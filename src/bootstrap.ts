@@ -53,7 +53,7 @@ function readConfig(huiRoot: { lovelace?: any }): DashboardSidebarConfig | null 
 
 function widthCss(config: DashboardSidebarConfig): string {
   const expanded = config.width ?? DEFAULT_WIDTH;
-  const collapsed = config.collapsed_width ?? DEFAULT_COLLAPSED_WIDTH;
+  const collapsed = DEFAULT_COLLAPSED_WIDTH;
   return `
     #${WRAPPER_ID} {
       display: flex;
@@ -66,6 +66,11 @@ function widthCss(config: DashboardSidebarConfig): string {
       width: ${expanded}px;
       box-sizing: border-box;
       overflow: visible;
+      align-self: flex-start;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 5;
       transition: width 0.25s ease;
     }
     #${WRAPPER_ID}.collapsed #${HOST_ID} {
@@ -74,6 +79,14 @@ function widthCss(config: DashboardSidebarConfig): string {
     #${WRAPPER_ID} > #view {
       flex: 1 1 0;
       min-width: 0;
+    }
+    ${
+      config.hide_on_mobile
+        ? `@media (max-width: 768px) {
+             #${HOST_ID} { display: none; }
+             #${WRAPPER_ID} > #view { flex-basis: 100%; }
+           }`
+        : ''
     }
   `;
 }

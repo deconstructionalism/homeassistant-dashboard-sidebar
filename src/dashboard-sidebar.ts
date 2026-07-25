@@ -14,14 +14,22 @@ import {
 } from './format';
 import { TemplateManager } from './templates';
 import {
+  type Align,
   type DashboardSidebarConfig,
   type SidebarCategoryConfig,
   type SidebarEntry,
   type SidebarFooterButtonConfig,
   type SidebarItemConfig,
   isCategory,
+  isDivider,
   validateConfig,
 } from './types';
+
+const FLEX_ALIGN: Record<Align, string> = {
+  left: 'flex-start',
+  center: 'center',
+  right: 'flex-end',
+};
 
 /** Fired when the collapsed state changes so the bootstrap can resize. */
 export const TOGGLE_EVENT = 'dashboard-sidebar-toggle';
@@ -44,11 +52,15 @@ export class DashboardSidebar extends LitElement {
 
   @state() private _collapsedCats = new Set<number>();
 
+  @state() private _errors: string[] = [];
+
   private readonly _templates = new TemplateManager(() => this.requestUpdate());
 
   private _tick?: number;
 
   private _contentCard?: HTMLElement & { hass?: HomeAssistant };
+
+  private _cardModApplied = false;
 
   private readonly _onDocumentClick = (ev: MouseEvent): void => {
     if ((this._openCategory !== null || this._footerOpen) && !ev.composedPath().includes(this)) {
@@ -63,9 +75,21 @@ export class DashboardSidebar extends LitElement {
   }
 
   public setConfig(config: DashboardSidebarConfig): void {
-    validateConfig(config);
+    this._errors = validateConfig(config);
     this._config = config;
+    this._cardModApplied = false;
+    if (this._errors.length > 0) {
+      console.warn(`[dashboard-sidebar] config errors:\n- ${this._errors.join('\n- ')}`);
+      return;
+    }
     this._collapsed = this._readStored() ?? Boolean(config.start_collapsed);
+    const cats = new Set<number>();
+    config.items.forEach((entry, i) => {
+      if (isCategory(entry) && (entry.start_collapsed ?? true)) {
+        cats.add(i);
+      }
+    });
+    this._collapsedCats = cats;
     this._templates.collect(config);
     this._restartTick();
     void this._buildContent();
@@ -104,12 +128,6 @@ export class DashboardSidebar extends LitElement {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('hass')) {
-      this._templates.setHass(this.hass);
-      if (this._contentCard) {
-        this._contentCard.hass = this.hass;
-      }
-    }
     if (changed.has('_collapsed')) {
       this.dispatchEvent(
         new CustomEvent(TOGGLE_EVENT, {
@@ -118,6 +136,45 @@ export class DashboardSidebar extends LitElement {
           composed: true,
         }),
       );
+    }
+    if (changed.has('hass')) {
+      this._templates.setHass(this.hass);
+      if (this._contentCard) {
+        this._contentCard.hass = this.hass;
+      }
+    }
+    this._applyCardMod();
+  }
+
+  /**
+   * Delegates styling to the card-mod integration when it is installed.
+   * card-mod exposes a static `applyToElement(element, type, config)` that
+   * renders the given styles into the element's shadow root and keeps them
+   * live against hass; it is not a card, so it has no `setConfig`.
+   *
+   * The fifth argument must be left at its `true` default: card-mod uses it
+   * to decide whether to attach inside `element.shadowRoot` (what we want, so
+   * the styles reach the dashboard-sidebar-* classes) or the light DOM.
+   */
+  private _applyCardMod(): void {
+    const cfg = this._config?.card_mod;
+    if (!cfg || this._cardModApplied || this._errors.length > 0) {
+      return;
+    }
+    const CardMod = customElements.get('card-mod') as
+      | {
+          applyToElement?: (element: HTMLElement, type: string, config: unknown) => void;
+        }
+      | undefined;
+    if (typeof CardMod?.applyToElement !== 'function') {
+      return;
+    }
+    try {
+      CardMod.applyToElement(this, 'dashboard-sidebar', cfg);
+      this._cardModApplied = true;
+    } catch (err) {
+      // Never let a card-mod failure break the sidebar (e.g. collapse).
+      console.warn('[dashboard-sidebar] card-mod failed:', err);
     }
   }
 
@@ -221,27 +278,75 @@ export class DashboardSidebar extends LitElement {
   }
 
   protected render(): TemplateResult {
+    if (this._errors.length > 0) {
+      return this._renderErrors();
+    }
     if (!this._config) {
       return html``;
     }
     const collapsed = this._collapsed;
-    const classes = { sidebar: true, collapsed, [`pos-${this._position}`]: true };
+    const cfg = this._config;
+    const classes = {
+      sidebar: true,
+      'dashboard-sidebar-root': true,
+      collapsed,
+      [`pos-${this._position}`]: true,
+    };
+    const sidebarStyle = cfg.background ? { background: cfg.background } : {};
+    const contentAlign = cfg.content_align ?? 'left';
+    const contentIsString = typeof cfg.content === 'string';
+    const contentStyle = {
+      'align-items': FLEX_ALIGN[contentAlign],
+      'text-align': contentAlign,
+      // A markdown string is shown chrome-less so it does not draw its own
+      // card box inside our content area.
+      ...(contentIsString
+        ? {
+            '--ha-card-background': 'transparent',
+            '--ha-card-box-shadow': 'none',
+            '--ha-card-border-width': '0px',
+          }
+        : {}),
+      ...(cfg.content_background
+        ? { background: cfg.content_background, padding: '8px', 'border-radius': '8px' }
+        : {}),
+    };
 
     return html`
-      <div class=${classMap(classes)}>
+      <div class=${classMap(classes)} style=${styleMap(sidebarStyle)}>
         <button
-          class="toggle"
+          class="toggle dashboard-sidebar-toggle"
           title=${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           @click=${this._toggleCollapse}
         >
           <ha-icon icon="mdi:chevron-left"></ha-icon>
         </button>
         ${this._renderHeader(collapsed)}
-        ${this._contentCard ? html`<div class="content">${this._contentCard}</div>` : nothing}
-        <nav class="menu">
-          ${this._config.items.map((entry, i) => this._renderEntry(entry, i, collapsed))}
+        ${
+          this._contentCard
+            ? html`<div class="content dashboard-sidebar-content" style=${styleMap(contentStyle)}>
+                ${this._contentCard}
+              </div>`
+            : nothing
+        }
+        <nav class="menu dashboard-sidebar-menu">
+          ${cfg.items.map((entry, i) => this._renderEntry(entry, i, collapsed))}
         </nav>
         ${this._renderFooter(collapsed)}
+      </div>
+    `;
+  }
+
+  private _renderErrors(): TemplateResult {
+    return html`
+      <div class="config-error">
+        <div class="config-error-title">
+          <ha-icon icon="mdi:alert-circle"></ha-icon>
+          <span>dashboard_sidebar config</span>
+        </div>
+        <ul>
+          ${this._errors.map((err) => html`<li>${err}</li>`)}
+        </ul>
       </div>
     `;
   }
@@ -257,15 +362,16 @@ export class DashboardSidebar extends LitElement {
     if (!title && !showClock && !showDate) {
       return nothing;
     }
+    const headerStyle = { 'text-align': cfg.header_align ?? 'center' };
     return html`
-      <div class="header">
-        ${title ? html`<div class="app-title">${title}</div>` : nothing}
+      <div class="header dashboard-sidebar-header" style=${styleMap(headerStyle)}>
+        ${title ? html`<div class="app-title dashboard-sidebar-title">${title}</div>` : nothing}
         ${
           showClock
-            ? html`<div class="clock">
+            ? html`<div class="clock dashboard-sidebar-clock">
                 ${
                   collapsed
-                    ? formatCollapsedClock(this._now)
+                    ? formatCollapsedClock(this._now, cfg.collapsed_clock_format === '12h')
                     : formatClock(this._now, cfg.clock_format ?? 'locale', this._locale)
                 }
               </div>`
@@ -273,7 +379,7 @@ export class DashboardSidebar extends LitElement {
         }
         ${
           showDate
-            ? html`<div class="date">
+            ? html`<div class="date dashboard-sidebar-date">
                 ${
                   collapsed
                     ? formatCollapsedDate(this._now)
@@ -287,6 +393,9 @@ export class DashboardSidebar extends LitElement {
   }
 
   private _renderEntry(entry: SidebarEntry, index: number, collapsed: boolean): TemplateResult {
+    if (isDivider(entry)) {
+      return html`<div class="entry-divider dashboard-sidebar-divider"></div>`;
+    }
     if (isCategory(entry)) {
       return collapsed
         ? this._renderCollapsedCategory(entry, index)
@@ -303,24 +412,38 @@ export class DashboardSidebar extends LitElement {
 
     if (collapsed) {
       return html`
-        <button class="row item collapsed-row" title=${title} @click=${() => this._runAction(item)}>
+        <button
+          class="row item collapsed-row dashboard-sidebar-item"
+          title=${title}
+          @click=${() => this._runAction(item)}
+        >
           ${
             icon
-              ? html`<ha-icon icon=${icon} style=${styleMap({ color: iconColor })}></ha-icon>`
-              : html`<span class="initials">${initials(title)}</span>`
+              ? html`<ha-icon
+                  class="dashboard-sidebar-item-icon"
+                  icon=${icon}
+                  style=${styleMap({ color: iconColor })}
+                ></ha-icon>`
+              : html`<span class="initials dashboard-sidebar-initials">${initials(title)}</span>`
           }
         </button>
       `;
     }
 
     return html`
-      <button class="row item" @click=${() => this._runAction(item)}>
+      <button class="row item dashboard-sidebar-item" @click=${() => this._runAction(item)}>
         ${
           icon
-            ? html`<ha-icon icon=${icon} style=${styleMap({ color: iconColor })}></ha-icon>`
+            ? html`<ha-icon
+                class="dashboard-sidebar-item-icon"
+                icon=${icon}
+                style=${styleMap({ color: iconColor })}
+              ></ha-icon>`
             : nothing
         }
-        <span class="label" style=${styleMap({ color: textColor })}>${title}</span>
+        <span class="label dashboard-sidebar-item-label" style=${styleMap({ color: textColor })}
+          >${title}</span
+        >
       </button>
     `;
   }
@@ -330,16 +453,26 @@ export class DashboardSidebar extends LitElement {
     const icon = category.icon ? this._templates.resolve(category.icon) : '';
     const collapsed = this._collapsedCats.has(index);
     return html`
-      <div class="category">
-        <button class="row category-header" @click=${() => this._toggleCategoryCollapse(index)}>
+      <div class="category dashboard-sidebar-category">
+        <button
+          class="row category-header dashboard-sidebar-category-header"
+          @click=${() => this._toggleCategoryCollapse(index)}
+        >
           ${icon ? html`<ha-icon icon=${icon}></ha-icon>` : nothing}
           <span class="label">${title}</span>
-          <ha-icon class="chevron ${collapsed ? '' : 'open'}" icon="mdi:chevron-down"></ha-icon>
+          <ha-icon
+            class="chevron dashboard-sidebar-chevron ${collapsed ? '' : 'open'}"
+            icon="mdi:chevron-down"
+          ></ha-icon>
         </button>
         ${
           collapsed
             ? nothing
-            : html`<div class="category-items">
+            : html`<div
+                class="category-items dashboard-sidebar-category-items ${
+                  category.guide_line === false ? 'no-line' : ''
+                }"
+              >
                 ${category.items.map((item) => this._renderItemRow(item, false))}
               </div>`
         }
@@ -352,9 +485,9 @@ export class DashboardSidebar extends LitElement {
     const icon = category.icon ? this._templates.resolve(category.icon) : '';
     const open = this._openCategory === index;
     return html`
-      <div class="category-anchor">
+      <div class="category-anchor dashboard-sidebar-category">
         <button
-          class="row item collapsed-row ${open ? 'active' : ''}"
+          class="row item collapsed-row dashboard-sidebar-item ${open ? 'active' : ''}"
           title=${title}
           @click=${(ev: Event) => {
             ev.stopPropagation();
@@ -363,8 +496,8 @@ export class DashboardSidebar extends LitElement {
         >
           ${
             icon
-              ? html`<ha-icon icon=${icon}></ha-icon>`
-              : html`<span class="initials">${initials(title)}</span>`
+              ? html`<ha-icon class="dashboard-sidebar-item-icon" icon=${icon}></ha-icon>`
+              : html`<span class="initials dashboard-sidebar-initials">${initials(title)}</span>`
           }
         </button>
         ${open && this._popoverAnchor ? this._renderPopover(category, this._popoverAnchor) : nothing}
@@ -376,11 +509,13 @@ export class DashboardSidebar extends LitElement {
     // Fixed to the viewport so it escapes the scrollable menu's clipping.
     return html`
       <div
-        class="popover"
+        class="popover dashboard-sidebar-popover"
         style=${styleMap(this._popoverStyle(anchor, false))}
         @click=${(ev: Event) => ev.stopPropagation()}
       >
-        <div class="popover-title">${this._templates.resolve(category.title)}</div>
+        <div class="popover-title dashboard-sidebar-popover-title">
+          ${this._templates.resolve(category.title)}
+        </div>
         ${category.items.map((item) => this._renderItemRow(item, false))}
       </div>
     `;
@@ -391,34 +526,70 @@ export class DashboardSidebar extends LitElement {
     if (buttons.length === 0) {
       return nothing;
     }
+    const anchor = this._popoverAnchor;
+    const footerClasses = {
+      footer: true,
+      'dashboard-sidebar-footer': true,
+      'collapsed-footer': collapsed,
+      'no-divider': this._config?.footer_divider === false,
+    };
+
     if (collapsed) {
       return html`
-        <div class="footer collapsed-footer">
-          <button
-            class="row item collapsed-row ${this._footerOpen ? 'active' : ''}"
-            title="More"
-            @click=${(ev: Event) => {
-              ev.stopPropagation();
-              this._toggleFooter(ev);
-            }}
-          >
-            <ha-icon icon="mdi:dots-vertical"></ha-icon>
-          </button>
-          ${
-            this._footerOpen && this._popoverAnchor
-              ? html`<div
-                  class="popover footer-popover"
-                  style=${styleMap(this._popoverStyle(this._popoverAnchor, true))}
-                  @click=${(ev: Event) => ev.stopPropagation()}
-                >
-                  ${buttons.map((btn) => this._renderFooterButton(btn))}
-                </div>`
-              : nothing
-          }
+        <div class=${classMap(footerClasses)}>
+          ${this._renderDots('row item collapsed-row dashboard-sidebar-item dashboard-sidebar-footer-more')}
+          ${this._footerOpen && anchor ? this._renderFooterPopover(buttons, anchor) : nothing}
         </div>
       `;
     }
-    return html` <div class="footer">${buttons.map((btn) => this._renderFooterButton(btn))}</div> `;
+
+    // Fit as many as the width allows; the rest go behind a dots button.
+    const width = this._config?.width ?? 240;
+    const maxFit = Math.max(1, Math.floor((width - 24 + 4) / 44)); // 40px button + 4px gap
+    if (buttons.length <= maxFit) {
+      return html`<div class=${classMap(footerClasses)}>
+        ${buttons.map((btn) => this._renderFooterButton(btn))}
+      </div>`;
+    }
+    const inline = buttons.slice(0, maxFit - 1);
+    const overflow = buttons.slice(maxFit - 1);
+    return html`
+      <div class=${classMap(footerClasses)}>
+        ${inline.map((btn) => this._renderFooterButton(btn))}
+        ${this._renderDots('footer-btn dashboard-sidebar-footer-btn dashboard-sidebar-footer-more')}
+        ${this._footerOpen && anchor ? this._renderFooterPopover(overflow, anchor) : nothing}
+      </div>
+    `;
+  }
+
+  private _renderDots(cls: string): TemplateResult {
+    return html`
+      <button
+        class="${cls} ${this._footerOpen ? 'active' : ''}"
+        title="More"
+        @click=${(ev: Event) => {
+          ev.stopPropagation();
+          this._toggleFooter(ev);
+        }}
+      >
+        <ha-icon icon="mdi:dots-vertical"></ha-icon>
+      </button>
+    `;
+  }
+
+  private _renderFooterPopover(
+    buttons: SidebarFooterButtonConfig[],
+    anchor: DOMRect,
+  ): TemplateResult {
+    return html`
+      <div
+        class="popover footer-popover dashboard-sidebar-popover dashboard-sidebar-footer-popover"
+        style=${styleMap(this._popoverStyle(anchor, true))}
+        @click=${(ev: Event) => ev.stopPropagation()}
+      >
+        ${buttons.map((btn) => this._renderFooterButton(btn))}
+      </div>
+    `;
   }
 
   private _renderFooterButton(btn: SidebarFooterButtonConfig): TemplateResult {
@@ -426,8 +597,16 @@ export class DashboardSidebar extends LitElement {
     const color = btn.icon_color ? this._templates.resolve(btn.icon_color) : '';
     const title = btn.title ? this._templates.resolve(btn.title) : '';
     return html`
-      <button class="footer-btn" title=${title} @click=${() => this._runAction(btn)}>
-        <ha-icon icon=${icon} style=${styleMap({ color })}></ha-icon>
+      <button
+        class="footer-btn dashboard-sidebar-footer-btn"
+        title=${title}
+        @click=${() => this._runAction(btn)}
+      >
+        <ha-icon
+          class="dashboard-sidebar-footer-icon"
+          icon=${icon}
+          style=${styleMap({ color })}
+        ></ha-icon>
       </button>
     `;
   }
@@ -616,6 +795,10 @@ export class DashboardSidebar extends LitElement {
       margin-left: 18px;
     }
 
+    .category-items.no-line {
+      border-left: none;
+    }
+
     .category-anchor {
       position: relative;
     }
@@ -631,11 +814,27 @@ export class DashboardSidebar extends LitElement {
     }
 
     .content {
+      display: flex;
+      flex-direction: column;
       margin-bottom: 12px;
     }
 
     .collapsed .content {
       display: none;
+    }
+
+    .entry-divider {
+      flex: none;
+      align-self: stretch;
+      height: 1px;
+      min-height: 1px;
+      margin: 6px 4px;
+      background: var(--divider-color, rgb(0 0 0 / 12%));
+    }
+
+    .collapsed .entry-divider {
+      width: 60%;
+      margin: 6px auto;
     }
 
     .popover-title {
@@ -657,6 +856,11 @@ export class DashboardSidebar extends LitElement {
       justify-content: center;
     }
 
+    .footer.no-divider {
+      border-top: none;
+      padding-top: 0;
+    }
+
     .footer-btn {
       display: flex;
       align-items: center;
@@ -671,7 +875,8 @@ export class DashboardSidebar extends LitElement {
       cursor: pointer;
     }
 
-    .footer-btn:hover {
+    .footer-btn:hover,
+    .footer-btn.active {
       background: var(--divider-color, rgb(0 0 0 / 8%));
     }
 
@@ -679,11 +884,45 @@ export class DashboardSidebar extends LitElement {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      max-width: 200px;
+      min-width: 0;
+      width: max-content;
+      max-width: 220px;
     }
 
     ha-icon {
       color: var(--paper-item-icon-color, var(--primary-text-color, #000));
+    }
+
+    .config-error {
+      margin: 12px;
+      padding: 12px;
+      border: 1px solid var(--error-color, #db4437);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+      color: var(--primary-text-color, #000);
+      font-size: 0.85rem;
+      overflow-y: auto;
+    }
+
+    .config-error-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .config-error-title ha-icon {
+      color: var(--error-color, #db4437);
+    }
+
+    .config-error ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .config-error li {
+      margin: 4px 0;
     }
   `;
 }
