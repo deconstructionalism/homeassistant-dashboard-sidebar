@@ -6,7 +6,6 @@ import { validateConfig } from './validate';
 describe('validateConfig — every block and option together', () => {
   it('accepts a config exercising every block type and option', () => {
     const config: DashboardSidebarConfig = {
-      position: 'right',
       width: 300,
       start_collapsed: false,
       hide_on_mobile: true,

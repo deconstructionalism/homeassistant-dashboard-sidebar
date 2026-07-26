@@ -55,6 +55,9 @@ export class DashboardSidebar extends LitElement {
   /** The current Home Assistant object, assigned by the bootstrap. */
   @property({ attribute: false }) public hass?: HomeAssistant;
 
+  /** Whether the dashboard is in edit mode, which reveals the edit button. */
+  @property({ attribute: false }) public editMode = false;
+
   /** The validated configuration, or undefined before setConfig runs. */
   @state() private _config?: DashboardSidebarConfig;
 
@@ -72,6 +75,9 @@ export class DashboardSidebar extends LitElement {
 
   /** Whether the footer overflow popover is open. */
   @state() private _footerOpen = false;
+
+  /** The active hover tooltip for a collapsed row, or null. */
+  @state() private _tooltip: { text: string; rect: DOMRect } | null = null;
 
   /** Keys (`region-index`) of categories currently collapsed when expanded. */
   @state() private _collapsedCats = new Set<string>();
@@ -145,6 +151,14 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
+   * Returns the leading-space-prefixed extra classes from a block's `class`
+   * hook, for appending to a built-in class list.
+   */
+  private _hookClass(block: { class?: string }): string {
+    return block.class ? ` ${block.class}` : '';
+  }
+
+  /**
    * Instantiates card elements for every card block (and a footer card) via
    * Home Assistant's card helpers, keyed by `region-index`.
    */
@@ -208,7 +222,7 @@ export class DashboardSidebar extends LitElement {
     if (changed.has('_collapsed')) {
       this.dispatchEvent(
         new CustomEvent(TOGGLE_EVENT, {
-          detail: { collapsed: this._collapsed },
+          detail: { collapsed: this._collapsed, side: this._side },
           bubbles: true,
           composed: true,
         }),
@@ -236,9 +250,9 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * The resolved dock side, defaulting to left.
+   * The resolved dock side, from the config position (default left).
    */
-  private get _position(): 'left' | 'right' {
+  private get _side(): 'left' | 'right' {
     return this._config?.position === 'right' ? 'right' : 'left';
   }
 
@@ -253,7 +267,7 @@ export class DashboardSidebar extends LitElement {
    * The localStorage key for this view and dock side's collapsed state.
    */
   private _storageKey(): string {
-    return `${STORAGE_PREFIX}:${window.location.pathname}:${this._position}`;
+    return `${STORAGE_PREFIX}:${window.location.pathname}:${this._side}`;
   }
 
   /**
@@ -316,6 +330,7 @@ export class DashboardSidebar extends LitElement {
    */
   private _toggleCollapse(): void {
     this._collapsed = !this._collapsed;
+    this._tooltip = null;
     this._closePopovers();
     try {
       window.localStorage.setItem(this._storageKey(), this._collapsed ? '1' : '0');
@@ -354,7 +369,7 @@ export class DashboardSidebar extends LitElement {
    */
   private _popoverStyle(anchor: DOMRect, growUp: boolean): Record<string, string> {
     const style: Record<string, string> = {};
-    if (this._position === 'left') {
+    if (this._side === 'left') {
       style.left = `${anchor.right + 8}px`;
     } else {
       style.right = `${window.innerWidth - anchor.left + 8}px`;
@@ -363,6 +378,42 @@ export class DashboardSidebar extends LitElement {
       style.bottom = `${window.innerHeight - anchor.bottom}px`;
     } else {
       style.top = `${anchor.top}px`;
+    }
+    return style;
+  }
+
+  /**
+   * Shows the hover tooltip for an icon-only control, anchored to it. HA tends
+   * to suppress native title tooltips, so this provides a reliable one. Only
+   * controls that attach the handler (collapsed rows and footer buttons) use
+   * it; labelled expanded rows do not.
+   */
+  private _showTip(ev: MouseEvent, text: string): void {
+    if (!text) {
+      return;
+    }
+    this._tooltip = { text, rect: (ev.currentTarget as HTMLElement).getBoundingClientRect() };
+  }
+
+  /**
+   * Hides the hover tooltip.
+   */
+  private _hideTip(): void {
+    if (this._tooltip) {
+      this._tooltip = null;
+    }
+  }
+
+  /**
+   * Computes fixed-position coordinates for the tooltip beside its row, on the
+   * side away from the dock edge and vertically centered.
+   */
+  private _tipStyle(rect: DOMRect): Record<string, string> {
+    const style: Record<string, string> = { top: `${rect.top + rect.height / 2}px` };
+    if (this._side === 'left') {
+      style.left = `${rect.right + 8}px`;
+    } else {
+      style.right = `${window.innerWidth - rect.left + 8}px`;
     }
     return style;
   }
@@ -410,7 +461,7 @@ export class DashboardSidebar extends LitElement {
       sidebar: true,
       'dashboard-sidebar-root': true,
       collapsed,
-      [`pos-${this._position}`]: true,
+      [`pos-${this._side}`]: true,
     };
     const sidebarStyle = cfg.background ? { background: cfg.background } : {};
 
@@ -425,9 +476,25 @@ export class DashboardSidebar extends LitElement {
         </button>
         ${this._renderRegion('header', cfg.header, collapsed, 'region-header dashboard-sidebar-header')}
         ${this._renderRegion('body', cfg.body, collapsed, 'region-body dashboard-sidebar-body')}
-        ${this._renderFooter(collapsed)}
+        ${this._renderFooter(collapsed)} ${this._renderTooltip()}
       </div>
     `;
+  }
+
+  /**
+   * Renders the hover tooltip for a collapsed row, fixed to the viewport.
+   */
+  private _renderTooltip(): TemplateResult | typeof nothing {
+    // Never cover an open popover; the dots tooltip would otherwise sit on top.
+    if (!this._tooltip || this._footerOpen || this._openCategory !== null) {
+      return nothing;
+    }
+    return html`<div
+      class="tooltip dashboard-sidebar-tooltip"
+      style=${styleMap(this._tipStyle(this._tooltip.rect))}
+    >
+      ${this._tooltip.text}
+    </div>`;
   }
 
   /**
@@ -466,7 +533,10 @@ export class DashboardSidebar extends LitElement {
       case 'date':
         return this._renderDate(block, collapsed);
       case 'divider':
-        return html`<div class="entry-divider dashboard-sidebar-divider"></div>`;
+        return html`<div
+          class="entry-divider dashboard-sidebar-divider${this._hookClass(block)}"
+          id=${block.id ?? nothing}
+        ></div>`;
       case 'item':
         return this._renderItemRow(block, collapsed);
       case 'category':
@@ -487,7 +557,11 @@ export class DashboardSidebar extends LitElement {
     }
     const text = this._templates.resolve(block.text);
     const style = { 'text-align': block.align ?? 'center' };
-    return html`<div class="app-title dashboard-sidebar-title" style=${styleMap(style)}>
+    return html`<div
+      class="app-title dashboard-sidebar-title${this._hookClass(block)}"
+      id=${block.id ?? nothing}
+      style=${styleMap(style)}
+    >
       ${text}
     </div>`;
   }
@@ -497,7 +571,11 @@ export class DashboardSidebar extends LitElement {
    */
   private _renderClock(block: ClockBlock, collapsed: boolean): TemplateResult {
     const style = { 'text-align': block.align ?? 'center' };
-    return html`<div class="clock dashboard-sidebar-clock" style=${styleMap(style)}>
+    return html`<div
+      class="clock dashboard-sidebar-clock${this._hookClass(block)}"
+      id=${block.id ?? nothing}
+      style=${styleMap(style)}
+    >
       ${
         collapsed
           ? formatCollapsedClock(this._now, block.collapsed_format === '12h')
@@ -511,7 +589,11 @@ export class DashboardSidebar extends LitElement {
    */
   private _renderDate(block: DateBlock, collapsed: boolean): TemplateResult {
     const style = { 'text-align': block.align ?? 'center' };
-    return html`<div class="date dashboard-sidebar-date" style=${styleMap(style)}>
+    return html`<div
+      class="date dashboard-sidebar-date${this._hookClass(block)}"
+      id=${block.id ?? nothing}
+      style=${styleMap(style)}
+    >
       ${
         collapsed
           ? formatCollapsedDate(this._now)
@@ -545,7 +627,11 @@ export class DashboardSidebar extends LitElement {
         ? { background: block.background, padding: '8px', 'border-radius': '8px' }
         : {}),
     };
-    return html`<div class="content dashboard-sidebar-content" style=${styleMap(style)}>
+    return html`<div
+      class="content dashboard-sidebar-content${this._hookClass(block)}"
+      id=${block.id ?? nothing}
+      style=${styleMap(style)}
+    >
       ${el}
     </div>`;
   }
@@ -576,8 +662,11 @@ export class DashboardSidebar extends LitElement {
     if (collapsed) {
       return html`
         <button
-          class="row item collapsed-row dashboard-sidebar-item"
-          title=${title}
+          class="row item collapsed-row dashboard-sidebar-item${this._hookClass(item)}"
+          id=${item.id ?? nothing}
+          aria-label=${title}
+          @mouseenter=${(ev: MouseEvent) => this._showTip(ev, title)}
+          @mouseleave=${this._hideTip}
           @click=${() => this._runAction(item)}
         >
           ${
@@ -587,14 +676,20 @@ export class DashboardSidebar extends LitElement {
                   icon=${icon}
                   style=${styleMap({ color: iconColor })}
                 ></ha-icon>`
-              : html`<span class="initials dashboard-sidebar-initials">${initials(title)}</span>`
+              : html`<span class="initials dashboard-sidebar-initials"
+                  >${item.abbr ?? initials(title)}</span
+                >`
           }
         </button>
       `;
     }
 
     return html`
-      <button class="row item dashboard-sidebar-item" @click=${() => this._runAction(item)}>
+      <button
+        class="row item dashboard-sidebar-item${this._hookClass(item)}"
+        id=${item.id ?? nothing}
+        @click=${() => this._runAction(item)}
+      >
         ${
           icon
             ? html`<ha-icon
@@ -620,7 +715,10 @@ export class DashboardSidebar extends LitElement {
     const icon = category.icon ? this._templates.resolve(category.icon) : '';
     const collapsed = this._collapsedCats.has(key);
     return html`
-      <div class="category dashboard-sidebar-category">
+      <div
+        class="category dashboard-sidebar-category${this._hookClass(category)}"
+        id=${category.id ?? nothing}
+      >
         <button
           class="row category-header dashboard-sidebar-category-header"
           @click=${() => this._toggleCategoryCollapse(key)}
@@ -655,10 +753,15 @@ export class DashboardSidebar extends LitElement {
     const icon = category.icon ? this._templates.resolve(category.icon) : '';
     const open = this._openCategory === key;
     return html`
-      <div class="category-anchor dashboard-sidebar-category">
+      <div
+        class="category-anchor dashboard-sidebar-category${this._hookClass(category)}"
+        id=${category.id ?? nothing}
+      >
         <button
           class="row item collapsed-row dashboard-sidebar-item ${open ? 'active' : ''}"
-          title=${title}
+          aria-label=${title}
+          @mouseenter=${(ev: MouseEvent) => this._showTip(ev, title)}
+          @mouseleave=${this._hideTip}
           @click=${(ev: Event) => {
             ev.stopPropagation();
             this._toggleCategory(key, ev);
@@ -667,7 +770,9 @@ export class DashboardSidebar extends LitElement {
           ${
             icon
               ? html`<ha-icon class="dashboard-sidebar-item-icon" icon=${icon}></ha-icon>`
-              : html`<span class="initials dashboard-sidebar-initials">${initials(title)}</span>`
+              : html`<span class="initials dashboard-sidebar-initials"
+                  >${category.abbr ?? initials(title)}</span
+                >`
           }
         </button>
         ${open && this._popoverAnchor ? this._renderPopover(category, this._popoverAnchor) : nothing}
@@ -762,7 +867,9 @@ export class DashboardSidebar extends LitElement {
     return html`
       <button
         class="${cls} ${this._footerOpen ? 'active' : ''}"
-        title="More"
+        aria-label="More"
+        @mouseenter=${(ev: MouseEvent) => this._showTip(ev, 'More')}
+        @mouseleave=${this._hideTip}
         @click=${(ev: Event) => {
           ev.stopPropagation();
           this._toggleFooter(ev);
@@ -798,8 +905,11 @@ export class DashboardSidebar extends LitElement {
     const title = btn.title ? this._templates.resolve(btn.title) : '';
     return html`
       <button
-        class="footer-btn dashboard-sidebar-footer-btn"
-        title=${title}
+        class="footer-btn dashboard-sidebar-footer-btn${this._hookClass(btn)}"
+        id=${btn.id ?? nothing}
+        aria-label=${title}
+        @mouseenter=${(ev: MouseEvent) => this._showTip(ev, title)}
+        @mouseleave=${this._hideTip}
         @click=${() => this._runAction(btn)}
       >
         <ha-icon

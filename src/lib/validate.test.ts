@@ -4,7 +4,7 @@ import type { DashboardSidebarConfig } from './types';
 import { validateConfig } from './validate';
 
 /**
- * A minimal valid config the cases mutate into invalid shapes.
+ * A minimal valid single-sidebar config the cases mutate into invalid shapes.
  */
 const valid = (): DashboardSidebarConfig => ({
   body: [{ type: 'item', title: 'Home', tap_action: { action: 'toggle' } }],
@@ -15,19 +15,25 @@ describe('validateConfig', () => {
     expect(validateConfig(valid())).toHaveLength(0);
   });
 
-  it('rejects a non-mapping config', () => {
-    expect(validateConfig(null as unknown as DashboardSidebarConfig)).toEqual([
-      'dashboard_sidebar: config must be a mapping',
-    ]);
-  });
-
   it('requires a header or body', () => {
     expect(validateConfig({})).toContain(
       'dashboard_sidebar: needs a header or body with at least one block',
     );
   });
 
-  it('flags unknown top-level keys and non-list regions', () => {
+  it('rejects a non-mapping config', () => {
+    expect(validateConfig(null as unknown as DashboardSidebarConfig)).toEqual([
+      'dashboard_sidebar: config must be a mapping',
+    ]);
+  });
+
+  it('checks the position enum', () => {
+    expect(
+      validateConfig({ ...valid(), position: 'up' } as unknown as DashboardSidebarConfig),
+    ).toContain('position: must be "left" or "right"');
+  });
+
+  it('flags unknown keys and non-list regions', () => {
     expect(validateConfig({ ...valid(), bogus: 1 } as DashboardSidebarConfig)).toContain(
       'dashboard_sidebar: unknown option "bogus"',
     );
@@ -36,10 +42,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('checks global enums and types', () => {
-    expect(
-      validateConfig({ ...valid(), position: 'up' } as unknown as DashboardSidebarConfig),
-    ).toContain('position: must be "left" or "right"');
+  it('checks numeric types', () => {
     expect(
       validateConfig({ ...valid(), width: '240' } as unknown as DashboardSidebarConfig),
     ).toContain('width: must be a number');

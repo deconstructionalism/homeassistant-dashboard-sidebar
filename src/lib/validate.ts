@@ -23,22 +23,51 @@ const TOP_KEYS = new Set([
   'card_mod',
 ]);
 
+/** CSS targeting hooks accepted on every block and footer button. */
+const COMMON = ['class', 'id'];
+
 /** Recognized block types, and the keys each one accepts. */
 const BLOCK_KEYS: Record<string, Set<string>> = {
-  title: new Set(['type', 'text', 'align']),
-  clock: new Set(['type', 'format', 'collapsed_format', 'align']),
-  date: new Set(['type', 'format', 'align']),
-  divider: new Set(['type']),
-  item: new Set(['type', 'title', 'icon', 'text_color', 'icon_color', 'entity', 'tap_action']),
-  category: new Set(['type', 'title', 'icon', 'start_collapsed', 'guide_line', 'items']),
-  card: new Set(['type', 'card', 'align', 'background']),
+  title: new Set(['type', 'text', 'align', ...COMMON]),
+  clock: new Set(['type', 'format', 'collapsed_format', 'align', ...COMMON]),
+  date: new Set(['type', 'format', 'align', ...COMMON]),
+  divider: new Set(['type', ...COMMON]),
+  item: new Set([
+    'type',
+    'title',
+    'icon',
+    'abbr',
+    'text_color',
+    'icon_color',
+    'entity',
+    'tap_action',
+    ...COMMON,
+  ]),
+  category: new Set([
+    'type',
+    'title',
+    'icon',
+    'abbr',
+    'start_collapsed',
+    'guide_line',
+    'items',
+    ...COMMON,
+  ]),
+  card: new Set(['type', 'card', 'align', 'background', ...COMMON]),
 };
 
 /** Recognized keys on the footer. */
 const FOOTER_KEYS = new Set(['divider', 'buttons', 'card']);
 
 /** Recognized keys on a footer button. */
-const FOOTER_BUTTON_KEYS = new Set(['icon', 'icon_color', 'title', 'entity', 'tap_action']);
+const FOOTER_BUTTON_KEYS = new Set([
+  'icon',
+  'icon_color',
+  'title',
+  'entity',
+  'tap_action',
+  ...COMMON,
+]);
 
 /**
  * Reports any keys on `obj` that are not in the `allowed` set, prefixing each
@@ -68,6 +97,35 @@ function checkAlign(value: unknown, ctx: string, errors: string[]): void {
   if (value !== undefined && (typeof value !== 'string' || !ALIGNS.includes(value))) {
     errors.push(`${ctx}: must be left, center, or right`);
   }
+}
+
+/**
+ * Records an error when a defined value is not a string.
+ */
+function checkString(value: unknown, ctx: string, errors: string[]): void {
+  if (value !== undefined && typeof value !== 'string') {
+    errors.push(`${ctx}: must be a string`);
+  }
+}
+
+/**
+ * Records an error when `abbr` is set alongside an icon, since the collapsed
+ * glyph override only applies when there is no icon to show.
+ */
+function checkAbbr(abbr: unknown, icon: unknown, ctx: string, errors: string[]): void {
+  checkString(abbr, `${ctx}.abbr`, errors);
+  if (abbr !== undefined && icon !== undefined) {
+    errors.push(`${ctx}: abbr is only allowed when icon is not set`);
+  }
+}
+
+/**
+ * Validates the optional card-mod targeting hooks (`class` and `id`).
+ */
+function checkHooks(block: unknown, ctx: string, errors: string[]): void {
+  const b = block as { class?: unknown; id?: unknown };
+  checkString(b.class, `${ctx}.class`, errors);
+  checkString(b.id, `${ctx}.id`, errors);
 }
 
 /**
@@ -111,6 +169,8 @@ function validateItem(item: ItemBlock, ctx: string, errors: string[]): void {
   if (!item.tap_action) {
     errors.push(`${ctx}: needs a tap_action`);
   }
+  checkAbbr(item.abbr, item.icon, ctx, errors);
+  checkHooks(item, ctx, errors);
 }
 
 /**
@@ -127,6 +187,9 @@ function validateBlock(block: SidebarBlock, ctx: string, errors: string[]): void
     return;
   }
   unknownKeys(block, BLOCK_KEYS[type], ctx, errors);
+  if (type !== 'item') {
+    checkHooks(block, ctx, errors);
+  }
 
   switch (type) {
     case 'title':
@@ -178,6 +241,12 @@ function validateBlock(block: SidebarBlock, ctx: string, errors: string[]): void
         errors,
       );
       checkBool((block as { guide_line?: unknown }).guide_line, `${ctx}.guide_line`, errors);
+      checkAbbr(
+        (block as { abbr?: unknown }).abbr,
+        (block as { icon?: unknown }).icon,
+        ctx,
+        errors,
+      );
       {
         const items = (block as { items?: unknown }).items;
         if (!Array.isArray(items) || items.length === 0) {
@@ -222,37 +291,38 @@ function validateRegion(value: unknown, ctx: string, errors: string[]): void {
 /**
  * Validates the footer: divider flag, and buttons XOR a card.
  */
-function validateFooter(footer: unknown, errors: string[]): void {
+function validateFooter(footer: unknown, ctx: string, errors: string[]): void {
   if (footer === undefined) {
     return;
   }
   if (!footer || typeof footer !== 'object') {
-    errors.push('footer: must be a mapping');
+    errors.push(`${ctx}: must be a mapping`);
     return;
   }
-  unknownKeys(footer, FOOTER_KEYS, 'footer', errors);
+  unknownKeys(footer, FOOTER_KEYS, ctx, errors);
   const f = footer as { divider?: unknown; buttons?: unknown; card?: unknown };
-  checkBool(f.divider, 'footer.divider', errors);
+  checkBool(f.divider, `${ctx}.divider`, errors);
   if (f.buttons !== undefined && f.card !== undefined) {
-    errors.push('footer: set either buttons or card, not both');
+    errors.push(`${ctx}: set either buttons or card, not both`);
   }
   if (f.buttons !== undefined) {
     if (!Array.isArray(f.buttons)) {
-      errors.push('footer.buttons: must be a list');
+      errors.push(`${ctx}.buttons: must be a list`);
     } else {
       f.buttons.forEach((btn, i) => {
-        const ctx = `footer.buttons[${i}]`;
+        const bctx = `${ctx}.buttons[${i}]`;
         if (!btn || typeof btn !== 'object') {
-          errors.push(`${ctx}: must be a mapping`);
+          errors.push(`${bctx}: must be a mapping`);
           return;
         }
-        unknownKeys(btn, FOOTER_BUTTON_KEYS, ctx, errors);
+        unknownKeys(btn, FOOTER_BUTTON_KEYS, bctx, errors);
         if (typeof (btn as { icon?: unknown }).icon !== 'string') {
-          errors.push(`${ctx}: needs an icon`);
+          errors.push(`${bctx}: needs an icon`);
         }
         if (!(btn as { tap_action?: unknown }).tap_action) {
-          errors.push(`${ctx}: needs a tap_action`);
+          errors.push(`${bctx}: needs a tap_action`);
         }
+        checkHooks(btn, bctx, errors);
       });
     }
   }
@@ -269,7 +339,6 @@ export function validateConfig(config: DashboardSidebarConfig): string[] {
   }
   const c = config as unknown as Record<string, unknown>;
   unknownKeys(config, TOP_KEYS, 'dashboard_sidebar', errors);
-
   if (config.position !== undefined && config.position !== 'left' && config.position !== 'right') {
     errors.push('position: must be "left" or "right"');
   }
@@ -278,13 +347,11 @@ export function validateConfig(config: DashboardSidebarConfig): string[] {
   }
   checkBool(c.start_collapsed, 'start_collapsed', errors);
   checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
-
   validateRegion(config.header, 'header', errors);
   validateRegion(config.body, 'body', errors);
   if (config.header === undefined && config.body === undefined) {
     errors.push('dashboard_sidebar: needs a header or body with at least one block');
   }
-  validateFooter(config.footer, errors);
-
+  validateFooter(config.footer, 'footer', errors);
   return errors;
 }

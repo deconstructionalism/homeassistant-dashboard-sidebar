@@ -80,13 +80,13 @@ describe('<dashboard-sidebar> config species', () => {
     });
   });
 
-  describe('position', () => {
+  describe('side', () => {
     it('defaults to the left', async () => {
       const el = await mount({ body: [{ type: 'item', title: 'A', tap_action: TAP }] });
       expect(root(el).querySelector('.sidebar')?.classList.contains('pos-left')).to.equal(true);
     });
 
-    it('docks right when configured', async () => {
+    it('docks right when position is right', async () => {
       const el = await mount({
         position: 'right',
         body: [{ type: 'item', title: 'A', tap_action: TAP }],
