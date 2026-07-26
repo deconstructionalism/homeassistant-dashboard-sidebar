@@ -1,14 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 
-import type {
-  CardBlock,
-  CategoryBlock,
-  ClockBlock,
-  DateBlock,
-  ItemBlock,
-  SidebarBlock,
-  TitleBlock,
-} from '../lib/types';
+import type { SidebarBlock } from '../lib/types';
 
 /** Merges a partial update into the object being edited, then re-renders. */
 export type Patch = (partial: Record<string, unknown>) => void;
@@ -16,8 +8,8 @@ export type Patch = (partial: Record<string, unknown>) => void;
 /** Alignment choices shared by the text and card blocks. */
 const ALIGN_OPTIONS = ['left', 'center', 'right'];
 
-/** Tap-action kinds offered by the minimal action editor. */
-const ACTION_OPTIONS = ['none', 'toggle', 'more-info', 'navigate', 'call-service'];
+/** Tap-action kinds offered by the action editor. */
+const ACTION_OPTIONS = ['none', 'toggle', 'more-info', 'navigate', 'url', 'call-service'];
 
 /**
  * Renders a labelled single-line text input.
@@ -91,26 +83,77 @@ export function checkboxField(
 }
 
 /**
- * Returns a one-line human summary of a block for its collapsed row.
+ * Capitalizes the first letter of a word, for display labels.
  */
-export function blockSummary(block: SidebarBlock): string {
-  switch (block.type) {
-    case 'title':
-      return (block as TitleBlock).text || '(title)';
-    case 'clock':
-      return (block as ClockBlock).format ?? 'clock';
-    case 'date':
-      return (block as DateBlock).format ?? 'date';
-    case 'divider':
-      return '──';
-    case 'item':
-      return (block as ItemBlock).title || '(item)';
-    case 'category':
-      return `${(block as CategoryBlock).title || '(category)'} (${(block as CategoryBlock).items?.length ?? 0})`;
-    case 'card':
-      return typeof (block as CardBlock).card === 'string' ? 'markdown' : 'card';
-    default:
-      return '';
+export function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Renders a labelled integer input that accepts only digits, reporting
+ * undefined when cleared.
+ */
+export function intField(
+  label: string,
+  value: number | undefined,
+  onInput: (value: number | undefined) => void,
+): TemplateResult {
+  return html`<label class="field">
+    <span>${label}</span>
+    <input
+      type="text"
+      inputmode="numeric"
+      .value=${value != null ? String(value) : ''}
+      @input=${(e: Event) => {
+        const el = e.target as HTMLInputElement;
+        const digits = el.value.replace(/[^0-9]/g, '');
+        el.value = digits;
+        onInput(digits === '' ? undefined : Number(digits));
+      }}
+    />
+  </label>`;
+}
+
+/**
+ * Renders a labelled single-choice group of icon buttons.
+ */
+export function iconChoiceField(
+  label: string,
+  value: string,
+  options: Array<{ value: string; icon: string; title: string }>,
+  onChange: (value: string) => void,
+): TemplateResult {
+  return html`<div class="field">
+    <span>${label}</span>
+    <div class="icon-choice">
+      ${options.map(
+        (opt) =>
+          html`<button
+            type="button"
+            class="choice ${opt.value === value ? 'sel' : ''}"
+            title=${opt.title}
+            aria-label=${opt.title}
+            @click=${() => onChange(opt.value)}
+          >
+            <ha-icon icon=${opt.icon}></ha-icon>
+          </button>`,
+      )}
+    </div>
+  </div>`;
+}
+
+/**
+ * Parses a JSON object from a textarea, or undefined when empty/invalid.
+ */
+function parseJson(value: string): Record<string, unknown> | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    return undefined;
   }
 }
 
@@ -118,28 +161,101 @@ export function blockSummary(block: SidebarBlock): string {
  * Renders the minimal tap-action editor for an item or footer button.
  */
 export function actionFields(
-  action: { action?: string; navigation_path?: string; entity?: string },
+  action: {
+    action?: string;
+    navigation_path?: string;
+    url_path?: string;
+    entity?: string;
+    service?: string;
+    data?: Record<string, unknown>;
+  },
   patch: Patch,
 ): TemplateResult {
   const kind = action?.action ?? 'none';
+  const set = (partial: Record<string, unknown>): void =>
+    patch({ tap_action: { ...action, action: kind, ...partial } });
   return html`
     ${selectField('Tap action', kind, ACTION_OPTIONS, (v) =>
       patch({ tap_action: { ...action, action: v } }),
     )}
     ${
       kind === 'navigate'
-        ? textField('Navigation path', action?.navigation_path, (v) =>
-            patch({ tap_action: { ...action, action: kind, navigation_path: v } }),
-          )
+        ? textField('Navigation path', action.navigation_path, (v) => set({ navigation_path: v }))
+        : nothing
+    }
+    ${kind === 'url' ? textField('URL', action.url_path, (v) => set({ url_path: v })) : nothing}
+    ${
+      kind === 'toggle' || kind === 'more-info'
+        ? textField('Entity', action.entity, (v) => set({ entity: v || undefined }))
+        : nothing
+    }
+    ${
+      kind === 'call-service'
+        ? html`
+            ${textField('Service (domain.service)', action.service, (v) => set({ service: v }))}
+            ${textField('Target entity', action.entity, (v) => set({ entity: v || undefined }))}
+            ${areaField(
+              'Service data (JSON)',
+              action.data ? JSON.stringify(action.data, null, 2) : '',
+              (v) => set({ data: parseJson(v) }),
+            )}
+          `
         : nothing
     }
   `;
 }
 
 /**
- * Renders the editable fields for one block, applying edits through `patch`.
+ * Renders the editable fields for one footer button, applying edits via patch.
+ */
+export function footerButtonFields(
+  btn: { icon?: string; title?: string; entity?: string; tap_action?: { action?: string } },
+  patch: Patch,
+): TemplateResult {
+  return html`
+    ${textField('Icon (mdi:...)', btn.icon, (v) => patch({ icon: v }))}
+    ${textField('Title', btn.title, (v) => patch({ title: v || undefined }))}
+    ${textField('Entity', btn.entity, (v) => patch({ entity: v || undefined }))}
+    ${actionFields(btn.tap_action ?? {}, patch)}
+  `;
+}
+
+/**
+ * Renders the class/id (and, for items/categories, abbr) hooks under a native
+ * collapsible Advanced section.
+ */
+function advancedFields(
+  block: { class?: string; id?: string; abbr?: string; icon?: unknown },
+  patch: Patch,
+  withAbbr: boolean,
+): TemplateResult {
+  return html`<details class="advanced">
+    <summary>Advanced</summary>
+    ${textField('CSS class', block.class, (v) => patch({ class: v || undefined }))}
+    ${textField('CSS id', block.id, (v) => patch({ id: v || undefined }))}
+    ${
+      withAbbr
+        ? textField('Abbr (collapsed glyph, icon-less only)', block.abbr, (v) =>
+            patch({ abbr: v || undefined }),
+          )
+        : nothing
+    }
+  </details>`;
+}
+
+/**
+ * Renders the editable fields for one block: its type-specific fields plus the
+ * shared Advanced (class/id/abbr) section.
  */
 export function blockFields(block: SidebarBlock, patch: Patch): TemplateResult {
+  const withAbbr = block.type === 'item' || block.type === 'category';
+  return html`${blockTypeFields(block, patch)}${advancedFields(block, patch, withAbbr)}`;
+}
+
+/**
+ * Renders the type-specific fields for one block.
+ */
+function blockTypeFields(block: SidebarBlock, patch: Patch): TemplateResult {
   switch (block.type) {
     case 'title':
       return html`
@@ -176,7 +292,6 @@ export function blockFields(block: SidebarBlock, patch: Patch): TemplateResult {
           patch({ start_collapsed: v }),
         )}
         ${checkboxField('Guide line', block.guide_line ?? true, (v) => patch({ guide_line: v }))}
-        <p class="hint">${block.items?.length ?? 0} item(s). Edit items in YAML for now.</p>
       `;
     case 'card':
       return html`

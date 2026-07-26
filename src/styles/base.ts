@@ -25,6 +25,34 @@ export const baseStyles = css`
     overflow: visible;
   }
 
+  /* Inert single-block preview embedded in the editor: no host box, no
+     interaction, sized to its content. */
+  :host([preview]) {
+    height: auto;
+    background: transparent;
+  }
+
+  :host([preview]) .sidebar,
+  :host([preview]) .sidebar.preview {
+    height: auto;
+    /* Keep the real horizontal inset so content sits where it will in the live
+       sidebar, but no vertical padding so stacked previews stay compact. */
+    padding: 0 12px;
+    pointer-events: none;
+  }
+
+  :host([preview]) .region-header {
+    margin-bottom: 0;
+  }
+
+  :host([preview]) .region-body {
+    overflow: visible;
+  }
+
+  :host([preview]) .footer {
+    margin-top: 0;
+  }
+
   .sidebar.collapsed {
     align-items: center;
     padding: 16px 6px;
