@@ -72,9 +72,15 @@ describe('<dashboard-sidebar-editor>', () => {
     const el = await mount(cfg());
     await tab(el, 'Content');
     const before = root(el).querySelectorAll('.pv-list[data-sort="body"] > .pv-node').length;
-    const sel = root(el).querySelector('select.add') as HTMLSelectElement;
-    sel.value = 'divider';
-    sel.dispatchEvent(new Event('change'));
+    // Nothing is auto-selected, so pick an element to reveal its "Add Below" control.
+    (root(el).querySelector('.pv-list[data-sort="body"] > .pv-node') as HTMLElement).click();
+    await el.updateComplete;
+    (root(el).querySelector('.form .add') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const divider = [...root(el).querySelectorAll('.add-menu-item')].find(
+      (b) => b.textContent?.trim() === 'Divider',
+    ) as HTMLButtonElement;
+    divider.click();
     await el.updateComplete;
     expect(root(el).querySelectorAll('.pv-list[data-sort="body"] > .pv-node').length).to.equal(
       before + 1,
@@ -94,6 +100,13 @@ describe('<dashboard-sidebar-editor>', () => {
     );
   });
 
+  it('selects nothing on landing and shows the hint', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Content');
+    expect(root(el).querySelector('.form')).to.not.exist;
+    expect(root(el).querySelector('.hint')?.textContent).to.contain('Select an element');
+  });
+
   it('selecting a preview node reveals its edit form', async () => {
     const el = await mount(cfg());
     await tab(el, 'Header');
@@ -110,7 +123,7 @@ describe('<dashboard-sidebar-editor>', () => {
     (root(el).querySelector('.pv-cat-head') as HTMLElement).click();
     await el.updateComplete;
     const addItem = [...root(el).querySelectorAll('.form .add-btn')].some((b) =>
-      b.textContent?.includes('Add item'),
+      b.textContent?.includes('Add Sub-Item'),
     );
     expect(addItem).to.equal(true);
   });
@@ -133,6 +146,10 @@ describe('<dashboard-sidebar-editor>', () => {
     el.onClose = () => {
       closed = true;
     };
+    // A change is required before Save is enabled.
+    await tab(el, 'Settings');
+    (root(el).querySelectorAll('.settings .choice')[1] as HTMLButtonElement).click();
+    await el.updateComplete;
     (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
     expect(saved?.body?.length).to.equal(2);
     expect(closed).to.equal(true);
@@ -144,9 +161,78 @@ describe('<dashboard-sidebar-editor>', () => {
     el.onSave = () => {
       saved = true;
     };
+    // Make a change so Save is enabled, while the config stays invalid.
+    await tab(el, 'Settings');
+    (root(el).querySelector('.settings input[type="checkbox"]') as HTMLInputElement).click();
+    await el.updateComplete;
     (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(root(el).querySelector('.errors')).to.exist;
     expect(saved).to.equal(false);
+  });
+
+  it('disables Save until a change is made', async () => {
+    const el = await mount(cfg());
+    const save = (): HTMLButtonElement =>
+      root(el).querySelector('footer .primary') as HTMLButtonElement;
+    expect(save().disabled).to.equal(true);
+    await tab(el, 'Settings');
+    (root(el).querySelectorAll('.settings .choice')[1] as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(save().disabled).to.equal(false);
+  });
+
+  it('shows a field error on blur and disables Save', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Settings');
+    const width = root(el).querySelector('.settings input[type="text"]') as HTMLInputElement;
+    width.value = '0';
+    width.dispatchEvent(new Event('input'));
+    width.dispatchEvent(new Event('blur'));
+    await el.updateComplete;
+    expect(root(el).querySelector('.field-error')).to.exist;
+    expect((root(el).querySelector('footer .primary') as HTMLButtonElement).disabled).to.equal(
+      true,
+    );
+  });
+
+  it('confirms before closing with unsaved changes', async () => {
+    const el = await mount(cfg());
+    let closed = false;
+    el.onClose = () => {
+      closed = true;
+    };
+    await tab(el, 'Settings');
+    (root(el).querySelectorAll('.settings .choice')[1] as HTMLButtonElement).click();
+    await el.updateComplete;
+    (root(el).querySelector('footer button') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(root(el).querySelector('.confirm')).to.exist;
+    expect(closed).to.equal(false);
+    (root(el).querySelector('.danger-btn') as HTMLButtonElement).click();
+    expect(closed).to.equal(true);
+  });
+
+  it('shows a Preview header and toggles the collapsed look', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Content');
+    expect(root(el).querySelector('.preview-title')?.textContent?.trim()).to.equal('Preview');
+    expect(root(el).querySelector('.pv-frame.collapsed')).to.not.exist;
+    (root(el).querySelector('.pv-toggle') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(root(el).querySelector('.pv-frame.collapsed')).to.exist;
+  });
+
+  it('toggles the footer top divider bar', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Footer');
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
+    };
+    (root(el).querySelector('.editor input[type="checkbox"]') as HTMLInputElement).click();
+    await el.updateComplete;
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.footer?.divider).to.equal(false);
   });
 });
