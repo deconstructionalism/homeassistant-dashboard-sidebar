@@ -18,25 +18,52 @@ import type {
 } from '../lib/types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
-import { DEFAULT_WIDTH, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from '../lib/const';
+import {
+  DEFAULT_WIDTH,
+  MAX_USABLE_WIDTH,
+  MIN_USABLE_WIDTH,
+  PREVIEW_REORDER_EVENT,
+  PREVIEW_SELECT_EVENT,
+} from '../lib/const';
 import { validateConfig } from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
 import {
-  areaField,
   blockFields,
+  blockTypeLabel,
   checkboxField,
+  codeField,
   colorField,
   footerButtonFields,
   iconChoiceField,
   intField,
   type Patch,
-  titleCase,
   type ValidationCtx,
   validateWidth,
+  yamlField,
 } from './block-form';
 
+/**
+ * The expanded preview frame is capped to this many pixels, and to this
+ * fraction of the viewport, so it fits the sidebar without dominating the modal.
+ * A configured width beyond the cap shows a disclaimer that the preview is
+ * narrower than the real width.
+ */
+const PREVIEW_CAP_PX = 380;
+
+/** See {@link PREVIEW_CAP_PX}. */
+const PREVIEW_CAP_VW = 42;
+
 /** Every block type, offered when adding to the header. */
-const ALL_TYPES: BlockType[] = ['title', 'clock', 'date', 'divider', 'item', 'category', 'card'];
+const ALL_TYPES: BlockType[] = [
+  'title',
+  'clock',
+  'date',
+  'divider',
+  'item',
+  'category',
+  'markdown',
+  'card',
+];
 
 /** The modal tabs, in order. `body` is labelled "Content". */
 const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer'; label: string }> = [
@@ -193,6 +220,16 @@ export class DashboardSidebarEditor extends LitElement {
       }
       delete rec.custom_format;
     };
+    // A legacy card block whose `card` was a string was really markdown; split
+    // it into the new markdown block type.
+    const fixCard = (rec: Record<string, unknown>): void => {
+      if (typeof rec.card === 'string') {
+        rec.type = 'markdown';
+        rec.content = rec.card;
+        delete rec.card;
+        delete rec.background;
+      }
+    };
     const fix = (blocks?: SidebarBlock[]): void => {
       blocks?.forEach((block) => {
         const rec = block as unknown as Record<string, unknown>;
@@ -200,18 +237,31 @@ export class DashboardSidebarEditor extends LitElement {
           fixClock(rec);
         } else if (block.type === 'date') {
           fixDate(rec);
+        } else if (block.type === 'card') {
+          fixCard(rec);
         }
       });
     };
     fix(config.header);
     fix(config.body);
+    // A legacy footer card that was a string is now markdown.
+    const footer = config.footer as Record<string, unknown> | undefined;
+    if (footer && typeof footer.card === 'string') {
+      footer.markdown = footer.card;
+      delete footer.card;
+    }
   }
 
   /**
-   * Preloads Home Assistant's code editor so the fields can use it.
+   * Preloads Home Assistant's code editor so the fields can use it. Also
+   * re-renders once the YAML editor registers, so the manual-card field can
+   * upgrade from its textarea fallback.
    */
   protected firstUpdated(): void {
     void this._ensureCodeEditor();
+    if (!customElements.get('ha-yaml-editor')) {
+      void customElements.whenDefined('ha-yaml-editor').then(() => this.requestUpdate());
+    }
   }
 
   /**
@@ -229,33 +279,44 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _compactEditors(): void {
     let retry = false;
-    this.renderRoot
-      .querySelectorAll<HTMLElement & { shadowRoot: ShadowRoot | null }>(
+    // The code fields hold an <ha-code-editor> directly; the YAML field's editor
+    // is an <ha-code-editor> nested inside an <ha-yaml-editor>'s shadow root.
+    const editors: Array<HTMLElement & { shadowRoot: ShadowRoot | null }> = [
+      ...this.renderRoot.querySelectorAll<HTMLElement & { shadowRoot: ShadowRoot | null }>(
         '.code-field ha-code-editor',
-      )
-      .forEach((ed) => {
-        if (this._compactedEditors.has(ed)) {
-          return;
-        }
-        if (!ed.shadowRoot?.querySelector('.cm-editor')) {
-          retry = true;
-          return;
-        }
-        this._compactedEditors.add(ed);
-        const style = document.createElement('style');
-        // Hide the line-number gutter and the action toolbar (which sits in the
-        // editor's top padding), drop the padding and the toolbar's separator
-        // border so the code sits flush like a plain input.
-        style.textContent =
-          '.cm-gutters{display:none!important}' +
-          '.cm-panels{display:none!important}' +
-          '.code-editor-toolbar{display:none!important}' +
-          '.cm-editor{padding-top:0!important}' +
-          '.cm-scroller{padding-top:0!important}' +
-          '.cm-content{border-top-style:none!important}' +
-          '.cm-activeLine{background-color:transparent!important}';
-        ed.shadowRoot.appendChild(style);
-      });
+      ),
+    ];
+    this.renderRoot.querySelectorAll('.yaml-field ha-yaml-editor').forEach((yaml) => {
+      const inner = yaml.shadowRoot?.querySelector('ha-code-editor');
+      if (inner) {
+        editors.push(inner as HTMLElement & { shadowRoot: ShadowRoot | null });
+      } else {
+        retry = true;
+      }
+    });
+    editors.forEach((ed) => {
+      if (this._compactedEditors.has(ed)) {
+        return;
+      }
+      if (!ed.shadowRoot?.querySelector('.cm-editor')) {
+        retry = true;
+        return;
+      }
+      this._compactedEditors.add(ed);
+      const style = document.createElement('style');
+      // Hide the line-number gutter and the action toolbar (which sits in the
+      // editor's top padding), drop the padding and the toolbar's separator
+      // border so the code sits flush like a plain input.
+      style.textContent =
+        '.cm-gutters{display:none!important}' +
+        '.cm-panels{display:none!important}' +
+        '.code-editor-toolbar{display:none!important}' +
+        '.cm-editor{padding-top:0!important;border-radius:6px!important}' +
+        '.cm-scroller{padding-top:0!important}' +
+        '.cm-content{border-top-style:none!important;padding:8px 0!important}' +
+        '.cm-activeLine{background-color:transparent!important}';
+      ed.shadowRoot.appendChild(style);
+    });
     if (retry && !this._compactScheduled) {
       this._compactScheduled = true;
       requestAnimationFrame(() => {
@@ -335,6 +396,23 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * A non-blocking advisory for the expanded width when it is outside the usable
+   * range. Save is still allowed; the rendered width is clamped to the viewport.
+   */
+  private _widthWarning(width: number | undefined): string | undefined {
+    if (width == null) {
+      return undefined;
+    }
+    if (width < MIN_USABLE_WIDTH) {
+      return `Below ~${MIN_USABLE_WIDTH}px, labels may not fit beside their icons.`;
+    }
+    if (width > MAX_USABLE_WIDTH) {
+      return `Above ~${MAX_USABLE_WIDTH}px, this reads more like a panel than a sidebar.`;
+    }
+    return undefined;
+  }
+
+  /**
    * The validation context passed to the block form's fields.
    */
   private _ctx(): ValidationCtx {
@@ -405,7 +483,7 @@ export class DashboardSidebarEditor extends LitElement {
    * through its own field rather than the selection form).
    */
   private _idForLoc(loc: string): string | null {
-    if (loc === 'footer:card') {
+    if (loc === 'footer:card' || loc === 'footer:markdown') {
       return null;
     }
     if (loc.startsWith('footer:btn:')) {
@@ -527,11 +605,11 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Whether a block still renders in the collapsed (icon-strip) sidebar: titles
-   * and cards are hidden, everything else shows.
+   * Whether a block still renders in the collapsed (icon-strip) sidebar: titles,
+   * markdown, and cards are hidden, everything else shows.
    */
   private _visibleCollapsed(block: SidebarBlock): boolean {
-    return block.type !== 'title' && block.type !== 'card';
+    return block.type !== 'title' && block.type !== 'markdown' && block.type !== 'card';
   }
 
   /**
@@ -745,12 +823,18 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Switches the footer between button and custom-component mode, keeping the
-   * divider setting.
+   * Switches the footer content mode, keeping the divider setting. Modes are
+   * mutually exclusive: buttons, a manual card, or markdown.
    */
-  private _setFooterMode(card: boolean): void {
+  private _setFooterMode(mode: 'buttons' | 'card' | 'markdown'): void {
     const divider = this._working.footer?.divider;
-    this._working.footer = card ? { card: '', divider } : { buttons: [], divider };
+    const base =
+      mode === 'card'
+        ? { card: { type: 'markdown', content: 'Card content' } as LovelaceCardConfig }
+        : mode === 'markdown'
+          ? { markdown: 'Markdown **content**' }
+          : { buttons: [] as FooterButtonConfig[] };
+    this._working.footer = { ...base, divider };
     this._touch();
   }
 
@@ -800,19 +884,21 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Sets the footer card content, parsing JSON objects.
+   * Replaces the footer's manual card config from the YAML editor.
    */
-  private _setFooterCard(value: string): void {
-    const trimmed = value.trim();
-    let card: string | LovelaceCardConfig = value;
-    if (trimmed.startsWith('{')) {
-      try {
-        card = JSON.parse(trimmed) as LovelaceCardConfig;
-      } catch {
-        card = value;
-      }
-    }
-    this._working.footer = { card, divider: this._working.footer?.divider };
+  private _setFooterCard(card: unknown): void {
+    this._working.footer = {
+      card: card as LovelaceCardConfig,
+      divider: this._working.footer?.divider,
+    };
+    this._touch();
+  }
+
+  /**
+   * Sets the footer markdown content.
+   */
+  private _setFooterMarkdown(content: string): void {
+    this._working.footer = { markdown: content, divider: this._working.footer?.divider };
     this._touch();
   }
 
@@ -961,6 +1047,7 @@ export class DashboardSidebarEditor extends LitElement {
             onBlur: (v) => this._validateField('width', v, validateWidth),
           },
           `Defaults to ${DEFAULT_WIDTH}px when left empty.`,
+          this._widthWarning(c.width),
         )}
         ${checkboxField(
           'Start Collapsed',
@@ -1059,12 +1146,20 @@ export class DashboardSidebarEditor extends LitElement {
     collapsedNote: string,
     menu: TemplateResult | typeof nothing = nothing,
   ): TemplateResult {
+    const belowBar = this._tabCollapsed
+      ? this._editorNote(collapsedNote)
+      : this._previewWidthCapped()
+        ? this._editorNote(
+            `The preview is capped to fit the editor, so it is narrower than the ` +
+              `${this._working.width ?? DEFAULT_WIDTH}px expanded width.`,
+          )
+        : nothing;
     return html`
       <div class="tab-notes">
         <p class="tab-note">${scrollNote}</p>
         ${menu}
       </div>
-      ${this._tabCollapsed ? this._editorNote(collapsedNote) : nothing}
+      ${belowBar}
     `;
   }
 
@@ -1090,17 +1185,23 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Renders the footer tab's options menu, fixed under its trigger: toggles for
-   * the top divider bar and the buttons/component mode.
+   * Renders the footer tab's options menu, fixed under its trigger: a toggle for
+   * the top divider bar and switches to the other two content modes.
    */
   private _renderTabMenu(): TemplateResult | typeof nothing {
     const rect = this._tabMenuRect;
     if (!this._tabMenuOpen || !rect || this._tab !== 'footer') {
       return nothing;
     }
-    const footer = this._working.footer;
-    const cardMode = footer?.card !== undefined;
-    const dividerShown = footer?.divider ?? true;
+    const mode = this._footerMode();
+    const dividerShown = this._working.footer?.divider ?? true;
+    const others = (
+      [
+        ['buttons', 'Buttons'],
+        ['card', 'Manual Card'],
+        ['markdown', 'Text'],
+      ] as const
+    ).filter(([m]) => m !== mode);
     return html`
       <div
         class="menu-scrim"
@@ -1118,17 +1219,35 @@ export class DashboardSidebarEditor extends LitElement {
         >
           ${dividerShown ? 'Hide' : 'Show'} Top Divider Bar
         </button>
-        <button
-          class="add-menu-item"
-          @click=${() => {
-            this._setFooterMode(!cardMode);
-            this._tabMenuOpen = false;
-          }}
-        >
-          ${cardMode ? 'Show As Buttons' : 'Show As Component'}
-        </button>
+        ${others.map(
+          ([m, label]) => html`
+            <button
+              class="add-menu-item"
+              @click=${() => {
+                this._setFooterMode(m);
+                this._tabMenuOpen = false;
+              }}
+            >
+              Show As ${label}
+            </button>
+          `,
+        )}
       </div>
     `;
+  }
+
+  /**
+   * Returns the footer's current content mode.
+   */
+  private _footerMode(): 'buttons' | 'card' | 'markdown' {
+    const footer = this._working.footer;
+    if (footer?.card !== undefined) {
+      return 'card';
+    }
+    if (footer?.markdown !== undefined) {
+      return 'markdown';
+    }
+    return 'buttons';
   }
 
   /**
@@ -1151,9 +1270,31 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Wraps preview content in the preview column: a "Preview" heading with an
-   * expand/collapse toggle, and the sidebar frame (narrowed when collapsed) so
-   * the user can see both the expanded and collapsed looks.
+   * The preview frame's inline style. In the expanded view the frame is capped
+   * to the configured sidebar width (so it matches the live width instead of
+   * stretching with the modal), and never past a fraction under half the modal.
+   */
+  private _previewFrameStyle(): string {
+    const bg = `background: ${this._working.background ?? ''};`;
+    if (this._tabCollapsed) {
+      return bg;
+    }
+    const width = this._working.width ?? DEFAULT_WIDTH;
+    return `${bg} width: min(${width}px, ${PREVIEW_CAP_PX}px, ${PREVIEW_CAP_VW}vw);`;
+  }
+
+  /**
+   * Whether the expanded preview frame is capped narrower than the configured
+   * width, so the preview does not show the full expanded width.
+   */
+  private _previewWidthCapped(): boolean {
+    const width = this._working.width ?? DEFAULT_WIDTH;
+    return width > Math.min(PREVIEW_CAP_PX, window.innerWidth * (PREVIEW_CAP_VW / 100));
+  }
+
+  /**
+   * Renders the preview column: a heading with the collapse toggle above the
+   * framed live preview content.
    */
   private _renderPreview(content: TemplateResult, column = false): TemplateResult {
     return html`
@@ -1189,7 +1330,7 @@ export class DashboardSidebarEditor extends LitElement {
         </div>
         <div
           class="pv-frame ${this._tabCollapsed ? 'collapsed' : ''} ${column ? 'pv-col' : ''}"
-          style="background: ${this._working.background ?? ''}"
+          style=${this._previewFrameStyle()}
         >
           ${content}
         </div>
@@ -1213,13 +1354,13 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderFooterTab(): TemplateResult {
     const footer = this._working.footer;
-    const cardMode = footer?.card !== undefined;
-    const empty = !cardMode && (footer?.buttons?.length ?? 0) === 0;
+    const mode = this._footerMode();
+    const empty = mode === 'buttons' && (footer?.buttons?.length ?? 0) === 0;
     const notes = this._renderTabNotes(
       'The footer is pinned to the bottom of the sidebar and does not scroll.',
-      cardMode
-        ? 'Collapsed: the footer component is hidden.'
-        : 'Collapsed: footer buttons collapse into a single menu button.',
+      mode === 'buttons'
+        ? 'Collapsed: footer buttons collapse into a single menu button.'
+        : 'Collapsed: the footer content is hidden.',
       // No options menu until the footer has content: divider/mode do not apply.
       empty ? nothing : this._renderTabMenuButton(),
     );
@@ -1228,29 +1369,50 @@ export class DashboardSidebarEditor extends LitElement {
         ${notes}
         ${this._renderEmptyState(
           this._renderAddMenu([
-            { label: 'Button', run: () => this._addFooterButton() },
-            { label: 'Component', run: () => this._setFooterMode(true) },
+            { label: 'Buttons', run: () => this._addFooterButton() },
+            { label: 'Manual Card', run: () => this._setFooterMode('card') },
+            { label: 'Text', run: () => this._setFooterMode('markdown') },
           ]),
         )}
       `;
     }
-    if (cardMode) {
+    if (mode === 'card') {
       return html`
         ${notes}
         <div class="split ${this._tabCollapsed ? 'pv-collapsed' : ''}">
           <div class="editor">
-            ${areaField(
-              'Card (markdown or JSON)',
-              typeof footer?.card === 'string'
-                ? footer.card
-                : JSON.stringify(footer?.card ?? '', null, 2),
-              (v) => this._setFooterCard(v),
-            )}
+            ${yamlField('YAML Config', footer?.card, (v) => this._setFooterCard(v))}
           </div>
           ${this._renderPreview(
             html`${this._renderGhost('up')}
             ${this._previewEl('footer-card', {
-              footer: { card: footer?.card ?? '', divider: false },
+              footer: { card: footer?.card ?? { type: 'markdown', content: '' }, divider: false },
+            })}`,
+            true,
+          )}
+        </div>
+      `;
+    }
+    if (mode === 'markdown') {
+      return html`
+        ${notes}
+        <div class="split ${this._tabCollapsed ? 'pv-collapsed' : ''}">
+          <div class="editor">
+            ${codeField(
+              'Content Template',
+              footer?.markdown,
+              (v) => this._setFooterMarkdown(v),
+              this.hass,
+              {
+                entities: true,
+                icons: true,
+              },
+            )}
+          </div>
+          ${this._renderPreview(
+            html`${this._renderGhost('up')}
+            ${this._previewEl('footer-markdown', {
+              footer: { markdown: footer?.markdown ?? '', divider: false },
             })}`,
             true,
           )}
@@ -1441,7 +1603,7 @@ export class DashboardSidebarEditor extends LitElement {
     const patch: Patch = (partial) => this._patchBlock(sel.region, sel.index, partial);
     // ItemBlock.type is optional (items in a category omit it), so default to
     // 'item' for the label of a top-level item.
-    const typeLabel = titleCase(sel.block.type ?? 'item');
+    const typeLabel = blockTypeLabel(sel.block.type ?? 'item');
     return html`
       <div class="form">
         ${this._formHeader(typeLabel)} ${blockFields(sel.block, patch, this._ctx(), this.hass)}
@@ -1536,7 +1698,7 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _typeItems(region: Region): Array<{ label: string; run: () => void }> {
     const types = region === 'header' ? ALL_TYPES : ALL_TYPES.filter((t) => t !== 'title');
-    return types.map((t) => ({ label: titleCase(t), run: () => this._addBlock(region, t) }));
+    return types.map((t) => ({ label: blockTypeLabel(t), run: () => this._addBlock(region, t) }));
   }
 
   /**
@@ -1629,7 +1791,7 @@ export class DashboardSidebarEditor extends LitElement {
     .panel {
       position: relative;
       z-index: 1;
-      width: min(640px, 94vw);
+      width: min(820px, 94vw);
       height: 75vh;
       display: flex;
       flex-direction: column;
@@ -1758,8 +1920,9 @@ export class DashboardSidebarEditor extends LitElement {
       margin-bottom: 16px;
     }
 
-    /* Two equal halves at a constant modal width; the layout never reflows when
-       the preview collapses. Stacks on mobile via the media query below. */
+    /* The editor fills the width; the preview shrinks to just the sidebar frame
+       so it never reserves half the modal. Stacks on mobile via the media query
+       below. */
     .split {
       display: flex;
       gap: 20px;
@@ -1770,14 +1933,20 @@ export class DashboardSidebarEditor extends LitElement {
 
     .editor,
     .preview {
-      flex: 1 1 0;
       min-width: 0;
       min-height: 0;
       display: flex;
       flex-direction: column;
     }
 
+    /* Shrink to the framed preview's own (capped) width. */
+    .preview {
+      flex: 0 0 auto;
+    }
+
+    /* Fill the space left of the preview. */
     .editor {
+      flex: 1 1 auto;
       gap: 10px;
       /* Scrolls independently of the preview. Inset the content on the right so
          an overlay scrollbar (macOS "show when scrolling") sits clear of the
@@ -2113,6 +2282,13 @@ export class DashboardSidebarEditor extends LitElement {
       line-height: 1.3;
     }
 
+    /* Non-blocking advisory (e.g. an out-of-range width): amber, not red. */
+    .field-warn {
+      font-size: 0.75rem;
+      line-height: 1.3;
+      color: var(--warning-color, #e8a33d);
+    }
+
     /* Format field: the label row with an info disclosure that reveals the
        supported strftime tokens in a floating list. */
     .field-head {
@@ -2261,6 +2437,16 @@ export class DashboardSidebarEditor extends LitElement {
       border-color: var(--error-color, #db4437);
     }
 
+    /* HA's YAML editor field (manual card): match the bordered input box. */
+    .yaml-field ha-yaml-editor {
+      display: block;
+      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
+      border-radius: 6px;
+      overflow: hidden;
+      --code-editor-background-color: var(--card-background-color, transparent);
+      --code-mirror-max-height: 220px;
+    }
+
     .field-error {
       color: var(--error-color, #db4437);
       font-size: 0.75rem;
@@ -2284,6 +2470,12 @@ export class DashboardSidebarEditor extends LitElement {
 
     .tab-notes .tab-note {
       flex: 1 1 auto;
+    }
+
+    /* The 28px options button must not tallen the notes row past its text, so
+       the footer notes line up with the other tabs. */
+    .tab-notes .tool {
+      margin-block: -4px;
     }
 
     .tab-note {
