@@ -20,6 +20,7 @@ import {
   formatCollapsedDate,
   formatDate,
   initials,
+  zonedDate,
 } from './lib/format';
 import { TemplateManager } from './lib/templates';
 import type {
@@ -815,17 +816,32 @@ export class DashboardSidebar extends LitElement {
    */
   private _renderClock(block: ClockBlock, collapsed: boolean, loc: string): TemplateResult {
     const style = { 'text-align': block.align ?? 'center' };
+    // `format` is either the 12/24-hour convention or a custom strftime pattern.
+    // Read legacy keys (`hour_format`, `collapsed_format`) for configs saved
+    // before the rename.
+    const legacy = block as ClockBlock & { hour_format?: string; collapsed_format?: string };
+    const raw = typeof legacy.format === 'string' ? legacy.format : '';
+    const isCustom = raw !== '' && raw !== '12h' && raw !== '24h';
+    const hour =
+      raw === '12h' || raw === '24h'
+        ? raw
+        : (legacy.hour_format ?? legacy.collapsed_format ?? '24h');
+    const twelve = hour === '12h';
+    const builtin = twelve
+      ? block.show_seconds
+        ? '%-I:%M:%S %p'
+        : '%-I:%M %p'
+      : block.show_seconds
+        ? '%H:%M:%S'
+        : '%H:%M';
+    const now = zonedDate(this._now, block.timezone ?? '');
     return html`<div
       class="clock dashboard-sidebar-clock${this._hookClass(block)}${this._selClass(loc)}"
       id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
     >
-      ${
-        collapsed
-          ? formatCollapsedClock(this._now, block.collapsed_format === '12h')
-          : formatClock(this._now, block.format ?? 'locale', this._locale)
-      }
+      ${collapsed ? formatCollapsedClock(now, twelve) : formatClock(now, isCustom ? raw : builtin, this._locale)}
     </div>`;
   }
 
@@ -834,17 +850,16 @@ export class DashboardSidebar extends LitElement {
    */
   private _renderDate(block: DateBlock, collapsed: boolean, loc: string): TemplateResult {
     const style = { 'text-align': block.align ?? 'center' };
+    const bf = typeof block.format === 'string' ? block.format : '';
+    const format = bf.trim() || 'locale';
+    const now = zonedDate(this._now, block.timezone ?? '');
     return html`<div
       class="date dashboard-sidebar-date${this._hookClass(block)}${this._selClass(loc)}"
       id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
     >
-      ${
-        collapsed
-          ? formatCollapsedDate(this._now)
-          : formatDate(this._now, block.format ?? 'locale', this._locale)
-      }
+      ${collapsed ? formatCollapsedDate(now) : formatDate(now, format, this._locale)}
     </div>`;
   }
 

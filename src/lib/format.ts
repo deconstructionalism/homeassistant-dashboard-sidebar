@@ -40,13 +40,58 @@ function dayOfYear(date: Date): number {
 }
 
 /**
+ * Returns a Date whose local fields equal the wall-clock time in `timeZone`, so
+ * the existing local-field formatters render that zone. Falls back to the input
+ * date if the zone is unknown. Time-zone name/offset tokens still reflect the
+ * system zone.
+ */
+export function zonedDate(date: Date, timeZone: string): Date {
+  if (!timeZone) {
+    return date;
+  }
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(date);
+    const get = (t: string): number => Number(parts.find((p) => p.type === t)?.value);
+    return new Date(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour'),
+      get('minute'),
+      get('second'),
+    );
+  } catch {
+    return date;
+  }
+}
+
+/**
  * Formats a date with a strftime pattern, as used by Home Assistant's
  * `now().strftime`. A leading `-` on a numeric token drops zero padding
  * (`%-d`). Month and weekday names localize; unknown tokens pass through.
  */
-export function strftime(date: Date, pattern: string, locale: string): string {
+export function strftime(
+  date: Date,
+  pattern: string,
+  locale: string,
+  allowed?: Set<string>,
+): string {
   const h12 = ((date.getHours() + 11) % 12) + 1;
   return pattern.replace(/%(-?)([A-Za-z%])/g, (match: string, dash: string, ch: string): string => {
+    // When restricted to a token set (e.g. time-only for a clock), tokens
+    // outside it render as their literal text rather than being interpreted.
+    if (allowed && !allowed.has(ch)) {
+      return match;
+    }
     /**
      * Renders a numeric field, honoring the token's zero-padding flag.
      */
@@ -137,7 +182,7 @@ export function formatClock(date: Date, format: string, locale: string): string 
   if (!format || format === 'locale') {
     return date.toLocaleTimeString(locale);
   }
-  return strftime(date, CLOCK_ALIASES[format] ?? format, locale);
+  return strftime(date, CLOCK_ALIASES[format] ?? format, locale, TIME_TOKENS);
 }
 
 /**
@@ -148,7 +193,7 @@ export function formatDate(date: Date, format: string, locale: string): string {
   if (!format || format === 'locale') {
     return date.toLocaleDateString(locale);
   }
-  return strftime(date, DATE_ALIASES[format] ?? format, locale);
+  return strftime(date, DATE_ALIASES[format] ?? format, locale, DATE_TOKENS);
 }
 
 /**

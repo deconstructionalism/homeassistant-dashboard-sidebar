@@ -24,8 +24,8 @@ export type TimeFormat = string;
  */
 export type DateFormat = string;
 
-/** Collapsed-clock rendering: 24-hour, or 12-hour with no AM/PM suffix. */
-export type CollapsedClockFormat = '12h' | '24h';
+/** Clock hour convention applied to both the expanded and collapsed views. */
+export type ClockHourFormat = '12h' | '24h';
 
 /** CSS targeting hooks shared by every block and footer button. */
 export interface BlockCommon {
@@ -52,10 +52,12 @@ export interface TitleBlock extends BlockCommon {
 export interface ClockBlock extends BlockCommon {
   /** Block discriminator. */
   type: 'clock';
-  /** Expanded clock format. See {@link TimeFormat}. */
-  format?: TimeFormat;
-  /** Clock style used while collapsed. Default 24h. */
-  collapsed_format?: CollapsedClockFormat;
+  /** `24h`/`12h` for the built-in clock, or any strftime pattern for a custom one. */
+  format?: ClockHourFormat | TimeFormat;
+  /** Show seconds in the built-in clock format. Default false. */
+  show_seconds?: boolean;
+  /** IANA time zone to render in; empty uses the system zone. */
+  timezone?: string;
   /** Horizontal alignment. Default center. */
   align?: Align;
 }
@@ -64,8 +66,10 @@ export interface ClockBlock extends BlockCommon {
 export interface DateBlock extends BlockCommon {
   /** Block discriminator. */
   type: 'date';
-  /** Expanded date format. See {@link DateFormat}. */
+  /** An strftime pattern (a preset or a custom one); empty uses the locale date. */
   format?: DateFormat;
+  /** IANA time zone to render in; empty uses the system zone. */
+  timezone?: string;
   /** Horizontal alignment. Default center. */
   align?: Align;
 }
@@ -177,7 +181,10 @@ export interface DashboardSidebarConfig {
   start_collapsed?: boolean;
   /** Hide the sidebar on narrow (mobile) viewports. */
   hide_on_mobile?: boolean;
-  /** Sidebar background: any CSS color. Defaults to the theme card background. */
+  /**
+   * Sidebar background: any CSS `background` value (color, gradient, image, …),
+   * applied as the `background` shorthand. Defaults to the theme card background.
+   */
   background?: string;
   /** Blocks pinned to the top, above the scrolling body. */
   header?: SidebarBlock[];

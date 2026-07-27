@@ -18,7 +18,7 @@ import type {
 } from '../lib/types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
-import { PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from '../lib/const';
+import { DEFAULT_WIDTH, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from '../lib/const';
 import { validateConfig } from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
 import {
@@ -141,7 +141,8 @@ export class DashboardSidebarEditor extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('config')) {
       this._working = this.config ? (structuredClone(this.config) as DashboardSidebarConfig) : {};
-      this._initialJson = JSON.stringify(this.config ?? {});
+      this._migrateConfig(this._working);
+      this._initialJson = JSON.stringify(this._working);
       this._fieldErrors = {};
       this._selected = null;
       this._confirmingClose = false;
@@ -151,6 +152,59 @@ export class DashboardSidebarEditor extends LitElement {
       this._elementMenuOpen = false;
       this._tabMenuOpen = false;
     }
+  }
+
+  /**
+   * Migrates deprecated clock/date shapes in place. A single `format` key now
+   * holds either the built-in dropdown value or a custom strftime pattern; the
+   * old `custom_format`, `hour_format`, and `collapsed_format` keys are folded
+   * into it.
+   */
+  private _migrateConfig(config: DashboardSidebarConfig): void {
+    const fixClock = (rec: Record<string, unknown>): void => {
+      const cf = typeof rec.custom_format === 'string' ? rec.custom_format.trim() : '';
+      const old = typeof rec.format === 'string' ? rec.format : '';
+      const legacyHour = rec.hour_format ?? rec.collapsed_format;
+      if (cf) {
+        rec.format = cf;
+        if (rec.show_seconds === undefined && /%S/.test(cf)) {
+          rec.show_seconds = true;
+        }
+      } else if (old.includes('%')) {
+        // Already a custom strftime pattern in `format`; leave it in place.
+        if (rec.show_seconds === undefined && /%S/.test(old)) {
+          rec.show_seconds = true;
+        }
+      } else if (old !== '12h' && old !== '24h') {
+        if (legacyHour === '12h' || legacyHour === '24h') {
+          rec.format = legacyHour;
+        } else {
+          delete rec.format;
+        }
+      }
+      delete rec.custom_format;
+      delete rec.hour_format;
+      delete rec.collapsed_format;
+    };
+    const fixDate = (rec: Record<string, unknown>): void => {
+      const cf = typeof rec.custom_format === 'string' ? rec.custom_format.trim() : '';
+      if (cf) {
+        rec.format = cf;
+      }
+      delete rec.custom_format;
+    };
+    const fix = (blocks?: SidebarBlock[]): void => {
+      blocks?.forEach((block) => {
+        const rec = block as unknown as Record<string, unknown>;
+        if (block.type === 'clock') {
+          fixClock(rec);
+        } else if (block.type === 'date') {
+          fixDate(rec);
+        }
+      });
+    };
+    fix(config.header);
+    fix(config.body);
   }
 
   /**
@@ -898,10 +952,16 @@ export class DashboardSidebarEditor extends LitElement {
           ],
           (v) => this._patchConfig({ position: v }),
         )}
-        ${intField('Expanded Width (px)', c.width, (v) => this._patchConfig({ width: v }), {
-          error: this._fieldErrors['width'],
-          onBlur: (v) => this._validateField('width', v, validateWidth),
-        })}
+        ${intField(
+          'Expanded Width (px)',
+          c.width,
+          (v) => this._patchConfig({ width: v }),
+          {
+            error: this._fieldErrors['width'],
+            onBlur: (v) => this._validateField('width', v, validateWidth),
+          },
+          `Defaults to ${DEFAULT_WIDTH}px when left empty.`,
+        )}
         ${checkboxField(
           'Start Collapsed',
           c.start_collapsed ?? false,
@@ -916,8 +976,11 @@ export class DashboardSidebarEditor extends LitElement {
           (v) => this._patchConfig({ hide_on_mobile: v || undefined }),
           'Hide the sidebar entirely on narrow (phone-width) screens.',
         )}
-        ${colorField('Background CSS Color', c.background, (v) =>
-          this._patchConfig({ background: v || undefined }),
+        ${colorField(
+          'Background CSS',
+          c.background,
+          (v) => this._patchConfig({ background: v || undefined }),
+          'Any valid CSS background, including gradients (e.g. linear-gradient(...)).',
         )}
       </section>
     `;
@@ -2050,6 +2113,81 @@ export class DashboardSidebarEditor extends LitElement {
       line-height: 1.3;
     }
 
+    /* Format field: the label row with an info disclosure that reveals the
+       supported strftime tokens in a floating list. */
+    .field-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .format-help {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .format-help > summary {
+      display: inline-flex;
+      align-items: center;
+      list-style: none;
+      cursor: pointer;
+      opacity: 0.6;
+    }
+
+    .format-help > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .format-help[open] > summary,
+    .format-help > summary:hover {
+      opacity: 1;
+    }
+
+    .format-help ha-icon {
+      --mdc-icon-size: 16px;
+    }
+
+    .format-help-pop {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: max-content;
+      max-width: 18rem;
+      max-height: 15rem;
+      overflow-y: auto;
+      padding: 8px 10px;
+      border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+      border-radius: 8px;
+      background-color: var(--primary-background-color, #fff);
+      background-image: linear-gradient(
+        var(--card-background-color, #fff),
+        var(--card-background-color, #fff)
+      );
+      box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
+
+    .format-token {
+      display: flex;
+      gap: 10px;
+    }
+
+    .format-token code {
+      flex: 0 0 auto;
+      min-width: 2.4em;
+      color: var(--primary-color, #03a9f4);
+      font-family: var(--ha-font-family-code, monospace);
+    }
+
+    .format-token span {
+      opacity: 0.85;
+    }
+
     .color-row {
       display: flex;
       align-items: center;
@@ -2084,9 +2222,28 @@ export class DashboardSidebarEditor extends LitElement {
       color: inherit;
     }
 
+    /* Match the select's height to the text inputs (native selects render
+       shorter otherwise). */
+    .field input[type='text'],
+    .field select {
+      height: 34px;
+    }
+
     .field.invalid input[type='text'],
     .field.invalid textarea {
       border-color: var(--error-color, #db4437);
+    }
+
+    /* Clearly show a disabled control (e.g. Format while a custom format is set). */
+    .field select:disabled,
+    .field input:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: var(--divider-color, rgb(0 0 0 / 6%));
+    }
+
+    .field-inline input:disabled ~ .check-label {
+      opacity: 0.4;
     }
 
     /* HA's code editor field: wrap it in the same bordered box as the other

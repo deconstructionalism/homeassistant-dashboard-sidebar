@@ -1,11 +1,4 @@
-import { DATE_TOKENS, TIME_TOKENS, invalidToken } from './format';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
-
-/** Clock-format aliases accepted in place of a strftime pattern. */
-const CLOCK_ALIASES = ['iso', '24h', '12h', 'locale'];
-
-/** Date-format aliases accepted in place of a strftime pattern. */
-const DATE_ALIASES = ['iso', 'locale'];
 
 /** Accepted alignment values. */
 const ALIGNS = ['left', 'center', 'right'];
@@ -29,8 +22,17 @@ const COMMON = ['class', 'id'];
 /** Recognized block types, and the keys each one accepts. */
 const BLOCK_KEYS: Record<string, Set<string>> = {
   title: new Set(['type', 'text', 'align', ...COMMON]),
-  clock: new Set(['type', 'format', 'collapsed_format', 'align', ...COMMON]),
-  date: new Set(['type', 'format', 'align', ...COMMON]),
+  clock: new Set([
+    'type',
+    'format',
+    'show_seconds',
+    'timezone',
+    'hour_format',
+    'collapsed_format',
+    'align',
+    ...COMMON,
+  ]),
+  date: new Set(['type', 'format', 'timezone', 'align', ...COMMON]),
   divider: new Set(['type', ...COMMON]),
   item: new Set([
     'type',
@@ -129,33 +131,6 @@ function checkHooks(block: unknown, ctx: string, errors: string[]): void {
 }
 
 /**
- * Records an error when a clock or date format uses a token outside its domain.
- */
-function checkFormat(
-  value: unknown,
-  aliases: string[],
-  tokens: Set<string>,
-  kind: string,
-  ctx: string,
-  errors: string[],
-): void {
-  if (value === undefined) {
-    return;
-  }
-  if (typeof value !== 'string') {
-    errors.push(`${ctx}: must be a string`);
-    return;
-  }
-  if (aliases.includes(value)) {
-    return;
-  }
-  const bad = invalidToken(value, tokens);
-  if (bad) {
-    errors.push(`${ctx}: only allows ${kind} tokens, not ${bad}`);
-  }
-}
-
-/**
  * Validates a single item spec: known keys, a title, and a tap_action.
  */
 function validateItem(item: ItemBlock, ctx: string, errors: string[]): void {
@@ -198,34 +173,24 @@ function validateBlock(block: SidebarBlock, ctx: string, errors: string[]): void
       }
       checkAlign((block as { align?: unknown }).align, `${ctx}.align`, errors);
       break;
-    case 'clock':
-      checkFormat(
-        (block as { format?: unknown }).format,
-        CLOCK_ALIASES,
-        TIME_TOKENS,
-        'time',
-        `${ctx}.format`,
-        errors,
-      );
-      if (
-        (block as { collapsed_format?: unknown }).collapsed_format !== undefined &&
-        !['12h', '24h'].includes(String((block as { collapsed_format?: unknown }).collapsed_format))
-      ) {
-        errors.push(`${ctx}.collapsed_format: must be "12h" or "24h"`);
+    case 'clock': {
+      const rec = block as unknown as Record<string, unknown>;
+      // format accepts a 12h/24h convention or any strftime pattern; unknown
+      // tokens render literally, so they are not validated for token type.
+      for (const key of ['hour_format', 'collapsed_format'] as const) {
+        const val = rec[key];
+        if (val !== undefined && !['12h', '24h'].includes(String(val))) {
+          errors.push(`${ctx}.${key}: must be "12h" or "24h"`);
+        }
       }
-      checkAlign((block as { align?: unknown }).align, `${ctx}.align`, errors);
+      checkAlign(rec.align, `${ctx}.align`, errors);
       break;
-    case 'date':
-      checkFormat(
-        (block as { format?: unknown }).format,
-        DATE_ALIASES,
-        DATE_TOKENS,
-        'date',
-        `${ctx}.format`,
-        errors,
-      );
-      checkAlign((block as { align?: unknown }).align, `${ctx}.align`, errors);
+    }
+    case 'date': {
+      const rec = block as unknown as Record<string, unknown>;
+      checkAlign(rec.align, `${ctx}.align`, errors);
       break;
+    }
     case 'divider':
       break;
     case 'item':
