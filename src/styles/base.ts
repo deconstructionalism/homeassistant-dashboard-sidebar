@@ -38,12 +38,46 @@ export const baseStyles = css`
     /* Keep the real horizontal inset so content sits where it will in the live
        sidebar, but no vertical padding so stacked previews stay compact. */
     padding: 0 12px;
-    pointer-events: none;
   }
 
   /* Collapsed preview sits in a narrow icon-strip frame, so drop the inset. */
   :host([preview]) .sidebar.collapsed {
     padding: 0;
+  }
+
+  /* Every element in a preview is clickable to select and draggable to reorder,
+     so show a pointer and mark the selected one with an outline. */
+  :host([preview]) .row,
+  :host([preview]) .app-title,
+  :host([preview]) .clock,
+  :host([preview]) .date,
+  :host([preview]) .entry-divider,
+  :host([preview]) .content,
+  :host([preview]) .footer-btn {
+    cursor: pointer;
+  }
+
+  /* Give the divider a taller hit area so it can be selected and dragged, while
+     the visible line stays 1px like live: the vertical margin becomes padding
+     (same footprint) and the background paints only the 1px content strip. */
+  :host([preview]) .entry-divider {
+    box-sizing: content-box;
+    min-height: 1px;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    background-clip: content-box;
+  }
+
+  :host([preview]) .sb-selected {
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: 1px;
+    border-radius: 8px;
+  }
+
+  :host([preview]) .sortable-ghost {
+    opacity: 0.4;
   }
 
   :host([preview]) .region-header {
