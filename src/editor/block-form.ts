@@ -1,3 +1,4 @@
+import type { HomeAssistant } from 'custom-card-helpers';
 import { html, nothing, type TemplateResult } from 'lit';
 
 import { DATE_TOKENS, TIME_TOKENS, invalidToken } from '../lib/format';
@@ -141,6 +142,50 @@ export function textField(
     />
     ${opts?.error ? html`<span class="field-error">${opts.error}</span>` : nothing}
   </label>`;
+}
+
+/**
+ * Renders a field backed by Home Assistant's `<ha-code-editor>` (CodeMirror)
+ * when it and `hass` are available, giving inline autocomplete for Jinja
+ * template helpers, entity ids, and/or mdi icons. Falls back to a plain text
+ * input otherwise (e.g. outside HA, or in tests).
+ */
+export function codeField(
+  label: string,
+  value: string | undefined,
+  onInput: (value: string) => void,
+  hass?: HomeAssistant,
+  opts?: { mode?: string; entities?: boolean; icons?: boolean; error?: string },
+): TemplateResult {
+  if (hass && customElements.get('ha-code-editor')) {
+    return html`<div class="field code-field ${opts?.error ? 'invalid' : ''}">
+      <span>${label}</span>
+      <ha-code-editor
+        .hass=${hass}
+        .value=${value ?? ''}
+        .mode=${opts?.mode ?? 'jinja2'}
+        .autocompleteEntities=${opts?.entities ?? false}
+        .autocompleteIcons=${opts?.icons ?? false}
+        dir="ltr"
+        @value-changed=${(e: CustomEvent<{ value: string }>) => onInput(e.detail.value)}
+      ></ha-code-editor>
+      ${opts?.error ? html`<span class="field-error">${opts.error}</span>` : nothing}
+    </div>`;
+  }
+  return textField(label, value, onInput, opts?.error ? { error: opts.error } : undefined);
+}
+
+/**
+ * Renders an icon field: a code editor with mdi-icon (and template) autocomplete
+ * when available, else a plain text input.
+ */
+export function iconField(
+  label: string,
+  value: string | undefined,
+  onInput: (value: string) => void,
+  hass?: HomeAssistant,
+): TemplateResult {
+  return codeField(label, value, onInput, hass, { icons: true });
 }
 
 /**
@@ -335,6 +380,7 @@ export function actionFields(
   },
   patch: Patch,
   ctx?: ValidationCtx,
+  hass?: HomeAssistant,
 ): TemplateResult {
   const kind = action?.action ?? 'none';
   const set = (partial: Record<string, unknown>): void =>
@@ -351,7 +397,9 @@ export function actionFields(
     ${kind === 'url' ? textField('URL', action.url_path, (v) => set({ url_path: v })) : nothing}
     ${
       kind === 'toggle' || kind === 'more-info'
-        ? textField('Entity', action.entity, (v) => set({ entity: v || undefined }))
+        ? codeField('Entity', action.entity, (v) => set({ entity: v || undefined }), hass, {
+            entities: true,
+          })
         : nothing
     }
     ${
@@ -363,7 +411,15 @@ export function actionFields(
               (v) => set({ service: v }),
               fieldOpts(ctx, 'service', validateService),
             )}
-            ${textField('Target entity', action.entity, (v) => set({ entity: v || undefined }))}
+            ${codeField(
+              'Target entity',
+              action.entity,
+              (v) => set({ entity: v || undefined }),
+              hass,
+              {
+                entities: true,
+              },
+            )}
             ${areaField(
               'Service data (JSON)',
               action.data ? JSON.stringify(action.data, null, 2) : '',
@@ -383,12 +439,18 @@ export function footerButtonFields(
   btn: { icon?: string; title?: string; entity?: string; tap_action?: { action?: string } },
   patch: Patch,
   ctx?: ValidationCtx,
+  hass?: HomeAssistant,
 ): TemplateResult {
   return html`
-    ${textField('Icon (mdi:...)', btn.icon, (v) => patch({ icon: v }))}
-    ${textField('Title', btn.title, (v) => patch({ title: v || undefined }))}
-    ${textField('Entity', btn.entity, (v) => patch({ entity: v || undefined }))}
-    ${actionFields(btn.tap_action ?? {}, patch, ctx)}
+    ${iconField('Icon', btn.icon, (v) => patch({ icon: v }), hass)}
+    ${codeField('Title', btn.title, (v) => patch({ title: v || undefined }), hass, {
+      entities: true,
+      icons: true,
+    })}
+    ${codeField('Entity', btn.entity, (v) => patch({ entity: v || undefined }), hass, {
+      entities: true,
+    })}
+    ${actionFields(btn.tap_action ?? {}, patch, ctx, hass)}
   `;
 }
 
@@ -423,19 +485,28 @@ export function blockFields(
   block: SidebarBlock,
   patch: Patch,
   ctx?: ValidationCtx,
+  hass?: HomeAssistant,
 ): TemplateResult {
   const withAbbr = block.type === 'item' || block.type === 'category';
-  return html`${blockTypeFields(block, patch, ctx)}${advancedFields(block, patch, withAbbr)}`;
+  return html`${blockTypeFields(block, patch, ctx, hass)}${advancedFields(block, patch, withAbbr)}`;
 }
 
 /**
  * Renders the type-specific fields for one block.
  */
-function blockTypeFields(block: SidebarBlock, patch: Patch, ctx?: ValidationCtx): TemplateResult {
+function blockTypeFields(
+  block: SidebarBlock,
+  patch: Patch,
+  ctx?: ValidationCtx,
+  hass?: HomeAssistant,
+): TemplateResult {
   switch (block.type) {
     case 'title':
       return html`
-        ${textField('Text', block.text, (v) => patch({ text: v }))}
+        ${codeField('Text', block.text, (v) => patch({ text: v }), hass, {
+          entities: true,
+          icons: true,
+        })}
         ${selectField('Align', block.align, ALIGN_OPTIONS, (v) => patch({ align: v }))}
       `;
     case 'clock':
@@ -465,15 +536,23 @@ function blockTypeFields(block: SidebarBlock, patch: Patch, ctx?: ValidationCtx)
       return html`<p class="hint">A horizontal rule. No options.</p>`;
     case 'item':
       return html`
-        ${textField('Title', block.title, (v) => patch({ title: v }))}
-        ${textField('Icon (mdi:...)', block.icon, (v) => patch({ icon: v || undefined }))}
-        ${textField('Entity', block.entity, (v) => patch({ entity: v || undefined }))}
-        ${actionFields(block.tap_action as { action?: string }, patch, ctx)}
+        ${codeField('Title', block.title, (v) => patch({ title: v }), hass, {
+          entities: true,
+          icons: true,
+        })}
+        ${iconField('Icon', block.icon, (v) => patch({ icon: v || undefined }), hass)}
+        ${codeField('Entity', block.entity, (v) => patch({ entity: v || undefined }), hass, {
+          entities: true,
+        })}
+        ${actionFields(block.tap_action as { action?: string }, patch, ctx, hass)}
       `;
     case 'category':
       return html`
-        ${textField('Title', block.title, (v) => patch({ title: v }))}
-        ${textField('Icon (mdi:...)', block.icon, (v) => patch({ icon: v || undefined }))}
+        ${codeField('Title', block.title, (v) => patch({ title: v }), hass, {
+          entities: true,
+          icons: true,
+        })}
+        ${iconField('Icon', block.icon, (v) => patch({ icon: v || undefined }), hass)}
         ${checkboxField('Start collapsed', block.start_collapsed ?? true, (v) =>
           patch({ start_collapsed: v }),
         )}

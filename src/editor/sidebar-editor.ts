@@ -129,6 +129,12 @@ export class DashboardSidebarEditor extends LitElement {
   /** Last config serialized into each preview, to skip redundant rebuilds. */
   private readonly _previewCfg = new WeakMap<DashboardSidebar, string>();
 
+  /** Code editors already stripped of their gutter and toolbar chrome. */
+  private readonly _compactedEditors = new WeakSet<HTMLElement>();
+
+  /** Whether a retry to compact not-yet-ready code editors is pending. */
+  private _compactScheduled = false;
+
   /**
    * Clones the incoming config into the working copy.
    */
@@ -144,6 +150,91 @@ export class DashboardSidebarEditor extends LitElement {
       this._addMenuOpen = false;
       this._elementMenuOpen = false;
       this._tabMenuOpen = false;
+    }
+  }
+
+  /**
+   * Preloads Home Assistant's code editor so the fields can use it.
+   */
+  protected firstUpdated(): void {
+    void this._ensureCodeEditor();
+  }
+
+  /**
+   * After each render, strips the line-number gutter and action toolbar from
+   * any code-editor field so it reads as a compact input.
+   */
+  protected updated(): void {
+    this._compactEditors();
+  }
+
+  /**
+   * Reaches into each code editor's shadow DOM to hide its gutter (line numbers)
+   * and any chrome rendered above the editor (the action toolbar), retrying on
+   * the next frame while CodeMirror is still loading.
+   */
+  private _compactEditors(): void {
+    let retry = false;
+    this.renderRoot
+      .querySelectorAll<HTMLElement & { shadowRoot: ShadowRoot | null }>(
+        '.code-field ha-code-editor',
+      )
+      .forEach((ed) => {
+        if (this._compactedEditors.has(ed)) {
+          return;
+        }
+        if (!ed.shadowRoot?.querySelector('.cm-editor')) {
+          retry = true;
+          return;
+        }
+        this._compactedEditors.add(ed);
+        const style = document.createElement('style');
+        // Hide the line-number gutter and the action toolbar (which sits in the
+        // editor's top padding), drop the padding and the toolbar's separator
+        // border so the code sits flush like a plain input.
+        style.textContent =
+          '.cm-gutters{display:none!important}' +
+          '.cm-panels{display:none!important}' +
+          '.code-editor-toolbar{display:none!important}' +
+          '.cm-editor{padding-top:0!important}' +
+          '.cm-scroller{padding-top:0!important}' +
+          '.cm-content{border-top-style:none!important}' +
+          '.cm-activeLine{background-color:transparent!important}';
+        ed.shadowRoot.appendChild(style);
+      });
+    if (retry && !this._compactScheduled) {
+      this._compactScheduled = true;
+      requestAnimationFrame(() => {
+        this._compactScheduled = false;
+        this._compactEditors();
+      });
+    }
+  }
+
+  /**
+   * Best-effort load of `<ha-code-editor>` (lazily registered by HA's own card
+   * editors) by pulling in the markdown-card config element, then re-renders so
+   * the fields upgrade from the plain-input fallback to the code editor.
+   */
+  private async _ensureCodeEditor(): Promise<void> {
+    if (customElements.get('ha-code-editor')) {
+      return;
+    }
+    try {
+      const helpers = await (
+        window as unknown as { loadCardHelpers?: () => Promise<Record<string, unknown>> }
+      ).loadCardHelpers?.();
+      const card = (
+        helpers as { createCardElement?: (c: unknown) => HTMLElement } | undefined
+      )?.createCardElement?.({ type: 'markdown', content: '' });
+      await (
+        card?.constructor as { getConfigElement?: () => Promise<unknown> } | undefined
+      )?.getConfigElement?.();
+    } catch {
+      // Could not preload the editor; fields keep the text-input fallback.
+    }
+    if (customElements.get('ha-code-editor')) {
+      this.requestUpdate();
     }
   }
 
@@ -954,10 +1045,7 @@ export class DashboardSidebarEditor extends LitElement {
           this._tabMenuOpen = false;
         }}
       ></div>
-      <div
-        class="add-menu"
-        style="top: ${rect.bottom + 4}px; right: ${Math.max(8, window.innerWidth - rect.right)}px"
-      >
+      <div class="add-menu" style=${this._menuStyle(rect, 'right')}>
         <button
           class="add-menu-item"
           @click=${() => {
@@ -1186,10 +1274,7 @@ export class DashboardSidebarEditor extends LitElement {
           this._elementMenuOpen = false;
         }}
       ></div>
-      <div
-        class="add-menu"
-        style="top: ${rect.bottom + 4}px; right: ${Math.max(8, window.innerWidth - rect.right)}px"
-      >
+      <div class="add-menu" style=${this._menuStyle(rect, 'right')}>
         ${this._renderElementMenuItems(category)}
       </div>
     `;
@@ -1251,6 +1336,7 @@ export class DashboardSidebarEditor extends LitElement {
             sel.btn,
             (partial) => this._patchFooterButton(sel.index, partial),
             this._ctx(),
+            this.hass,
           )}
           <button class="add-btn" @click=${() => this._addFooterButton()}>
             ＋ Add Button Next
@@ -1273,7 +1359,7 @@ export class DashboardSidebarEditor extends LitElement {
       return html`
         <div class="form">
           ${this._formHeader('Item')}
-          ${blockFields({ ...sel.item, type: 'item' }, patch, this._ctx())}
+          ${blockFields({ ...sel.item, type: 'item' }, patch, this._ctx(), this.hass)}
           <button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
             ＋ Add Sub-Item Below
           </button>
@@ -1290,9 +1376,12 @@ export class DashboardSidebarEditor extends LitElement {
       `;
     }
     const patch: Patch = (partial) => this._patchBlock(sel.region, sel.index, partial);
+    // ItemBlock.type is optional (items in a category omit it), so default to
+    // 'item' for the label of a top-level item.
+    const typeLabel = titleCase(sel.block.type ?? 'item');
     return html`
       <div class="form">
-        ${this._formHeader(titleCase(sel.block.type))} ${blockFields(sel.block, patch, this._ctx())}
+        ${this._formHeader(typeLabel)} ${blockFields(sel.block, patch, this._ctx(), this.hass)}
         ${
           sel.block.type === 'category'
             ? html`<button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
@@ -1308,7 +1397,7 @@ export class DashboardSidebarEditor extends LitElement {
             this._selected = null;
           }}
         >
-          Delete ${titleCase(sel.block.type)}
+          Delete ${typeLabel}
         </button>
       </div>
     `;
@@ -1388,7 +1477,29 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Renders the add menu, fixed-positioned under its trigger so it escapes the
+   * Fixed-position style for a menu anchored to a trigger rect: drops below the
+   * trigger, or flips above it when there is more room up, and caps its height
+   * to the available space (the menu scrolls internally past that). `align`
+   * pins the menu's left or right edge to the trigger.
+   */
+  private _menuStyle(rect: DOMRect, align: 'left' | 'right'): string {
+    const margin = 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const below = spaceBelow >= spaceAbove;
+    const maxHeight = Math.max(120, (below ? spaceBelow : spaceAbove) - margin - 4);
+    const vertical = below
+      ? `top: ${rect.bottom + 4}px`
+      : `bottom: ${window.innerHeight - rect.top + 4}px`;
+    const horizontal =
+      align === 'right'
+        ? `right: ${Math.max(margin, window.innerWidth - rect.right)}px`
+        : `left: ${Math.max(margin, rect.left)}px`;
+    return `${vertical}; ${horizontal}; max-height: ${maxHeight}px`;
+  }
+
+  /**
+   * Renders the add menu, fixed-positioned near its trigger so it escapes the
    * modal's clipping.
    */
   private _renderAddMenuPopup(): TemplateResult | typeof nothing {
@@ -1403,7 +1514,7 @@ export class DashboardSidebarEditor extends LitElement {
           this._addMenuOpen = false;
         }}
       ></div>
-      <div class="add-menu" style="top: ${rect.bottom + 4}px; left: ${Math.max(8, rect.left)}px">
+      <div class="add-menu" style=${this._menuStyle(rect, 'left')}>
         ${this._addMenuItems.map(
           (item) =>
             html`<button
@@ -1975,6 +2086,21 @@ export class DashboardSidebarEditor extends LitElement {
 
     .field.invalid input[type='text'],
     .field.invalid textarea {
+      border-color: var(--error-color, #db4437);
+    }
+
+    /* HA's code editor field: wrap it in the same bordered box as the other
+       inputs. Keep overflow visible so the CodeMirror autocomplete popup is not
+       clipped by the field box. */
+    .code-field ha-code-editor {
+      display: block;
+      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
+      border-radius: 6px;
+      --code-editor-background-color: var(--card-background-color, transparent);
+      --code-mirror-max-height: 160px;
+    }
+
+    .code-field.invalid ha-code-editor {
       border-color: var(--error-color, #db4437);
     }
 
