@@ -6,6 +6,7 @@ import {
 } from 'custom-card-helpers';
 import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 
 import type {
   BlockType,
@@ -33,10 +34,13 @@ import {
   checkboxField,
   codeField,
   colorField,
+  entityDatalist,
   footerButtonFields,
   iconChoiceField,
   intField,
   type Patch,
+  serviceDatalist,
+  TEMPLATE_HINT,
   type ValidationCtx,
   validateWidth,
   yamlField,
@@ -182,34 +186,44 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Migrates deprecated clock/date shapes in place. A single `format` key now
-   * holds either the built-in dropdown value or a custom strftime pattern; the
-   * old `custom_format`, `hour_format`, and `collapsed_format` keys are folded
-   * into it.
+   * Migrates deprecated clock/date shapes in place. The clock's single `format`
+   * key now holds an strftime pattern; the old `custom_format`, `show_seconds`,
+   * `hour_format`, `collapsed_format`, and the `12h`/`24h` conventions are folded
+   * into a pattern.
    */
   private _migrateConfig(config: DashboardSidebarConfig): void {
     const fixClock = (rec: Record<string, unknown>): void => {
       const cf = typeof rec.custom_format === 'string' ? rec.custom_format.trim() : '';
-      const old = typeof rec.format === 'string' ? rec.format : '';
+      const old = typeof rec.format === 'string' ? rec.format.trim() : '';
       const legacyHour = rec.hour_format ?? rec.collapsed_format;
+      const seconds = rec.show_seconds === true;
+      let pattern = '';
       if (cf) {
-        rec.format = cf;
-        if (rec.show_seconds === undefined && /%S/.test(cf)) {
-          rec.show_seconds = true;
-        }
+        pattern = cf;
       } else if (old.includes('%')) {
-        // Already a custom strftime pattern in `format`; leave it in place.
-        if (rec.show_seconds === undefined && /%S/.test(old)) {
-          rec.show_seconds = true;
-        }
-      } else if (old !== '12h' && old !== '24h') {
-        if (legacyHour === '12h' || legacyHour === '24h') {
-          rec.format = legacyHour;
-        } else {
-          delete rec.format;
+        pattern = old;
+      } else {
+        const hour =
+          old === '12h' || old === '24h'
+            ? old
+            : legacyHour === '12h' || legacyHour === '24h'
+              ? legacyHour
+              : '';
+        if (hour === '12h') {
+          pattern = seconds ? '%-I:%M:%S %p' : '%-I:%M %p';
+        } else if (hour === '24h') {
+          pattern = seconds ? '%H:%M:%S' : '%H:%M';
+        } else if (seconds) {
+          pattern = '%H:%M:%S';
         }
       }
+      if (pattern) {
+        rec.format = pattern;
+      } else {
+        delete rec.format;
+      }
       delete rec.custom_format;
+      delete rec.show_seconds;
       delete rec.hour_format;
       delete rec.collapsed_format;
     };
@@ -259,9 +273,37 @@ export class DashboardSidebarEditor extends LitElement {
    */
   protected firstUpdated(): void {
     void this._ensureCodeEditor();
+    // The YAML editor is lazily registered by HA; re-render once it defines so
+    // the manual-card field upgrades from its textarea fallback.
     if (!customElements.get('ha-yaml-editor')) {
       void customElements.whenDefined('ha-yaml-editor').then(() => this.requestUpdate());
     }
+    this._loadServiceTranslations();
+  }
+
+  /**
+   * Service names/descriptions live in HA's lazily-loaded `services` translation
+   * category, not on the registry. Load them and fold the resulting localize
+   * into `hass` so the service fields can show descriptions.
+   */
+  private _loadServiceTranslations(): void {
+    const load = (
+      this.hass as unknown as {
+        loadBackendTranslation?: (category: string) => Promise<unknown>;
+      }
+    )?.loadBackendTranslation;
+    if (typeof load !== 'function') {
+      return;
+    }
+    void Promise.resolve(load.call(this.hass, 'services'))
+      .then((localize) => {
+        if (this.hass && typeof localize === 'function') {
+          this.hass = { ...this.hass, localize: localize as HomeAssistant['localize'] };
+        }
+      })
+      .catch(() => {
+        // Translations could not be loaded; fields fall back to registry values.
+      });
   }
 
   /**
@@ -926,12 +968,30 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * Renders the shared entity and service `<datalist>`s that the native
+   * autocomplete inputs reference. Guarded on the entity/service counts so the
+   * (potentially large) option lists are not rebuilt on every keystroke.
+   */
+  private _renderDatalists(): TemplateResult {
+    const states = this.hass?.states ?? {};
+    const services = this.hass?.services ?? {};
+    const sig = `${Object.keys(states).length}:${Object.keys(services).length}`;
+    // Include the localize identity so the service labels rebuild once the
+    // service translations load (which replaces hass without changing counts).
+    return html`${guard(
+      [sig, this.hass?.localize],
+      () => html`${entityDatalist(this.hass)}${serviceDatalist(this.hass)}`,
+    )}`;
+  }
+
+  /**
    * Renders the modal shell: the three sections, errors, and actions.
    */
   protected render(): TemplateResult {
     return html`
       <div class="backdrop" @click=${this._close}></div>
       <div class="panel" role="dialog" aria-label="Edit Dashboard Sidebar">
+        ${this._renderDatalists()}
         <header>
           <h2>Edit Dashboard Sidebar</h2>
           <button class="icon" title="Close" @click=${this._close}>✕</button>
@@ -1406,6 +1466,7 @@ export class DashboardSidebarEditor extends LitElement {
               {
                 entities: true,
                 icons: true,
+                description: TEMPLATE_HINT,
               },
             )}
           </div>
@@ -1563,9 +1624,7 @@ export class DashboardSidebarEditor extends LitElement {
             this._ctx(),
             this.hass,
           )}
-          <button class="add-btn" @click=${() => this._addFooterButton()}>
-            ＋ Add Button Next
-          </button>
+          <button class="add-btn" @click=${() => this._addFooterButton()}>Add Button Next</button>
           <button
             class="add-btn danger"
             @click=${() => {
@@ -1586,7 +1645,7 @@ export class DashboardSidebarEditor extends LitElement {
           ${this._formHeader('Item')}
           ${blockFields({ ...sel.item, type: 'item' }, patch, this._ctx(), this.hass)}
           <button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
-            ＋ Add Sub-Item Below
+            Add Child Element
           </button>
           <button
             class="add-btn danger"
@@ -1610,11 +1669,11 @@ export class DashboardSidebarEditor extends LitElement {
         ${
           sel.block.type === 'category'
             ? html`<button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
-                ＋ Add Sub-Item Below
+                Add Child Element
               </button>`
             : nothing
         }
-        ${this._renderAddMenu(this._typeItems(sel.region), '＋ Add Element Below', true)}
+        ${this._renderAddMenu(this._typeItems(sel.region), 'Add Element After', true)}
         <button
           class="add-btn danger"
           @click=${() => {
@@ -2282,6 +2341,62 @@ export class DashboardSidebarEditor extends LitElement {
       line-height: 1.3;
     }
 
+    /* A resolved entity/service replaces the input with a card: the id over its
+       friendly name, and a clear button. Matches the inputs' bordered box. */
+    .field-picked {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-sizing: border-box;
+      width: 100%;
+      /* Left/right padding matches the inputs (8px) so the text left-aligns with
+         other fields and the clear button lines up with the select arrows. */
+      padding: 8px;
+      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
+      border-radius: 6px;
+      background: var(--card-background-color, #fff);
+    }
+
+    .field-picked-text {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .field-picked-id,
+    .field-picked-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .field-picked-name {
+      font-size: 0.8rem;
+      color: var(--secondary-text-color, #666);
+    }
+
+    .field-picked-clear {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--primary-text-color, #000);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .field-picked-clear:hover {
+      background: var(--secondary-background-color, rgb(0 0 0 / 8%));
+    }
+
     /* Non-blocking advisory (e.g. an out-of-range width): amber, not red. */
     .field-warn {
       font-size: 0.75rem;
@@ -2396,6 +2511,19 @@ export class DashboardSidebarEditor extends LitElement {
       border-radius: 6px;
       background: var(--card-background-color, #fff);
       color: inherit;
+    }
+
+    /* Monospace variant for code-ish content (e.g. Service Data JSON). */
+    .field textarea.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.4;
+    }
+
+    /* Grow to fit the content, with the rows attribute as the minimum. */
+    .field textarea.autosize {
+      /* stylelint-disable-next-line property-no-unknown */
+      field-sizing: content;
+      resize: none;
     }
 
     /* Match the select's height to the text inputs (native selects render
@@ -2518,26 +2646,34 @@ export class DashboardSidebarEditor extends LitElement {
       cursor: pointer;
     }
 
-    /* Normal (solid) form action buttons: add-below, add sub-item, delete. */
+    /* Solid (filled) form action buttons: add-after, add child, delete. */
     .add-btn,
     .add.solid {
       font: inherit;
       margin-top: 4px;
       padding: 8px 12px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 25%));
+      border: 1px solid transparent;
       border-radius: 8px;
-      background: transparent;
+      /* A tint of the text color reads as a solid button in both light and dark
+         themes, unlike the near-invisible secondary background. */
+      background: color-mix(in srgb, var(--primary-text-color, #000) 14%, transparent);
       color: inherit;
       cursor: pointer;
     }
 
     .add-btn:hover,
     .add.solid:hover {
-      background: var(--secondary-background-color, rgb(0 0 0 / 6%));
+      background: color-mix(in srgb, var(--primary-text-color, #000) 24%, transparent);
+    }
+
+    /* Delete is a solid red button. */
+    .add-btn.danger {
+      background: var(--error-color, #db4437);
+      color: var(--text-primary-color, #fff);
     }
 
     .add-btn.danger:hover {
-      background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+      background: color-mix(in srgb, var(--error-color, #db4437) 85%, #000);
     }
 
     .errors {
@@ -2558,11 +2694,15 @@ export class DashboardSidebarEditor extends LitElement {
     footer button {
       font: inherit;
       padding: 8px 16px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
+      border: 1px solid transparent;
       border-radius: 8px;
-      background: transparent;
+      background: color-mix(in srgb, var(--primary-text-color, #000) 14%, transparent);
       color: inherit;
       cursor: pointer;
+    }
+
+    footer button:not(.primary):hover {
+      background: color-mix(in srgb, var(--primary-text-color, #000) 24%, transparent);
     }
 
     .primary {

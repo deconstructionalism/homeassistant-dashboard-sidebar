@@ -46,20 +46,25 @@ export interface TitleBlock extends BlockCommon {
   text: MaybeTemplate;
   /** Horizontal alignment. Default center. */
   align?: Align;
+  /** Optional action performed when tapped. Not templatable. */
+  tap_action?: ActionConfig;
 }
 
 /** A digital clock block. */
 export interface ClockBlock extends BlockCommon {
   /** Block discriminator. */
   type: 'clock';
-  /** `24h`/`12h` for the built-in clock, or any strftime pattern for a custom one. */
-  format?: ClockHourFormat | TimeFormat;
-  /** Show seconds in the built-in clock format. Default false. */
-  show_seconds?: boolean;
+  /**
+   * An strftime pattern for the time. One of the presets (`%-I:%M %p`, `%H:%M`,
+   * `%-I:%M:%S %p`, `%H:%M:%S`) or any custom pattern. Empty defaults to `%H:%M`.
+   */
+  format?: TimeFormat;
   /** IANA time zone to render in; empty uses the system zone. */
   timezone?: string;
   /** Horizontal alignment. Default center. */
   align?: Align;
+  /** Optional action performed when tapped. Not templatable. */
+  tap_action?: ActionConfig;
 }
 
 /** A date block. */
@@ -72,6 +77,8 @@ export interface DateBlock extends BlockCommon {
   timezone?: string;
   /** Horizontal alignment. Default center. */
   align?: Align;
+  /** Optional action performed when tapped. Not templatable. */
+  tap_action?: ActionConfig;
 }
 
 /** A horizontal rule block. */
