@@ -372,7 +372,11 @@ export class DashboardSidebarEditor extends LitElement {
         '.code-editor-toolbar{display:none!important}' +
         '.cm-editor{padding-top:0!important}' +
         '.cm-scroller{padding-top:0!important}' +
-        '.cm-content{border-top-style:none!important;padding:8px 0!important}' +
+        // Append color-emoji fonts so astral-plane emoji (no glyph in the mono
+        // code font) fall back to real emoji instead of tofu boxes.
+        '.cm-content{border-top-style:none!important;padding:8px 0!important;' +
+        'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",' +
+        'monospace,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"!important}' +
         '.cm-activeLine{background-color:transparent!important}' +
         fill;
       ed.shadowRoot.appendChild(style);
@@ -2140,8 +2144,18 @@ export class DashboardSidebarEditor extends LitElement {
       border-color: transparent;
     }
 
-    /* When open, space the fields inside the section like the top-level form. */
+    /* When open, space the fields inside the section like the top-level form.
+       In browsers that wrap the content in ::details-content, the fields are
+       inside that box, so it must carry the gap too (the details-level flex
+       there only spaces the summary from the content box). */
     .advanced[open] {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
+    .advanced[open]::details-content {
       display: flex;
       flex-direction: column;
       gap: 10px;
