@@ -186,13 +186,59 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(saved?.body?.[0]?.type).to.equal('category');
   });
 
-  it('opens the selected element overflow menu', async () => {
+  it('opens the selected element overflow menu with the YAML toggle', async () => {
     const el = await mount(cfg());
     await tab(el, 'Content');
     await clickLoc(el, 'body:0');
     (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(root(el).querySelector('.add-menu .menu-empty')).to.exist;
+    const labels = [...root(el).querySelectorAll('.add-menu .add-menu-item')].map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels).to.include('Edit As YAML');
+  });
+
+  it('toggles an element between the UI form and a YAML editor', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Content');
+    await clickLoc(el, 'body:0');
+    const openMenu = (): void =>
+      (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
+    const yamlItem = (): HTMLButtonElement | undefined =>
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        /Edit (As YAML|With UI)/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement | undefined;
+    // Switch to YAML: the UI fields give way to a YAML/textarea editor.
+    openMenu();
+    await el.updateComplete;
+    expect(yamlItem()?.textContent?.trim()).to.equal('Edit As YAML');
+    yamlItem()!.click();
+    await el.updateComplete;
+    expect(root(el).querySelector('.form textarea, .form ha-yaml-editor')).to.exist;
+    // The menu now offers switching back to the UI.
+    openMenu();
+    await el.updateComplete;
+    expect(yamlItem()?.textContent?.trim()).to.equal('Edit With UI');
+  });
+
+  it('flags a schema-invalid element edited as YAML', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Content');
+    await clickLoc(el, 'body:0');
+    (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        b.textContent?.includes('Edit As YAML'),
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    const ta = root(el).querySelector('.form textarea') as HTMLTextAreaElement;
+    // A title with no text is valid YAML but invalid per the schema.
+    ta.value = '{"type":"title"}';
+    ta.dispatchEvent(new Event('input'));
+    await el.updateComplete;
+    expect(root(el).querySelector('.form .field-error')?.textContent).to.contain('needs text');
   });
 
   it('shows category items in the preview and offers add-item when selected', async () => {

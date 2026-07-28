@@ -19,9 +19,12 @@ const TOP_KEYS = new Set([
 /** CSS targeting hooks accepted on every block and footer button. */
 const COMMON = ['class', 'id'];
 
+/** The tap/hold/double-tap action keys accepted on interactive elements. */
+const ACTIONS = ['tap_action', 'hold_action', 'double_tap_action'];
+
 /** Recognized block types, and the keys each one accepts. */
 const BLOCK_KEYS: Record<string, Set<string>> = {
-  title: new Set(['type', 'text', 'align', 'tap_action', ...COMMON]),
+  title: new Set(['type', 'text', 'align', ...ACTIONS, ...COMMON]),
   clock: new Set([
     'type',
     'format',
@@ -29,10 +32,10 @@ const BLOCK_KEYS: Record<string, Set<string>> = {
     'hour_format',
     'collapsed_format',
     'align',
-    'tap_action',
+    ...ACTIONS,
     ...COMMON,
   ]),
-  date: new Set(['type', 'format', 'timezone', 'align', 'tap_action', ...COMMON]),
+  date: new Set(['type', 'format', 'timezone', 'align', ...ACTIONS, ...COMMON]),
   divider: new Set(['type', ...COMMON]),
   item: new Set([
     'type',
@@ -42,7 +45,7 @@ const BLOCK_KEYS: Record<string, Set<string>> = {
     'text_color',
     'icon_color',
     'entity',
-    'tap_action',
+    ...ACTIONS,
     ...COMMON,
   ]),
   category: new Set([
@@ -68,7 +71,7 @@ const FOOTER_BUTTON_KEYS = new Set([
   'icon_color',
   'title',
   'entity',
-  'tap_action',
+  ...ACTIONS,
   ...COMMON,
 ]);
 
@@ -290,23 +293,27 @@ function validateFooter(footer: unknown, ctx: string, errors: string[]): void {
     if (!Array.isArray(f.buttons)) {
       errors.push(`${ctx}.buttons: must be a list`);
     } else {
-      f.buttons.forEach((btn, i) => {
-        const bctx = `${ctx}.buttons[${i}]`;
-        if (!btn || typeof btn !== 'object') {
-          errors.push(`${bctx}: must be a mapping`);
-          return;
-        }
-        unknownKeys(btn, FOOTER_BUTTON_KEYS, bctx, errors);
-        if (typeof (btn as { icon?: unknown }).icon !== 'string') {
-          errors.push(`${bctx}: needs an icon`);
-        }
-        if (!(btn as { tap_action?: unknown }).tap_action) {
-          errors.push(`${bctx}: needs a tap_action`);
-        }
-        checkHooks(btn, bctx, errors);
-      });
+      f.buttons.forEach((btn, i) => validateFooterButton(btn, `${ctx}.buttons[${i}]`, errors));
     }
   }
+}
+
+/**
+ * Validates a single footer button: known keys, an icon, and a tap_action.
+ */
+function validateFooterButton(btn: unknown, ctx: string, errors: string[]): void {
+  if (!btn || typeof btn !== 'object') {
+    errors.push(`${ctx}: must be a mapping`);
+    return;
+  }
+  unknownKeys(btn, FOOTER_BUTTON_KEYS, ctx, errors);
+  if (typeof (btn as { icon?: unknown }).icon !== 'string') {
+    errors.push(`${ctx}: needs an icon`);
+  }
+  if (!(btn as { tap_action?: unknown }).tap_action) {
+    errors.push(`${ctx}: needs a tap_action`);
+  }
+  checkHooks(btn, ctx, errors);
 }
 
 /**
@@ -335,4 +342,45 @@ export function validateConfig(config: DashboardSidebarConfig): string[] {
   }
   validateFooter(config.footer, 'footer', errors);
   return errors;
+}
+
+/**
+ * Strips the leading context path (e.g. `element` / `element.align`) from each
+ * message, for surfacing single-element errors without the placeholder prefix.
+ */
+function stripCtx(errors: string[]): string[] {
+  return errors.map((e) => e.replace(/^element[.:]?\s*/, ''));
+}
+
+/**
+ * Validates one header/body block against its type's schema, returning the
+ * problems found. Used to check a YAML-edited element live.
+ */
+export function validateBlockConfig(block: unknown): string[] {
+  const errors: string[] = [];
+  validateBlock(block as SidebarBlock, 'element', errors);
+  return stripCtx(errors);
+}
+
+/**
+ * Validates one category child item against the item schema.
+ */
+export function validateItemConfig(item: unknown): string[] {
+  const errors: string[] = [];
+  const type = (item as { type?: unknown })?.type;
+  if (type === 'category' || type === 'divider') {
+    errors.push('a category can only contain items');
+  } else {
+    validateItem(item as ItemBlock, 'element', errors);
+  }
+  return stripCtx(errors);
+}
+
+/**
+ * Validates one footer button against the footer-button schema.
+ */
+export function validateFooterButtonConfig(btn: unknown): string[] {
+  const errors: string[] = [];
+  validateFooterButton(btn, 'element', errors);
+  return stripCtx(errors);
 }

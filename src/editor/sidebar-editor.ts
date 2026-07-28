@@ -1,9 +1,4 @@
-import {
-  type ActionConfig,
-  type HomeAssistant,
-  type LovelaceCardConfig,
-  handleAction,
-} from 'custom-card-helpers';
+import { type HomeAssistant, type LovelaceCardConfig } from 'custom-card-helpers';
 import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -26,7 +21,12 @@ import {
   PREVIEW_REORDER_EVENT,
   PREVIEW_SELECT_EVENT,
 } from '../lib/const';
-import { validateConfig } from '../lib/validate';
+import {
+  validateBlockConfig,
+  validateConfig,
+  validateFooterButtonConfig,
+  validateItemConfig,
+} from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
 import {
   blockFields,
@@ -129,6 +129,12 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Whether the selected element's overflow ("...") menu is open. */
   @state() private _elementMenuOpen = false;
+
+  /** Id of the element being edited as YAML, or null when editing with the UI. */
+  @state() private _yamlEditId: string | null = null;
+
+  /** The current YAML parse error for the selected element, or null. */
+  @state() private _yamlError: string | null = null;
 
   /** Anchor rect of the overflow menu's trigger. */
   private _elementMenuRect: DOMRect | null = null;
@@ -328,10 +334,17 @@ export class DashboardSidebarEditor extends LitElement {
         '.code-field ha-code-editor',
       ),
     ];
+    const fillEditors = new Set<HTMLElement>();
     this.renderRoot.querySelectorAll('.yaml-field ha-yaml-editor').forEach((yaml) => {
       const inner = yaml.shadowRoot?.querySelector('ha-code-editor');
       if (inner) {
         editors.push(inner as HTMLElement & { shadowRoot: ShadowRoot | null });
+        // A YAML editor in fill mode grows to its (flex) container; make its
+        // inner editor stretch to full height.
+        if (yaml.closest('.yaml-fill')) {
+          fillEditors.add(inner as HTMLElement);
+          this._fillYamlEditor(yaml as HTMLElement & { shadowRoot: ShadowRoot | null });
+        }
       } else {
         retry = true;
       }
@@ -348,15 +361,20 @@ export class DashboardSidebarEditor extends LitElement {
       const style = document.createElement('style');
       // Hide the line-number gutter and the action toolbar (which sits in the
       // editor's top padding), drop the padding and the toolbar's separator
-      // border so the code sits flush like a plain input.
+      // border so the code sits flush like a plain input. Fill-mode editors also
+      // stretch to their container so the box is as tall as the space allows.
+      const fill = fillEditors.has(ed)
+        ? '.cm-editor{height:100%!important;max-height:100%!important}.cm-scroller{max-height:none!important}'
+        : '.cm-editor{border-radius:6px!important}';
       style.textContent =
         '.cm-gutters{display:none!important}' +
         '.cm-panels{display:none!important}' +
         '.code-editor-toolbar{display:none!important}' +
-        '.cm-editor{padding-top:0!important;border-radius:6px!important}' +
+        '.cm-editor{padding-top:0!important}' +
         '.cm-scroller{padding-top:0!important}' +
         '.cm-content{border-top-style:none!important;padding:8px 0!important}' +
-        '.cm-activeLine{background-color:transparent!important}';
+        '.cm-activeLine{background-color:transparent!important}' +
+        fill;
       ed.shadowRoot.appendChild(style);
     });
     if (retry && !this._compactScheduled) {
@@ -366,6 +384,21 @@ export class DashboardSidebarEditor extends LitElement {
         this._compactEditors();
       });
     }
+  }
+
+  /**
+   * Makes an `<ha-yaml-editor>`'s inner `<ha-code-editor>` fill its height, so a
+   * fill-mode YAML editor grows with its container.
+   */
+  private _fillYamlEditor(yaml: HTMLElement & { shadowRoot: ShadowRoot | null }): void {
+    const sr = yaml.shadowRoot;
+    if (!sr || sr.querySelector('style[data-fill]')) {
+      return;
+    }
+    const style = document.createElement('style');
+    style.setAttribute('data-fill', '');
+    style.textContent = 'ha-code-editor{display:block!important;height:100%!important}';
+    sr.appendChild(style);
   }
 
   /**
@@ -465,9 +498,11 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Re-renders after an in-place mutation of the working copy.
+   * Re-renders after an in-place mutation of the working copy. Any content
+   * change (a UI edit, or a valid YAML apply) clears a stale YAML error.
    */
   private _touch(): void {
+    this._yamlError = null;
     this.requestUpdate();
   }
 
@@ -561,6 +596,8 @@ export class DashboardSidebarEditor extends LitElement {
     }
     if (id !== this._selected) {
       this._fieldErrors = {};
+      this._yamlEditId = null;
+      this._yamlError = null;
     }
     this._selected = id;
     if (this._tabCollapsed && loc.includes('.')) {
@@ -735,40 +772,6 @@ export class DashboardSidebarEditor extends LitElement {
     ev.stopPropagation();
     this._elementMenuRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
     this._elementMenuOpen = true;
-  }
-
-  /**
-   * The selected element's entity/tap action when it has one (items and footer
-   * buttons), or null — used to offer "Test action" in the overflow menu.
-   */
-  private _actionable(): { entity?: string; tap_action: ActionConfig } | null {
-    const sel = this._locate(this._selected);
-    if (!sel) {
-      return null;
-    }
-    if (sel.kind === 'footer') {
-      return sel.btn;
-    }
-    if (sel.kind === 'item') {
-      return sel.item;
-    }
-    if (sel.kind === 'block' && sel.block.type === 'item') {
-      return sel.block;
-    }
-    return null;
-  }
-
-  /**
-   * Runs the selected element's tap action against the live Home Assistant, so
-   * its behavior can be tested from the editor without a preview click firing it.
-   */
-  private _testAction(): void {
-    const cfg = this._actionable();
-    if (!cfg || !this.hass) {
-      return;
-    }
-    handleAction(this, this.hass, { entity: cfg.entity, tap_action: cfg.tap_action }, 'tap');
-    this._elementMenuOpen = false;
   }
 
   /**
@@ -1543,8 +1546,7 @@ export class DashboardSidebarEditor extends LitElement {
 
   /**
    * Renders the selected element's overflow menu, fixed-positioned under its
-   * trigger: expand/collapse for a category, "Test action" for an element with a
-   * tap action, or a placeholder otherwise.
+   * trigger: the YAML/UI edit toggle, plus expand/collapse for a category.
    */
   private _renderElementMenu(): TemplateResult | typeof nothing {
     const rect = this._elementMenuRect;
@@ -1567,23 +1569,46 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * The overflow menu items for the current selection.
+   * The overflow menu items for the current selection: the YAML/UI edit toggle,
+   * plus the category expand/collapse item where it applies.
    */
   private _renderElementMenuItems(
     category: Extract<Selected, { kind: 'block' }> | null,
   ): TemplateResult {
-    if (category) {
-      const collapsed = this._previewCollapsedCats.has(this._idFor(category.block));
-      return html`<button class="add-menu-item" @click=${() => this._toggleCategoryPreview()}>
-        ${collapsed ? 'Expand' : 'Collapse'} Category
-      </button>`;
-    }
-    if (this._actionable() && this.hass) {
-      return html`<button class="add-menu-item" @click=${() => this._testAction()}>
-        Test action
-      </button>`;
-    }
-    return html`<p class="menu-empty">No actions yet.</p>`;
+    const yaml = this._yamlActive();
+    const catLabel = category
+      ? `${this._previewCollapsedCats.has(this._idFor(category.block)) ? 'Expand' : 'Collapse'} Category`
+      : '';
+    const context = category
+      ? html`<button class="add-menu-item" @click=${() => this._toggleCategoryPreview()}>
+          ${catLabel}
+        </button>`
+      : nothing;
+    return html`
+      <button class="add-menu-item" @click=${() => this._toggleYamlMode()}>
+        ${yaml ? 'Edit With UI' : 'Edit As YAML'}
+      </button>
+      ${context}
+    `;
+  }
+
+  /**
+   * Whether the currently selected element is being edited as YAML.
+   */
+  private _yamlActive(): boolean {
+    return this._yamlEditId !== null && this._yamlEditId === this._selected;
+  }
+
+  /**
+   * Toggles the selected element between the UI form and the YAML editor.
+   */
+  private _toggleYamlMode(): void {
+    const toYaml = !this._yamlActive();
+    this._yamlEditId = toYaml ? this._selected : null;
+    // Entering YAML surfaces any existing schema errors of the element up front;
+    // leaving clears the editor error (the UI banner re-derives it live).
+    this._yamlError = toYaml ? this._selectedSchemaErrors().join(' • ') || null : null;
+    this._elementMenuOpen = false;
   }
 
   /**
@@ -1606,6 +1631,138 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * Renders a YAML editor for the whole element (via HA's `<ha-yaml-editor>`,
+   * with a JSON textarea fallback), emitting the parsed object on each valid
+   * edit. `validate` checks the parsed value against the element's schema and
+   * its problems are surfaced alongside YAML parse errors.
+   */
+  private _yamlEditor(
+    value: unknown,
+    onChange: (value: unknown) => void,
+    validate: (parsed: unknown) => string[],
+  ): TemplateResult {
+    // Apply a valid YAML value, then flag any schema problems (the apply calls
+    // _touch, which clears the error, so set it afterwards).
+    const apply = (parsed: unknown): void => {
+      onChange(parsed);
+      const problems = validate(parsed);
+      this._yamlError = problems.length ? problems.join(' • ') : null;
+    };
+    const error = this._yamlError
+      ? html`<span class="field-error">${this._yamlError}</span>`
+      : nothing;
+    if (customElements.get('ha-yaml-editor')) {
+      return html`<div class="field yaml-field yaml-fill">
+        <ha-yaml-editor
+          .defaultValue=${value}
+          @value-changed=${(e: CustomEvent<{ value: unknown; isValid: boolean }>) => {
+            if (e.detail.isValid) {
+              apply(e.detail.value);
+            } else {
+              this._yamlError = (e.target as { errorMsg?: string }).errorMsg || 'Invalid YAML.';
+            }
+          }}
+        ></ha-yaml-editor>
+        ${error}
+      </div>`;
+    }
+    return html`<label class="field yaml-fill">
+      <textarea
+        class="mono"
+        rows="10"
+        .value=${JSON.stringify(value, null, 2)}
+        @input=${(e: Event) => {
+          const text = (e.target as HTMLTextAreaElement).value.trim();
+          if (!text) {
+            return;
+          }
+          try {
+            apply(JSON.parse(text));
+          } catch {
+            this._yamlError = 'Invalid YAML.';
+          }
+        }}
+      ></textarea>
+      ${error}
+    </label>`;
+  }
+
+  /**
+   * The schema problems of the currently selected element, checked against its
+   * type's rules. Empty when the element is valid.
+   */
+  private _selectedSchemaErrors(): string[] {
+    const sel = this._locate(this._selected);
+    if (!sel) {
+      return [];
+    }
+    if (sel.kind === 'footer') {
+      return validateFooterButtonConfig(sel.btn);
+    }
+    if (sel.kind === 'item') {
+      return validateItemConfig(sel.item);
+    }
+    return validateBlockConfig(sel.block);
+  }
+
+  /**
+   * A banner shown above the UI form when the selected element is invalid (e.g.
+   * a YAML edit introduced a bad key), validated live from the applied element
+   * so it always reflects what is actually in the config.
+   */
+  private _uiYamlBanner(): TemplateResult | typeof nothing {
+    if (this._yamlActive()) {
+      return nothing;
+    }
+    const errors = this._selectedSchemaErrors();
+    return errors.length
+      ? html`<div class="yaml-banner">This element has errors: ${errors.join(' • ')}</div>`
+      : nothing;
+  }
+
+  /**
+   * Replaces the object's own keys with those of `next` (kept in place so the
+   * element's identity, and thus the selection, survives a YAML edit).
+   */
+  private _replaceInPlace(target: Record<string, unknown>, next: unknown): void {
+    const obj = next && typeof next === 'object' ? (next as Record<string, unknown>) : {};
+    Object.keys(target).forEach((key) => delete target[key]);
+    Object.assign(target, obj);
+    this._touch();
+  }
+
+  /**
+   * Replaces a header/body block from its edited YAML.
+   */
+  private _replaceBlock(region: Region, index: number, next: unknown): void {
+    const block = this._working[region]?.[index] as Record<string, unknown> | undefined;
+    if (block) {
+      this._replaceInPlace(block, next);
+    }
+  }
+
+  /**
+   * Replaces a category child item from its edited YAML.
+   */
+  private _replaceItem(region: Region, index: number, itemIndex: number, next: unknown): void {
+    const category = this._working[region]?.[index] as { items?: unknown[] } | undefined;
+    const item = category?.items?.[itemIndex] as Record<string, unknown> | undefined;
+    if (item) {
+      this._replaceInPlace(item, next);
+    }
+  }
+
+  /**
+   * Replaces a footer button from its edited YAML.
+   */
+  private _replaceFooterButton(index: number, next: unknown): void {
+    const btn = this._working.footer?.buttons?.[index] as Record<string, unknown> | undefined;
+    if (btn) {
+      this._replaceInPlace(btn, next);
+    }
+  }
+
+  /**
    * Renders the left-panel edit form for the selected element, with a delete
    * control, or a hint when nothing is selected in the current tab.
    */
@@ -1615,15 +1772,21 @@ export class DashboardSidebarEditor extends LitElement {
       return html`<p class="hint">Select an element in the preview to edit it.</p>`;
     }
     if (sel.kind === 'footer') {
-      return html`
-        <div class="form">
-          ${this._formHeader('Button')}
-          ${footerButtonFields(
+      const body = this._yamlActive()
+        ? this._yamlEditor(
+            sel.btn,
+            (v) => this._replaceFooterButton(sel.index, v),
+            validateFooterButtonConfig,
+          )
+        : footerButtonFields(
             sel.btn,
             (partial) => this._patchFooterButton(sel.index, partial),
             this._ctx(),
             this.hass,
-          )}
+          );
+      return html`
+        <div class="form ${this._yamlActive() ? 'yaml-mode' : ''}">
+          ${this._formHeader('Button')} ${this._uiYamlBanner()} ${body}
           <button class="add-btn" @click=${() => this._addFooterButton()}>Add Button Next</button>
           <button
             class="add-btn danger"
@@ -1640,10 +1803,16 @@ export class DashboardSidebarEditor extends LitElement {
     if (sel.kind === 'item') {
       const patch: Patch = (partial) =>
         this._patchItem(sel.region, sel.index, sel.itemIndex, partial);
+      const body = this._yamlActive()
+        ? this._yamlEditor(
+            sel.item,
+            (v) => this._replaceItem(sel.region, sel.index, sel.itemIndex, v),
+            validateItemConfig,
+          )
+        : blockFields({ ...sel.item, type: 'item' }, patch, this._ctx(), this.hass);
       return html`
-        <div class="form">
-          ${this._formHeader('Item')}
-          ${blockFields({ ...sel.item, type: 'item' }, patch, this._ctx(), this.hass)}
+        <div class="form ${this._yamlActive() ? 'yaml-mode' : ''}">
+          ${this._formHeader('Item')} ${this._uiYamlBanner()} ${body}
           <button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
             Add Child Element
           </button>
@@ -1663,9 +1832,16 @@ export class DashboardSidebarEditor extends LitElement {
     // ItemBlock.type is optional (items in a category omit it), so default to
     // 'item' for the label of a top-level item.
     const typeLabel = blockTypeLabel(sel.block.type ?? 'item');
+    const body = this._yamlActive()
+      ? this._yamlEditor(
+          sel.block,
+          (v) => this._replaceBlock(sel.region, sel.index, v),
+          validateBlockConfig,
+        )
+      : blockFields(sel.block, patch, this._ctx(), this.hass);
     return html`
-      <div class="form">
-        ${this._formHeader(typeLabel)} ${blockFields(sel.block, patch, this._ctx(), this.hass)}
+      <div class="form ${this._yamlActive() ? 'yaml-mode' : ''}">
+        ${this._formHeader(typeLabel)} ${this._uiYamlBanner()} ${body}
         ${
           sel.block.type === 'category'
             ? html`<button class="add-btn" @click=${() => this._addItem(sel.region, sel.index)}>
@@ -1964,6 +2140,13 @@ export class DashboardSidebarEditor extends LitElement {
       border-color: transparent;
     }
 
+    /* When open, space the fields inside the section like the top-level form. */
+    .advanced[open] {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .advanced {
       margin-top: 4px;
     }
@@ -1972,7 +2155,6 @@ export class DashboardSidebarEditor extends LitElement {
       cursor: pointer;
       font-size: 0.8rem;
       opacity: 0.7;
-      margin-bottom: 4px;
     }
 
     .region {
@@ -2563,6 +2745,41 @@ export class DashboardSidebarEditor extends LitElement {
 
     .code-field.invalid ha-code-editor {
       border-color: var(--error-color, #db4437);
+    }
+
+    /* In element YAML mode, the form fills the editor column and the YAML editor
+       grows to take all the height left above the buttons. */
+    .form.yaml-mode {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .yaml-fill {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .yaml-fill ha-yaml-editor {
+      flex: 1 1 auto;
+      min-height: 0;
+      --code-mirror-max-height: 100%;
+    }
+
+    .yaml-fill textarea {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    /* Invalid-YAML notice carried back to the UI form. */
+    .yaml-banner {
+      padding: 8px 10px;
+      border: 1px solid var(--error-color, #db4437);
+      border-radius: 6px;
+      color: var(--error-color, #db4437);
+      font-size: 0.8rem;
+      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
     }
 
     /* HA's YAML editor field (manual card): match the bordered input box. */
