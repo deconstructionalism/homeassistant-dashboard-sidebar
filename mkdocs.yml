@@ -30,6 +30,7 @@ theme:
     - navigation.sections
     - navigation.top
     - content.code.copy
+    - content.tabs.link
     - search.suggest
     - toc.follow
 
@@ -54,3 +55,4 @@ nav:
   - Footer: footer.md
   - Actions: actions.md
   - Styling: styling.md
+  - Config Reference: reference.md
