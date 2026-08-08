@@ -1,5 +1,5 @@
 import { type HomeAssistant, type LovelaceCardConfig } from 'custom-card-helpers';
-import { LitElement, css, html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { LitElement, html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -15,6 +15,10 @@ import type {
 } from '../lib/types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
+import { confirmDialog } from './editor-dialogs';
+import { MenusController, menuStyle, popupMenu } from './editor-menus';
+import { renderEmptyState, renderGhost } from './editor-preview';
+import { editorStyles } from './editor-styles';
 import {
   DEFAULT_WIDTH,
   MAX_USABLE_WIDTH,
@@ -176,15 +180,8 @@ export class DashboardSidebarEditor extends LitElement {
   /** Ids of categories shown collapsed in the preview (toggled via their menu). */
   @state() private _previewCollapsedCats = new Set<string>();
 
-  /** Whether the add-element menu is open. */
-  @state() private _addMenuOpen = false;
-
-  /** Anchor rect and choices for the open add menu. */
-  private _addMenuRect: DOMRect | null = null;
-  private _addMenuItems: Array<{ label: string; run: () => void }> = [];
-
-  /** Whether the selected element's overflow ("...") menu is open. */
-  @state() private _elementMenuOpen = false;
+  /** Popup-menu open/close state: add, element overflow, and tab options. */
+  private _menus = new MenusController(this);
 
   /** Id of the element being edited as YAML, or null when editing with the UI. */
   @state() private _yamlEditId: string | null = null;
@@ -207,20 +204,8 @@ export class DashboardSidebarEditor extends LitElement {
   /** JSON of the last-validated manual card, to skip redundant re-validation. */
   private _lastCardSig = '';
 
-  /** Anchor rect of the overflow menu's trigger. */
-  private _elementMenuRect: DOMRect | null = null;
-
-  /** Whether the current tab's options ("...") menu is open. */
-  @state() private _tabMenuOpen = false;
-
-  /** Whether the footer menu's "Change to" submenu is expanded. */
-  @state() private _tabSubmenuOpen = false;
-
   /** Whether the footer content is being edited as raw YAML. */
   @state() private _footerYaml = false;
-
-  /** Anchor rect of the tab options menu's trigger. */
-  private _tabMenuRect: DOMRect | null = null;
 
   /** Validation errors from the last save attempt. */
   @state() private _errors: string[] = [];
@@ -262,9 +247,9 @@ export class DashboardSidebarEditor extends LitElement {
       this._confirmingClose = false;
       this._collapsedTabs = new Set();
       this._previewCollapsedCats = new Set();
-      this._addMenuOpen = false;
-      this._elementMenuOpen = false;
-      this._tabMenuOpen = false;
+      this._menus.addOpen = false;
+      this._menus.elementOpen = false;
+      this._menus.tabOpen = false;
     }
   }
 
@@ -956,8 +941,8 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _openElementMenu(ev: Event): void {
     ev.stopPropagation();
-    this._elementMenuRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-    this._elementMenuOpen = true;
+    this._menus.elementRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    this._menus.elementOpen = true;
   }
 
   /**
@@ -1204,10 +1189,10 @@ export class DashboardSidebarEditor extends LitElement {
         ? (this._tabSelection[tab] ?? null)
         : null;
     this._fieldErrors = {};
-    this._addMenuOpen = false;
-    this._elementMenuOpen = false;
-    this._tabMenuOpen = false;
-    this._tabSubmenuOpen = false;
+    this._menus.addOpen = false;
+    this._menus.elementOpen = false;
+    this._menus.tabOpen = false;
+    this._menus.tabSubmenuOpen = false;
     this._footerYaml = false;
   }
 
@@ -1275,63 +1260,39 @@ export class DashboardSidebarEditor extends LitElement {
    * Renders the unsaved-changes exit confirmation over the panel.
    */
   private _renderConfirmClose(): TemplateResult {
-    return html`
-      <div class="confirm-scrim">
-        <div class="confirm" role="alertdialog" aria-label="Unsaved changes">
-          <p>You have unsaved changes. Exit without saving?</p>
-          <div class="confirm-actions">
-            <button
-              @click=${() => {
-                this._confirmingClose = false;
-              }}
-            >
-              Keep editing
-            </button>
-            <button
-              class="danger-btn"
-              @click=${() => {
-                this._confirmingClose = false;
-                this.onClose?.();
-              }}
-            >
-              Discard changes
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    return confirmDialog({
+      label: 'Unsaved changes',
+      message: 'You have unsaved changes. Exit without saving?',
+      keepLabel: 'Keep editing',
+      confirmLabel: 'Discard changes',
+      onKeep: () => {
+        this._confirmingClose = false;
+      },
+      onConfirm: () => {
+        this._confirmingClose = false;
+        this.onClose?.();
+      },
+    });
   }
 
   /**
    * Renders the delete-sidebar confirmation over the panel.
    */
   private _renderConfirmDelete(): TemplateResult {
-    return html`
-      <div class="confirm-scrim">
-        <div class="confirm" role="alertdialog" aria-label="Delete sidebar">
-          <p>Delete the sidebar? This removes it from this dashboard.</p>
-          <div class="confirm-actions">
-            <button
-              @click=${() => {
-                this._confirmingDelete = false;
-              }}
-            >
-              Keep sidebar
-            </button>
-            <button
-              class="danger-btn"
-              @click=${() => {
-                this._confirmingDelete = false;
-                this.onDelete?.();
-                this.onClose?.();
-              }}
-            >
-              Delete sidebar
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    return confirmDialog({
+      label: 'Delete sidebar',
+      message: 'Delete the sidebar? This removes it from this dashboard.',
+      keepLabel: 'Keep sidebar',
+      confirmLabel: 'Delete sidebar',
+      onKeep: () => {
+        this._confirmingDelete = false;
+      },
+      onConfirm: () => {
+        this._confirmingDelete = false;
+        this.onDelete?.();
+        this.onClose?.();
+      },
+    });
   }
 
   /**
@@ -1485,9 +1446,7 @@ export class DashboardSidebarEditor extends LitElement {
     );
     const blocks = this._working[region] ?? [];
     if (blocks.length === 0) {
-      return html`
-        ${notes} ${this._renderEmptyState(this._renderAddMenu(this._typeItems(region)))}
-      `;
+      return html` ${notes} ${renderEmptyState(this._renderAddMenu(this._typeItems(region)))} `;
     }
     // The header is pinned to the top, so cross-hatch the space below it to
     // stand in for the content that would follow; the body is itself the
@@ -1495,7 +1454,7 @@ export class DashboardSidebarEditor extends LitElement {
     const preview =
       region === 'header'
         ? this._renderPreview(
-            html`${this._renderRegionPreview(region)}${this._renderGhost('down')}`,
+            html`${this._renderRegionPreview(region)}${renderGhost('down')}`,
             true,
           )
         : this._renderPreview(this._renderRegionPreview(region));
@@ -1504,21 +1463,6 @@ export class DashboardSidebarEditor extends LitElement {
       <div class="split ${this._tabCollapsed ? 'pv-collapsed' : ''}">
         <div class="editor">${keyed(this._selected, this._renderSelectedForm())}</div>
         ${preview}
-      </div>
-    `;
-  }
-
-  /**
-   * Renders the borderless empty-state for a region with no elements: a short
-   * explanation that the area only appears once it has content, plus the given
-   * add control. No preview frame, so an empty area is not made to look as if it
-   * renders anything.
-   */
-  private _renderEmptyState(add: TemplateResult): TemplateResult {
-    return html`
-      <div class="empty-state">
-        <p class="empty-msg">Add your first element for this area to show up.</p>
-        ${add}
       </div>
     `;
   }
@@ -1569,8 +1513,8 @@ export class DashboardSidebarEditor extends LitElement {
         aria-label="Footer options"
         @click=${(e: Event) => {
           e.stopPropagation();
-          this._tabMenuRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          this._tabMenuOpen = true;
+          this._menus.tabRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          this._menus.tabOpen = true;
         }}
       >
         <ha-icon icon="mdi:dots-vertical"></ha-icon>
@@ -1584,8 +1528,8 @@ export class DashboardSidebarEditor extends LitElement {
    * YAML/UI edit toggle.
    */
   private _renderTabMenu(): TemplateResult | typeof nothing {
-    const rect = this._tabMenuRect;
-    if (!this._tabMenuOpen || !rect || this._tab !== 'footer') {
+    const rect = this._menus.tabRect;
+    if (!this._menus.tabOpen || !rect || this._tab !== 'footer') {
       return nothing;
     }
     const mode = this._footerMode();
@@ -1598,12 +1542,12 @@ export class DashboardSidebarEditor extends LitElement {
       ] as const
     ).filter(([m]) => m !== mode);
     const close = (): void => {
-      this._tabMenuOpen = false;
-      this._tabSubmenuOpen = false;
+      this._menus.tabOpen = false;
+      this._menus.tabSubmenuOpen = false;
     };
     return html`
       <div class="menu-scrim" @click=${close}></div>
-      <div class="add-menu" style=${this._menuStyle(rect, 'right')}>
+      <div class="add-menu" style=${menuStyle(rect, 'right')}>
         <button
           class="add-menu-item"
           @click=${() => {
@@ -1616,13 +1560,13 @@ export class DashboardSidebarEditor extends LitElement {
         <button
           class="add-menu-item"
           @click=${() => {
-            this._tabSubmenuOpen = !this._tabSubmenuOpen;
+            this._menus.tabSubmenuOpen = !this._menus.tabSubmenuOpen;
           }}
         >
-          Change to ${this._tabSubmenuOpen ? '▾' : '▸'}
+          Change to ${this._menus.tabSubmenuOpen ? '▾' : '▸'}
         </button>
         ${
-          this._tabSubmenuOpen
+          this._menus.tabSubmenuOpen
             ? others.map(
                 ([m, label]) => html`
                   <button
@@ -1663,25 +1607,6 @@ export class DashboardSidebarEditor extends LitElement {
       return 'markdown';
     }
     return 'buttons';
-  }
-
-  /**
-   * Renders faded skeleton rows standing in for the content beside a pinned
-   * region: fading up (toward the top) above a footer, or down (toward the
-   * bottom) below a header.
-   */
-  private _renderGhost(fade: 'up' | 'down'): TemplateResult {
-    const widths = [72, 54, 84, 48, 66, 60, 78, 50];
-    return html`
-      <div class="pv-ghost fade-${fade}">
-        ${widths.map(
-          (w) =>
-            html`<div class="ghost-row">
-              <span class="ghost-icon"></span><span class="ghost-bar" style="width: ${w}%"></span>
-            </div>`,
-        )}
-      </div>
-    `;
   }
 
   /**
@@ -1737,8 +1662,8 @@ export class DashboardSidebarEditor extends LitElement {
                 next.delete(this._tab);
               }
               this._collapsedTabs = next;
-              this._addMenuOpen = false;
-              this._elementMenuOpen = false;
+              this._menus.addOpen = false;
+              this._menus.elementOpen = false;
               if (collapsing) {
                 this._reselectForCollapse();
               }
@@ -1791,7 +1716,7 @@ export class DashboardSidebarEditor extends LitElement {
     if (empty) {
       return html`
         ${notes}
-        ${this._renderEmptyState(
+        ${renderEmptyState(
           this._renderAddMenu([
             { label: 'Button Row', run: () => this._addFooterButton() },
             { label: 'Card', run: () => this._setFooterMode('card') },
@@ -1812,7 +1737,7 @@ export class DashboardSidebarEditor extends LitElement {
             )}
           </div>
           ${this._renderPreview(
-            html`${this._renderGhost('up')}
+            html`${renderGhost('up')}
             ${this._previewEl('footer', {
               width: this._working.width,
               footer: this._working.footer,
@@ -1836,7 +1761,7 @@ export class DashboardSidebarEditor extends LitElement {
             ${this._cardStatus()}
           </div>
           ${this._renderPreview(
-            html`${this._renderGhost('up')}
+            html`${renderGhost('up')}
             ${this._previewEl('footer-card', {
               footer: {
                 card: footer?.card ?? { type: 'markdown', content: '' },
@@ -1879,7 +1804,7 @@ export class DashboardSidebarEditor extends LitElement {
             )}
           </div>
           ${this._renderPreview(
-            html`${this._renderGhost('up')}
+            html`${renderGhost('up')}
             ${this._previewEl('footer-markdown', {
               footer: {
                 markdown: footer?.markdown ?? '',
@@ -1900,7 +1825,7 @@ export class DashboardSidebarEditor extends LitElement {
         ${this._renderPreview(
           // Faded placeholders above stand in for content so the footer sits
           // pinned to the bottom, as it does live, not in a large empty box.
-          html`${this._renderGhost('up')}
+          html`${renderGhost('up')}
           ${this._previewEl('footer', {
             width: this._working.width,
             footer: { buttons, divider: footer?.divider ?? true },
@@ -1990,8 +1915,8 @@ export class DashboardSidebarEditor extends LitElement {
    * trigger: the YAML/UI edit toggle, plus expand/collapse for a category.
    */
   private _renderElementMenu(): TemplateResult | typeof nothing {
-    const rect = this._elementMenuRect;
-    if (!this._elementMenuOpen || !rect) {
+    const rect = this._menus.elementRect;
+    if (!this._menus.elementOpen || !rect) {
       return nothing;
     }
     let items: TemplateResult;
@@ -2006,10 +1931,10 @@ export class DashboardSidebarEditor extends LitElement {
       <div
         class="menu-scrim"
         @click=${() => {
-          this._elementMenuOpen = false;
+          this._menus.elementOpen = false;
         }}
       ></div>
-      <div class="add-menu" style=${this._menuStyle(rect, 'right')}>${items}</div>
+      <div class="add-menu" style=${menuStyle(rect, 'right')}>${items}</div>
     `;
   }
 
@@ -2053,7 +1978,7 @@ export class DashboardSidebarEditor extends LitElement {
     // Entering YAML surfaces any existing schema errors of the element up front;
     // leaving clears the editor error (the UI banner re-derives it live).
     this._yamlError = toYaml ? this._selectedSchemaErrors().join(' • ') || null : null;
-    this._elementMenuOpen = false;
+    this._menus.elementOpen = false;
   }
 
   /**
@@ -2097,7 +2022,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _toggleSettingsYaml(): void {
     this._settingsYaml = !this._settingsYaml;
     this._yamlError = this._settingsYaml ? validateConfig(this._working).join(' • ') || null : null;
-    this._elementMenuOpen = false;
+    this._menus.elementOpen = false;
   }
 
   /**
@@ -2116,7 +2041,7 @@ export class DashboardSidebarEditor extends LitElement {
       next.add(id);
     }
     this._previewCollapsedCats = next;
-    this._elementMenuOpen = false;
+    this._menus.elementOpen = false;
   }
 
   /**
@@ -2471,9 +2396,9 @@ export class DashboardSidebarEditor extends LitElement {
         aria-label="Add element"
         @click=${(e: Event) => {
           e.stopPropagation();
-          this._addMenuRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          this._addMenuItems = items;
-          this._addMenuOpen = true;
+          this._menus.addRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          this._menus.addItems = items;
+          this._menus.addOpen = true;
         }}
       >
         ${label ?? (this._tabCollapsed ? '＋' : '＋ Add Element')}
@@ -2490,1226 +2415,20 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Fixed-position style for a menu anchored to a trigger rect: drops below the
-   * trigger, or flips above it when there is more room up, and caps its height
-   * to the available space (the menu scrolls internally past that). `align`
-   * pins the menu's left or right edge to the trigger.
-   */
-  private _menuStyle(rect: DOMRect, align: 'left' | 'right'): string {
-    const margin = 8;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const below = spaceBelow >= spaceAbove;
-    const maxHeight = Math.max(120, (below ? spaceBelow : spaceAbove) - margin - 4);
-    const vertical = below
-      ? `top: ${rect.bottom + 4}px`
-      : `bottom: ${window.innerHeight - rect.top + 4}px`;
-    const horizontal =
-      align === 'right'
-        ? `right: ${Math.max(margin, window.innerWidth - rect.right)}px`
-        : `left: ${Math.max(margin, rect.left)}px`;
-    return `${vertical}; ${horizontal}; max-height: ${maxHeight}px`;
-  }
-
-  /**
    * Renders the add menu, fixed-positioned near its trigger so it escapes the
    * modal's clipping.
    */
   private _renderAddMenuPopup(): TemplateResult | typeof nothing {
-    const rect = this._addMenuRect;
-    if (!this._addMenuOpen || !rect) {
+    const rect = this._menus.addRect;
+    if (!this._menus.addOpen || !rect) {
       return nothing;
     }
-    return html`
-      <div
-        class="menu-scrim"
-        @click=${() => {
-          this._addMenuOpen = false;
-        }}
-      ></div>
-      <div class="add-menu" style=${this._menuStyle(rect, 'left')}>
-        ${this._addMenuItems.map(
-          (item) =>
-            html`<button
-              class="add-menu-item"
-              @click=${() => {
-                item.run();
-                this._addMenuOpen = false;
-              }}
-            >
-              ${item.label}
-            </button>`,
-        )}
-      </div>
-    `;
+    return popupMenu(rect, this._menus.addItems, () => {
+      this._menus.addOpen = false;
+    });
   }
 
-  /** Styles for the editor modal. */
-  static styles = css`
-    :host {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      /* Center via flexbox rather than a transform on the panel: a transformed
-         ancestor would become the containing block for the preview's
-         fixed-position popovers and tooltips, throwing off their placement. */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--ha-font-family-body, sans-serif);
-      color: var(--primary-text-color, #212121);
-
-      /* A subtly distinct surface shared by the active tab and the content
-         area, so the two read as one region against the modal background. */
-      --dsb-surface: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
-    }
-
-    /* No focus/selection outlines on the modal's own controls. */
-    :focus,
-    :focus-visible {
-      outline: none;
-    }
-
-    .backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgb(0 0 0 / 45%);
-    }
-
-    .panel {
-      position: relative;
-      z-index: 1;
-      width: min(820px, 94vw);
-      height: 75vh;
-      display: flex;
-      flex-direction: column;
-      /* Composite the (often translucent) card color over an opaque base so the
-         dashboard never shows through the modal, plus the surface tint on top so
-         the modal is the tinted colour and the tab/content area is the base. */
-      background-color: var(--primary-background-color, #fff);
-      background-image:
-        linear-gradient(var(--dsb-surface), var(--dsb-surface)),
-        linear-gradient(var(--card-background-color, #fff), var(--card-background-color, #fff));
-      border-radius: 12px;
-      box-shadow: 0 8px 40px rgb(0 0 0 / 40%);
-      overflow: hidden;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 12px 2px;
-    }
-
-    header h2 {
-      margin: 0;
-      font-size: 1.4rem;
-      font-weight: 600;
-    }
-
-    .content {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 12px;
-      /* Clip here; the columns inside scroll independently. */
-      overflow: hidden;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-    }
-
-    .tabs {
-      display: flex;
-      gap: 4px;
-      padding: 2px 12px 0;
-      flex-wrap: wrap;
-    }
-
-    .tab {
-      font: inherit;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 8px 8px 0 0;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-      opacity: 0.7;
-    }
-
-    .tab.active {
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-      opacity: 1;
-      font-weight: 600;
-    }
-
-    .settings {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-    }
-
-    .icon-choice {
-      display: flex;
-      gap: 6px;
-    }
-
-    .choice {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      padding: 8px 18px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 8px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    .choice ha-icon {
-      --mdc-icon-size: 24px;
-    }
-
-    .choice-label {
-      font-size: 0.75rem;
-    }
-
-    .choice.sel {
-      background: var(--primary-color, #03a9f4);
-      color: var(--text-primary-color, #fff);
-      border-color: transparent;
-    }
-
-    /* When open, space the fields inside the section like the top-level form.
-       In browsers that wrap the content in ::details-content, the fields are
-       inside that box, so it must carry the gap too (the details-level flex
-       there only spaces the summary from the content box). */
-    .advanced[open] {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
-    .advanced[open]::details-content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .advanced {
-      margin-top: 4px;
-    }
-
-    .advanced summary {
-      cursor: pointer;
-      font-size: 0.8rem;
-      opacity: 0.7;
-    }
-
-    .region {
-      margin-bottom: 16px;
-    }
-
-    /* The editor fills the width; the preview shrinks to just the sidebar frame
-       so it never reserves half the modal. Stacks on mobile via the media query
-       below. */
-    .split {
-      display: flex;
-      gap: 20px;
-      align-items: stretch;
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    .editor,
-    .preview {
-      min-width: 0;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Shrink to the framed preview's own (capped) width. */
-    .preview {
-      flex: 0 0 auto;
-    }
-
-    /* Fill the space left of the preview. */
-    .editor {
-      flex: 1 1 auto;
-      gap: 10px;
-      /* Scrolls independently of the preview. Inset the content on the right so
-         an overlay scrollbar (macOS "show when scrolling") sits clear of the
-         form controls instead of over them, plus a thin styled bar. */
-      overflow-y: auto;
-      padding-right: 12px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--divider-color, rgb(0 0 0 / 30%)) transparent;
-    }
-
-    .editor::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .editor::-webkit-scrollbar-thumb {
-      border-radius: 3px;
-      background: var(--divider-color, rgb(0 0 0 / 30%));
-    }
-
-    .editor::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    /* Collapsed (non-mobile): the editor grows to fill and the preview shrinks
-       to just what the icon strip needs, pinned to the modal's right edge. No
-       flex-wrap, so it never drops below. */
-    .split.pv-collapsed .editor {
-      flex: 1 1 auto;
-    }
-
-    .split.pv-collapsed .preview {
-      flex: 0 0 auto;
-    }
-
-    .split.pv-collapsed .preview-head {
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .preview-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      /* Pin the Preview label + collapse toggle so they stay in view when the
-         whole content scrolls as one (stacked layout). A no-op on wide layouts,
-         where the preview column already sits above its own scroll frame. */
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-    }
-
-    .preview-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      opacity: 0.6;
-    }
-
-    .pv-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-      opacity: 0.7;
-    }
-
-    .pv-toggle:hover {
-      opacity: 1;
-      background: var(--secondary-background-color, rgb(0 0 0 / 6%));
-    }
-
-    .pv-toggle ha-icon {
-      --mdc-icon-size: 18px;
-    }
-
-    /* Expanded preview width: capped to the configured width and to a fraction
-       under half the modal so it never dominates the side-by-side layout. The
-       380px / 42vw caps must match PREVIEW_CAP_PX / PREVIEW_CAP_VW. */
-    .pv-frame:not(.collapsed) {
-      width: min(var(--pv-w, 100%), 380px, 42vw);
-    }
-
-    .pv-frame {
-      box-sizing: border-box;
-      /* A little vertical room so the first/last element's selection outline is
-         not clipped by the scroll container's edge. */
-      padding: 4px 0;
-      /* Draw the frame edge with an inset outline, not a border, so it takes no
-         layout width: the inner sidebar then gets the full configured width and
-         the footer's button-overflow count matches live exactly. */
-      outline: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-      outline-offset: -1px;
-      background: var(--card-background-color, #fff);
-      /* Fill the preview height and scroll on its own, below the fixed heading. */
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-      /* Hide the scrollbar so it reserves no width (which would shrink the
-         content below the live width and change the footer overflow count);
-         wheel/trackpad scrolling still works. */
-      scrollbar-width: none;
-    }
-
-    .pv-frame::-webkit-scrollbar {
-      width: 0;
-      height: 0;
-    }
-
-    /* Collapsed preview: narrow to the icon-strip width, pinned to the right
-       edge of the (content-sized) preview column. */
-    .pv-frame.collapsed {
-      width: 76px;
-      align-self: flex-end;
-    }
-
-    /* Column frame used by the header/footer previews so the region can be
-       pinned to one edge with a faded placeholder filling the rest. */
-    .pv-frame.pv-col {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Skeleton placeholder rows standing in for the content beside a pinned
-       region, faded out toward the far edge. */
-    .pv-ghost {
-      flex: 1 1 auto;
-      min-height: 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 10px 16px;
-      overflow: hidden;
-      pointer-events: none;
-    }
-
-    .pv-ghost.fade-up {
-      justify-content: flex-end;
-      mask-image: linear-gradient(to top, #000 15%, transparent 95%);
-    }
-
-    .pv-ghost.fade-down {
-      justify-content: flex-start;
-      mask-image: linear-gradient(to bottom, #000 15%, transparent 95%);
-    }
-
-    .ghost-row {
-      display: flex;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ghost-icon {
-      flex: 0 0 auto;
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      background: var(--divider-color, rgb(0 0 0 / 15%));
-    }
-
-    .ghost-bar {
-      height: 12px;
-      border-radius: 6px;
-      background: var(--divider-color, rgb(0 0 0 / 15%));
-    }
-
-    /* Collapsed preview shows a single centered column of icons, so the ghost
-       drops its text bars and centers the icon placeholders to match. */
-    .split.pv-collapsed .ghost-bar {
-      display: none;
-    }
-
-    .split.pv-collapsed .ghost-row {
-      justify-content: center;
-    }
-
-    /* The region preview renders at its natural height instead of filling the
-       frame, so a short region does not stretch. */
-    .pv-frame dashboard-sidebar {
-      display: block;
-      height: auto;
-    }
-
-    /* The whole-sidebar (Settings) preview instead fills the flex-column frame,
-       so its body flexes and the footer pins to the bottom, like live. This is
-       set in the outer scope because host-targeting page rules win over the
-       sidebar's own :host([preview][full]) rules. */
-    .pv-frame.pv-col dashboard-sidebar[full] {
-      display: flex;
-      flex-direction: column;
-      flex: 1 1 auto;
-      min-height: 0;
-      height: auto;
-    }
-
-    @media (width < 640px) {
-      /* Full-screen modal on mobile. */
-      .panel {
-        width: 100vw;
-        height: 100vh;
-        border-radius: 0;
-      }
-
-      /* Stacked: scroll the whole content as one instead of per-column. */
-      .content {
-        overflow-y: auto;
-      }
-
-      .split {
-        flex-direction: column;
-        flex: 0 0 auto;
-      }
-
-      .editor,
-      .preview,
-      .pv-frame {
-        width: 100%;
-        flex: 0 0 auto;
-      }
-
-      /* Stacked: the preview shows at its configured width but never wider than
-         the modal, right-aligned in the preview column to match the collapsed
-         view (which pins to the right). */
-      .pv-frame:not(.collapsed) {
-        width: min(var(--pv-w, 100%), 100%);
-        align-self: flex-end;
-      }
-
-      .editor,
-      .pv-frame {
-        overflow: visible;
-      }
-    }
-
-    .form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    /* The form header row: the element-setting label plus the move/overflow
-       tools aligned to the right. Pinned to the top so it stays in view as the
-       form scrolls (UI and YAML mode alike); the opaque backdrop matches
-       .content so fields pass cleanly underneath. */
-    .form-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      position: sticky;
-      top: 0;
-      z-index: 3;
-      padding-bottom: 8px;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-      border-bottom: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
-    }
-
-    /* Matches the PREVIEW label so the two columns' headers read as a pair. */
-    .form-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      opacity: 0.6;
-    }
-
-    .form-tools {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      flex: 0 0 auto;
-    }
-
-    .tool {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    .tool:hover:not([disabled]) {
-      background: var(--secondary-background-color, rgb(0 0 0 / 8%));
-    }
-
-    .tool[disabled] {
-      opacity: 0.3;
-      cursor: default;
-    }
-
-    .tool ha-icon {
-      --mdc-icon-size: 18px;
-    }
-
-    .menu-empty {
-      margin: 0;
-      padding: 8px 12px;
-      opacity: 0.6;
-      font-size: 0.85rem;
-    }
-
-    /* Borderless call-to-action shown instead of a preview when a region has no
-       elements, so an empty area is not made to look as if it renders. */
-    .empty-state {
-      display: flex;
-      flex: 1 1 auto;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 32px 16px;
-      text-align: center;
-    }
-
-    .empty-msg {
-      margin: 0;
-      max-width: 32ch;
-      opacity: 0.7;
-    }
-
-    .empty-icon {
-      --mdc-icon-size: 40px;
-
-      opacity: 0.35;
-    }
-
-    .danger {
-      color: var(--error-color, #db4437);
-    }
-
-    .icon {
-      border: none;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 6px;
-      font: inherit;
-    }
-
-    .icon:hover:not([disabled]) {
-      background: var(--divider-color, rgb(0 0 0 / 10%));
-    }
-
-    .icon[disabled] {
-      opacity: 0.3;
-      cursor: default;
-    }
-
-    .icon.danger:hover {
-      color: var(--error-color, #db4437);
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      font-size: 0.85rem;
-    }
-
-    .field-inline {
-      flex-direction: row;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .check-label {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .field-desc {
-      font-size: 0.75rem;
-      opacity: 0.6;
-      line-height: 1.3;
-    }
-
-    .field-desc a {
-      color: var(--primary-color, #03a9f4);
-    }
-
-    /* The card-mod install prompt shown when the integration is absent. */
-    .card-mod-missing .field-desc {
-      opacity: 0.8;
-    }
-
-    /* Collapsed reference of targetable CSS classes under the Card Mod field. */
-    .class-ref-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .class-ref-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 4px 10px;
-    }
-
-    .class-ref-row code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.78rem;
-      color: var(--primary-color, #03a9f4);
-      white-space: nowrap;
-    }
-
-    .class-ref-row span {
-      font-size: 0.78rem;
-      opacity: 0.7;
-    }
-
-    /* A resolved entity/service replaces the input with a card: the id over its
-       friendly name, and a clear button. Matches the inputs' bordered box. */
-    .field-picked {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-sizing: border-box;
-      width: 100%;
-      /* Left/right padding matches the inputs (8px) so the text left-aligns with
-         other fields and the clear button lines up with the select arrows. */
-      padding: 8px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 6px;
-      background: var(--card-background-color, #fff);
-    }
-
-    .field-picked-text {
-      display: flex;
-      flex: 1 1 auto;
-      min-width: 0;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .field-picked-id,
-    .field-picked-name {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .field-picked-name {
-      font-size: 0.8rem;
-      color: var(--secondary-text-color, #666);
-    }
-
-    .field-picked-clear {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      justify-content: flex-end;
-      width: 20px;
-      height: 20px;
-      padding: 0;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: var(--primary-text-color, #000);
-      font-size: 1rem;
-      cursor: pointer;
-    }
-
-    .field-picked-clear:hover {
-      background: var(--secondary-background-color, rgb(0 0 0 / 8%));
-    }
-
-    /* Non-blocking advisory (e.g. an out-of-range width): amber, not red. */
-    .field-warn {
-      font-size: 0.75rem;
-      line-height: 1.3;
-      color: var(--warning-color, #e8a33d);
-    }
-
-    /* Format field: the label row with an info disclosure that reveals the
-       supported strftime tokens in a floating list. */
-    .field-head {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .format-help {
-      position: relative;
-      display: inline-flex;
-    }
-
-    .format-help > summary {
-      display: inline-flex;
-      align-items: center;
-      list-style: none;
-      cursor: pointer;
-      opacity: 0.6;
-    }
-
-    .format-help > summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .format-help[open] > summary,
-    .format-help > summary:hover {
-      opacity: 1;
-    }
-
-    .format-help ha-icon {
-      --mdc-icon-size: 16px;
-    }
-
-    .format-help-pop {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      z-index: 5;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      width: max-content;
-      max-width: 18rem;
-      max-height: 15rem;
-      overflow-y: auto;
-      padding: 8px 10px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-      border-radius: 8px;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-      box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
-      font-size: 0.8rem;
-      font-weight: 400;
-    }
-
-    .format-token {
-      display: flex;
-      gap: 10px;
-    }
-
-    .format-token code {
-      flex: 0 0 auto;
-      min-width: 2.4em;
-      color: var(--primary-color, #03a9f4);
-      font-family: var(--ha-font-family-code, monospace);
-    }
-
-    .format-token span {
-      opacity: 0.85;
-    }
-
-    .color-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .color-row input[type='text'] {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .color-swatch {
-      width: 40px;
-      height: 34px;
-      flex: 0 0 auto;
-      padding: 2px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .field input[type='text'],
-    .field select,
-    .field textarea {
-      box-sizing: border-box;
-      width: 100%;
-      font: inherit;
-      padding: 6px 8px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 6px;
-      background: var(--card-background-color, #fff);
-      color: inherit;
-    }
-
-    /* Monospace variant for code-ish content (e.g. Service Data JSON). */
-    .field textarea.mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      line-height: 1.4;
-    }
-
-    /* Grow to fit the content, with the rows attribute as the minimum. */
-    .field textarea.autosize {
-      /* stylelint-disable-next-line property-no-unknown */
-      field-sizing: content;
-      resize: none;
-    }
-
-    /* Match the select's height to the text inputs (native selects render
-       shorter otherwise). */
-    .field input[type='text'],
-    .field select {
-      height: 34px;
-    }
-
-    .field.invalid input[type='text'],
-    .field.invalid textarea {
-      border-color: var(--error-color, #db4437);
-    }
-
-    /* Clearly show a disabled control (e.g. Format while a custom format is set). */
-    .field select:disabled,
-    .field input:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      background: var(--divider-color, rgb(0 0 0 / 6%));
-    }
-
-    .field-inline input:disabled ~ .check-label {
-      opacity: 0.4;
-    }
-
-    /* HA's code editor field: wrap it in the same bordered box as the other
-       inputs. Keep overflow visible so the CodeMirror autocomplete popup is not
-       clipped by the field box. */
-    .code-field ha-code-editor {
-      display: block;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 6px;
-      --code-editor-background-color: var(--card-background-color, transparent);
-      --code-mirror-max-height: 160px;
-    }
-
-    .code-field.invalid ha-code-editor {
-      border-color: var(--error-color, #db4437);
-    }
-
-    /* In element YAML mode, the form fills the editor column and the YAML editor
-       grows to take all the height left above the buttons. */
-    .form.yaml-mode {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    .yaml-fill {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .yaml-fill ha-yaml-editor {
-      flex: 1 1 auto;
-      min-height: 0;
-      --code-mirror-max-height: 100%;
-    }
-
-    .yaml-fill textarea {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
-
-    /* Invalid-YAML notice carried back to the UI form. */
-    .yaml-banner {
-      padding: 8px 10px;
-      border: 1px solid var(--error-color, #db4437);
-      border-radius: 6px;
-      color: var(--error-color, #db4437);
-      font-size: 0.8rem;
-      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
-    }
-
-    /* HA's YAML editor field (manual card): match the bordered input box. */
-    .yaml-field ha-yaml-editor {
-      display: block;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 6px;
-      overflow: hidden;
-      --code-editor-background-color: var(--card-background-color, transparent);
-      --code-mirror-max-height: 220px;
-    }
-
-    .field-error {
-      color: var(--error-color, #db4437);
-      font-size: 0.75rem;
-    }
-
-    .hint {
-      font-size: 0.8rem;
-      opacity: 0.6;
-      margin: 4px 0;
-    }
-
-    .tab-notes {
-      display: flex;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-    }
-
-    .tab-notes .tab-note {
-      flex: 1 1 auto;
-    }
-
-    /* The options button must not tallen the notes row past its text, so the
-       footer notes line up exactly with the other tabs: cap its box to the
-       note's line height (0.95rem * 1.4) while keeping the icon centered. */
-    .tab-notes .tool {
-      height: calc(0.95rem * 1.4);
-      margin-block: 0;
-    }
-
-    .tab-note {
-      margin: 0;
-      font-size: 0.95rem;
-      line-height: 1.4;
-      opacity: 0.85;
-    }
-
-    .editor-note {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin: 0 0 12px;
-      padding: 10px 12px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-      border-left: 3px solid var(--info-color, #2196f3);
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--info-color, #2196f3) 8%, transparent);
-      font-size: 0.95rem;
-      line-height: 1.4;
-    }
-
-    .editor-note ha-icon {
-      --mdc-icon-size: 22px;
-
-      flex: 0 0 auto;
-      color: var(--info-color, #2196f3);
-    }
-
-    /* Dashed "dropzone" add trigger, used for empty-area call-to-actions. */
-    .add {
-      font: inherit;
-      margin-top: 4px;
-      padding: 6px 10px;
-      border: 1px dashed var(--divider-color, rgb(0 0 0 / 25%));
-      border-radius: 8px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    /* Solid (filled) form action buttons: add-after, add child, delete. */
-    /* The form's bottom actions (Add / Delete) sit in one equal-width row. */
-    .form-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .form-actions > * {
-      flex: 1 1 0;
-      min-width: 0;
-      margin-top: 0;
-      text-align: center;
-    }
-
-    .add-btn,
-    .add.solid {
-      font: inherit;
-      margin-top: 4px;
-      padding: 8px 12px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      /* A tint of the text color reads as a solid button in both light and dark
-         themes, unlike the near-invisible secondary background. */
-      background: color-mix(in srgb, var(--primary-text-color, #000) 14%, transparent);
-      color: inherit;
-      cursor: pointer;
-    }
-
-    .add-btn:hover,
-    .add.solid:hover {
-      background: color-mix(in srgb, var(--primary-text-color, #000) 24%, transparent);
-    }
-
-    /* Delete is a solid red button. */
-    .add-btn.danger {
-      background: var(--error-color, #db4437);
-      color: var(--text-primary-color, #fff);
-    }
-
-    .add-btn.danger:hover {
-      background: color-mix(in srgb, var(--error-color, #db4437) 85%, #000);
-    }
-
-    .errors {
-      margin: 0;
-      padding: 8px 24px;
-      color: var(--error-color, #db4437);
-      font-size: 0.8rem;
-      background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
-    }
-
-    footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 10px 12px;
-    }
-
-    footer button {
-      font: inherit;
-      padding: 8px 16px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--primary-text-color, #000) 14%, transparent);
-      color: inherit;
-      cursor: pointer;
-    }
-
-    footer button:not(.primary):hover {
-      background: color-mix(in srgb, var(--primary-text-color, #000) 24%, transparent);
-    }
-
-    .primary {
-      background: var(--primary-color, #03a9f4);
-      color: var(--text-primary-color, #fff);
-      border-color: transparent;
-    }
-
-    .primary[disabled] {
-      opacity: 0.45;
-      cursor: default;
-    }
-
-    .confirm-scrim {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgb(0 0 0 / 45%);
-      border-radius: 12px;
-    }
-
-    .confirm {
-      max-width: 320px;
-      margin: 16px;
-      padding: 16px;
-      border-radius: 12px;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-      box-shadow: 0 8px 40px rgb(0 0 0 / 40%);
-    }
-
-    .confirm p {
-      margin: 0 0 14px;
-    }
-
-    .confirm-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .confirm-actions button {
-      font: inherit;
-      padding: 8px 14px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));
-      border-radius: 8px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    .danger-btn {
-      background: var(--error-color, #db4437);
-      color: var(--text-primary-color, #fff);
-      border-color: transparent;
-    }
-
-    /* Custom add-element type menu (fixed so it escapes the modal clipping). */
-    .menu-scrim {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-    }
-
-    .add-menu {
-      position: fixed;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      width: max-content;
-      min-width: 150px;
-      max-width: calc(100vw - 16px);
-      height: min-content;
-      max-height: 60vh;
-      overflow-y: auto;
-      padding: 4px;
-      border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-      border-radius: 8px;
-      background-color: var(--primary-background-color, #fff);
-      background-image: linear-gradient(
-        var(--card-background-color, #fff),
-        var(--card-background-color, #fff)
-      );
-      box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
-    }
-
-    .add-menu-item {
-      font: inherit;
-      text-align: left;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    .add-menu-item:hover {
-      background: var(--secondary-background-color, rgb(0 0 0 / 8%));
-    }
-
-    /* A nested "Change to" choice, indented under its parent item. */
-    .add-menu-item.submenu-item {
-      padding-left: 26px;
-      opacity: 0.85;
-    }
-  `;
+  static styles = editorStyles;
 }
 
 declare global {
