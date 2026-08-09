@@ -7,6 +7,10 @@ import { css } from 'lit';
 export const menuStyles = css`
   .row {
     display: flex;
+    /* Rows are flex children of the scrolling region. Without this they shrink
+       to absorb an over-full body instead of letting it scroll, so a long
+       sidebar silently squashes its rows. */
+    flex: 0 0 auto;
     /* Never wrap the icon/label onto a second line — during a collapse/expand
        the width animates through intermediate sizes, and wrapping made rows
        reflow/grow for a frame. Clip instead. */
