@@ -1293,7 +1293,14 @@ export class DashboardSidebar extends LitElement {
           class="entry-divider dashboard-sidebar-divider${this._hookClass(block)}${this._selClass(loc)}"
           id=${block.id ?? nothing}
           data-loc=${loc}
-          style=${styleMap(block.color ? { background: this._templates.resolve(block.color) } : {})}
+          style=${styleMap(
+            block.color
+              ? // background-color, not the background shorthand: the shorthand
+                // resets background-clip, which the editor preview relies on to
+                // keep the color on the 1px line instead of its padding box.
+                { 'background-color': this._templates.resolve(block.color) }
+              : {},
+          )}
         ></div>`;
       case 'item':
         return this._renderItemRow(block, collapsed, loc);

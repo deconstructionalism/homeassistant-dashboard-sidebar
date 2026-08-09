@@ -322,7 +322,11 @@ describe('<dashboard-sidebar> config species', () => {
         body: [{ type: 'item', title: 'A', tap_action: TAP }],
       });
       const divider = root(el).querySelector('.dashboard-sidebar-divider') as HTMLElement;
-      expect(divider.style.background).to.equal('purple');
+      expect(divider.style.backgroundColor).to.equal('purple');
+      // Must stay the longhand: the `background` shorthand resets
+      // background-clip, which the editor preview uses to keep the color on the
+      // 1px line rather than flooding its padding box.
+      expect(divider.style.background).to.equal('');
     });
 
     it('puts blocks in the fixed header and scrolling body', async () => {
