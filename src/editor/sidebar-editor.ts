@@ -1693,7 +1693,13 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderRegionPreview(region: Region): TemplateResult {
     const blocks = this._working[region] ?? [];
-    return html`${this._previewEl(region, { [region]: blocks })}`;
+    // Carry the sidebar-level card_mod through, so an element styled there (a
+    // title's letter-spacing, say) previews the same in the tab where it is
+    // edited as it does in the whole-sidebar preview on Settings.
+    return html`${this._previewEl(region, {
+      [region]: blocks,
+      card_mod: this._working.card_mod,
+    })}`;
   }
 
   /**
