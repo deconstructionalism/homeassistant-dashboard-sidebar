@@ -39,6 +39,10 @@ export default tseslint.config(
       // deliberately rather than littering the code with casts.
       '@typescript-eslint/no-explicit-any': 'off',
 
+      // Named module helpers are arrow functions assigned to a const, not
+      // `function` declarations, so there is no hoisting to reason about.
+      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+
       // Require a JSDoc block before every function, method, and class, on
       // every type/interface/enum, and on every interface property. The
       // property rule is scoped to interface bodies so it does not fire on

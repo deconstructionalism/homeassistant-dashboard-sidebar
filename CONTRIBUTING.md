@@ -95,8 +95,6 @@ checks. Editor screenshots are committed by a human after eyeballing them
 
 ## Conventions
 
-- Prefer **arrow functions** for named module helpers (`const foo = () => {}`).
-- No em-dashes in UI copy, comments, or prose.
 - Keep comments about *why*, not a restatement of the code.
 
 ## Releasing

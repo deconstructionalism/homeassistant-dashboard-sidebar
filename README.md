@@ -12,8 +12,10 @@ Footer), and everything it produces is plain YAML under a `dashboard_sidebar` ke
 
 📖 **[Documentation](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/)**: configuration reference, the visual editor, styling, and actions.
 
-<img src="https://raw.githubusercontent.com/deconstructionalism/homeassistant-dashboard-sidebar/main/docs/assets/editor/sidebar-expanded.png" alt="The sidebar expanded, with a title, clock, date, navigation items, a Rooms group, and a footer button row" width="300">
-<img src="https://raw.githubusercontent.com/deconstructionalism/homeassistant-dashboard-sidebar/main/docs/assets/editor/sidebar-collapsed.png" alt="The same sidebar collapsed to a slim icon strip" width="96">
+<p>
+  <img src="https://raw.githubusercontent.com/deconstructionalism/homeassistant-dashboard-sidebar/main/docs/assets/editor/sidebar-expanded.png" alt="The sidebar expanded, with a title, clock, date, navigation items, a Rooms group, and a footer button row" height="600">
+  <img src="https://raw.githubusercontent.com/deconstructionalism/homeassistant-dashboard-sidebar/main/docs/assets/editor/sidebar-collapsed.png" alt="The same sidebar collapsed to a slim icon strip" height="600">
+</p>
 
 
 ## Installation
