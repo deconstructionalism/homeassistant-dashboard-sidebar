@@ -4,6 +4,10 @@ import { css } from 'lit';
 export const footerStyles = css`
   .footer {
     display: flex;
+    /* The footer is a flex child of the sidebar column. Without this it shrinks
+       to absorb an over-full body, and since it clips its overflow (below) the
+       buttons lose their bottoms rather than the body scrolling for them. */
+    flex: 0 0 auto;
     /* Keep the buttons on one row and clip any that don't fit rather than
        wrapping — during a collapse/expand the width animates through
        intermediate sizes, and wrapping made the buttons stack vertically for a
