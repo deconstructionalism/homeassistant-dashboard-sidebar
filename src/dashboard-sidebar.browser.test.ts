@@ -684,9 +684,13 @@ describe('collapsed abbr and tooltip', () => {
     const btn = root(el).querySelector('.dashboard-sidebar-footer-btn') as HTMLElement;
     btn.dispatchEvent(new MouseEvent('mouseenter'));
     await el.updateComplete;
-    expect(root(el).querySelector('.dashboard-sidebar-tooltip')?.textContent?.trim()).to.equal(
-      'Settings',
-    );
+    const tip = root(el).querySelector('.dashboard-sidebar-tooltip') as HTMLElement;
+    expect(tip?.textContent?.trim()).to.equal('Settings');
+    // A button in the bar itself keeps the beside placement: vertically
+    // centered on the button, so anchored by top rather than bottom.
+    expect(tip.classList.contains('above')).to.be.false;
+    expect(tip.style.top).to.not.equal('');
+    expect(tip.style.bottom).to.equal('');
   });
 
   it('shows a tooltip on the footer ellipsis in the collapsed state', async () => {
@@ -735,6 +739,33 @@ describe('collapsed abbr and tooltip', () => {
     expect(root(el).querySelector('.dashboard-sidebar-tooltip')?.textContent?.trim()).to.equal(
       'Settings',
     );
+  });
+
+  it('places a popover button tooltip above the button, not beside it', async () => {
+    const el = await mount({
+      start_collapsed: true,
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      footer: { buttons: [{ icon: 'mdi:cog', title: 'Settings', tap_action: TAP }] },
+    });
+    const dots = root(el).querySelector('.dashboard-sidebar-footer-more') as HTMLElement;
+    dots.click();
+    await el.updateComplete;
+    const popBtn = root(el).querySelector(
+      '.dashboard-sidebar-footer-popover .dashboard-sidebar-footer-btn',
+    ) as HTMLElement;
+    const rect = popBtn.getBoundingClientRect();
+    popBtn.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    const tip = root(el).querySelector('.dashboard-sidebar-tooltip') as HTMLElement;
+    expect(tip.classList.contains('above')).to.be.true;
+    // Anchored above the button by its bottom edge, and running out from the
+    // button's own left or right edge rather than sitting beside it.
+    expect(tip.style.bottom).to.not.equal('');
+    expect(tip.style.top).to.equal('');
+    const edge = tip.style.left
+      ? { value: parseFloat(tip.style.left), expected: rect.left }
+      : { value: window.innerWidth - parseFloat(tip.style.right), expected: rect.right };
+    expect(edge.value).to.be.closeTo(edge.expected, 1);
   });
 });
 

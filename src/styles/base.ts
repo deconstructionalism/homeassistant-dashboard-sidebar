@@ -2,16 +2,56 @@ import { css } from 'lit';
 
 /**
  * Host box, sidebar column layout, the edge collapse toggle, and the default
- * icon color. All colors resolve to Home Assistant theme variables so the
- * sidebar inherits the active light/dark theme.
+ * icon color.
+ *
+ * Every color, radius, shadow, and type step in the sidebar resolves through a
+ * `--dsb-*` variable defined here, and each of those reads a Home Assistant
+ * theme variable first. Chrome (background, text, icons, the selected state)
+ * follows the tokens themes already use for Home Assistant's own nav sidebar,
+ * so a theme that styles that rail styles this one the same way; each falls
+ * back to the general card/text tokens and finally to the built-in value, so a
+ * theme that defines neither renders exactly as before. Overriding a `--dsb-*`
+ * variable from card-mod restyles every element that uses it at once.
  */
 export const baseStyles = css`
   :host {
+    /* Surfaces and text. */
+    --dsb-background: var(
+      --sidebar-background-color,
+      var(--card-background-color, var(--primary-background-color, #fff))
+    );
+    --dsb-surface-background: var(--dsb-background);
+    --dsb-text-color: var(--sidebar-text-color, var(--primary-text-color, #000));
+    --dsb-icon-color: var(
+      --sidebar-icon-color,
+      var(--paper-item-icon-color, var(--primary-text-color, #000))
+    );
+    --dsb-divider-color: var(--divider-color, rgb(0 0 0 / 12%));
+    --dsb-hover-background: var(--divider-color, rgb(0 0 0 / 8%));
+
+    /* The active/selected accent, and readable text on top of it. */
+    --dsb-accent-color: var(--sidebar-selected-icon-color, var(--primary-color, #03a9f4));
+    --dsb-accent-text-color: var(--sidebar-selected-text-color, var(--dsb-accent-color));
+    --dsb-on-accent-color: var(--text-primary-color, #fff);
+
+    /* Geometry: rows and floating surfaces follow the theme's card radius. */
+    --dsb-item-radius: var(--ha-card-border-radius, 10px);
+    --dsb-radius: var(--ha-card-border-radius, 12px);
+    --dsb-tooltip-radius: var(--ha-card-border-radius, 6px);
+    --dsb-border: var(--ha-card-border-width, 1px) solid
+      var(--ha-card-border-color, var(--dsb-divider-color));
+
+    /* Elevation. A theme that flattens its cards flattens these too; the
+       popover keeps its border so it still reads as a separate surface. */
+    --dsb-popover-shadow: var(--ha-card-box-shadow, 0 4px 16px rgb(0 0 0 / 30%));
+    --dsb-tooltip-shadow: var(--ha-card-box-shadow, 0 2px 8px rgb(0 0 0 / 30%));
+    --dsb-toggle-shadow: var(--ha-card-box-shadow, 0 1px 4px rgb(0 0 0 / 25%));
+
     display: block;
     height: 100%;
     box-sizing: border-box;
-    color: var(--primary-text-color, #000);
-    background: var(--card-background-color, var(--primary-background-color, #fff));
+    color: var(--dsb-text-color);
+    background: var(--dsb-background);
     /* Append color-emoji fonts so emoji render regardless of the inherited font
        stack (the editor preview's context otherwise lacks an emoji fallback). */
     font-family:
@@ -37,18 +77,18 @@ export const baseStyles = css`
   /* An element whose navigate action targets the current page is highlighted
      with the theme accent (rows/buttons also get a tinted pill). */
   .nav-active {
-    color: var(--primary-color, #03a9f4);
+    color: var(--dsb-accent-text-color);
   }
 
   .row.nav-active,
   .footer-btn.nav-active {
-    background: color-mix(in srgb, var(--primary-color, #03a9f4) 14%, transparent);
-    border-radius: 10px;
+    background: color-mix(in srgb, var(--dsb-accent-color) 14%, transparent);
+    border-radius: var(--dsb-item-radius);
   }
 
   .nav-active ha-icon,
   .nav-active .dashboard-sidebar-item-icon {
-    color: var(--primary-color, #03a9f4);
+    color: var(--dsb-accent-color);
   }
 
   /* Inert single-block preview embedded in the editor: no host box, no
@@ -154,16 +194,16 @@ export const baseStyles = css`
     width: 26px;
     height: 26px;
     padding: 0;
-    border: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+    border: 1px solid var(--dsb-divider-color);
     border-radius: 50%;
-    background: var(--card-background-color, var(--primary-background-color, #fff));
-    color: var(--primary-text-color, #000);
+    background: var(--dsb-surface-background);
+    color: var(--dsb-text-color);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 6;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
+    box-shadow: var(--dsb-toggle-shadow);
   }
 
   .pos-left .toggle {
@@ -198,10 +238,10 @@ export const baseStyles = css`
     width: 26px;
     height: 26px;
     padding: 0;
-    border: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+    border: 1px solid var(--dsb-divider-color);
     border-radius: 50%;
-    background: var(--card-background-color, var(--primary-background-color, #fff));
-    color: var(--primary-text-color, #000);
+    background: var(--dsb-surface-background);
+    color: var(--dsb-text-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -222,20 +262,27 @@ export const baseStyles = css`
   }
 
   ha-icon {
-    color: var(--paper-item-icon-color, var(--primary-text-color, #000));
+    color: var(--dsb-icon-color);
   }
 
   .tooltip {
     position: fixed;
     transform: translateY(-50%);
     padding: 4px 8px;
-    border-radius: 6px;
-    background: var(--card-background-color, var(--primary-background-color, #fff));
-    color: var(--primary-text-color, #000);
-    box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
-    font-size: 0.85rem;
+    border-radius: var(--dsb-tooltip-radius);
+    background: var(--dsb-surface-background);
+    color: var(--dsb-text-color);
+    box-shadow: var(--dsb-tooltip-shadow);
+    font-size: var(--ha-font-size-m, 0.85rem);
     white-space: nowrap;
     pointer-events: none;
     z-index: 10;
+  }
+
+  /* Placed above its control rather than beside it: anchored by its bottom
+     edge, so the half-height shift the beside placement needs would push it
+     out of place. */
+  .tooltip.above {
+    transform: none;
   }
 `;

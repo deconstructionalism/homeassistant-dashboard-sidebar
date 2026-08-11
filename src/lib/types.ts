@@ -279,6 +279,11 @@ export interface DashboardSidebarConfig {
   width?: number;
   /** Whether the sidebar starts collapsed, before any stored preference. */
   start_collapsed?: boolean;
+  /**
+   * Whether the sidebar floats over the dashboard content instead of pushing it
+   * aside. Default false (push): the view narrows by the sidebar's width.
+   */
+  overlay?: boolean;
   /** Hide the sidebar on narrow (mobile) viewports. */
   hide_on_mobile?: boolean;
   /**

@@ -177,16 +177,31 @@ const deleteConfig = (huiRoot: { lovelace?: any }): void => {
  * so pure content edits can update the element in place instead.
  */
 const structureKey = (config: DashboardSidebarConfig): string => {
-  return `${config.position ?? 'left'}:${config.width ?? DEFAULT_WIDTH}:${config.hide_on_mobile ? 1 : 0}`;
+  return [
+    config.position ?? 'left',
+    config.width ?? DEFAULT_WIDTH,
+    config.hide_on_mobile ? 1 : 0,
+    config.overlay ? 1 : 0,
+  ].join(':');
 };
 
 /**
  * Builds the wrapper/host layout CSS, including the collapsed width and the
  * optional hide-on-mobile media query.
+ *
+ * In push mode (the default) the host is a sticky flex item, so the view is
+ * laid out beside it and narrows by the sidebar's width. In overlay mode the
+ * host keeps its sticky box but takes zero width, and the sidebar inside is
+ * positioned against it, so the view keeps the full width and the sidebar
+ * floats over it.
  */
 const wrapperCss = (config: DashboardSidebarConfig): string => {
   const expanded = config.width ?? DEFAULT_WIDTH;
   const collapsed = DEFAULT_COLLAPSED_WIDTH;
+  // Clamp to the viewport so a mistyped width can never overflow the page.
+  const width = `min(${expanded}px, 100vw)`;
+  const overlay = Boolean(config.overlay);
+  const right = config.position === 'right';
   return `
     #${WRAPPER_ID} {
       display: flex;
@@ -196,8 +211,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
     }
     #${HOST_ID} {
       flex: 0 0 auto;
-      /* Clamp to the viewport so a mistyped width can never overflow the page. */
-      width: min(${expanded}px, 100vw);
+      width: ${overlay ? '0px' : width};
       box-sizing: border-box;
       overflow: visible;
       align-self: flex-start;
@@ -208,8 +222,25 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
       z-index: 5;
       transition: width 0.25s ease;
     }
-    #${WRAPPER_ID}.collapsed #${HOST_ID} {
-      width: ${collapsed}px;
+    ${
+      overlay
+        ? `#${HOST_ID} > dashboard-sidebar {
+             position: absolute;
+             top: 0;
+             ${right ? 'right: 0;' : 'left: 0;'}
+             width: ${width};
+             height: 100%;
+             transition: width 0.25s ease;
+             /* Floating over the view, the sidebar needs an edge of its own.
+                Read through a variable so card-mod can drop or restyle it. */
+             box-shadow: var(--dsb-overlay-shadow, 0 0 12px rgb(0 0 0 / 25%));
+           }
+           #${WRAPPER_ID}.collapsed #${HOST_ID} > dashboard-sidebar {
+             width: ${collapsed}px;
+           }`
+        : `#${WRAPPER_ID}.collapsed #${HOST_ID} {
+             width: ${collapsed}px;
+           }`
     }
     #${WRAPPER_ID} > #view {
       flex: 1 1 0;

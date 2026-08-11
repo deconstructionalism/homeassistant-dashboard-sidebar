@@ -1319,8 +1319,8 @@ export class DashboardSidebarEditor extends LitElement {
   private _renderSettings(): TemplateResult {
     const c = this._working;
     // A whole-sidebar preview so background, width, and sidebar-level Card Mod
-    // edits are visible here. Position and hide-on-mobile are left out on
-    // purpose: neither reads meaningfully in the framed preview.
+    // edits are visible here. Position, overlay, and hide-on-mobile are left
+    // out on purpose: none of them reads meaningfully in the framed preview.
     const previewConfig: DashboardSidebarConfig = {
       header: c.header,
       body: c.body,
@@ -1369,6 +1369,12 @@ export class DashboardSidebarEditor extends LitElement {
                     // off-then-on-then-off toggle returns cleanly to the original config.
                     (v) => this._patchConfig({ start_collapsed: v || undefined }),
                     'Load the sidebar collapsed to its icon strip; it expands when you tap the toggle.',
+                  )}
+                  ${checkboxField(
+                    'Overlay Dashboard Content',
+                    c.overlay ?? false,
+                    (v) => this._patchConfig({ overlay: v || undefined }),
+                    'Float the sidebar over the dashboard instead of pushing the content aside.',
                   )}
                   ${checkboxField(
                     'Hide Sidebar On Mobile',

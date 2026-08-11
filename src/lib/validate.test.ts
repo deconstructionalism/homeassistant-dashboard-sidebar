@@ -42,6 +42,13 @@ describe('validateConfig', () => {
     );
   });
 
+  it('checks the overlay flag is a boolean', () => {
+    expect(
+      validateConfig({ ...valid(), overlay: 'yes' } as unknown as DashboardSidebarConfig),
+    ).toContain('overlay: must be true or false');
+    expect(validateConfig({ ...valid(), overlay: true })).toHaveLength(0);
+  });
+
   it('checks numeric types', () => {
     expect(
       validateConfig({ ...valid(), width: '240' } as unknown as DashboardSidebarConfig),
@@ -252,6 +259,7 @@ describe('validateConfig — every block and option together', () => {
       width: 300,
       start_collapsed: false,
       hide_on_mobile: true,
+      overlay: true,
       background: '#111',
       header: [
         {

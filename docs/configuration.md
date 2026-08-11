@@ -21,6 +21,8 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **Position**: which edge the sidebar docks to (left or right).
     - **Width**: the expanded width in pixels. Defaults to 240 when left empty.
     - **Start Collapsed**: load collapsed to the icon strip.
+    - **Overlay Dashboard Content**: float the sidebar over the dashboard
+      instead of pushing the content aside.
     - **Hide on Mobile**: hide entirely on narrow (phone) screens.
 
     **Background** (any CSS background, including gradients) lives under
@@ -36,6 +38,7 @@ the [Config Reference](reference.md) (generated from the source, always current)
       position: right
       width: 300
       start_collapsed: false
+      overlay: false
       hide_on_mobile: true
       background: linear-gradient(180deg, #1b2735, #090a0f)
       header: []
@@ -48,12 +51,32 @@ the [Config Reference](reference.md) (generated from the source, always current)
 | `position` | `left` \| `right` | `left` | Which edge the sidebar docks to. |
 | `width` | number (px) | `240` | Expanded width. |
 | `start_collapsed` | boolean | `false` | Load collapsed to the icon strip. |
+| `overlay` | boolean | `false` | Float over the dashboard instead of pushing the content aside. |
 | `hide_on_mobile` | boolean | `false` | Hide entirely on narrow (phone) screens. |
 | `background` | CSS `background` | theme card bg | Any CSS background, including gradients. |
 | `header` | list | - | Blocks pinned to the top. |
 | `body` | list | - | Blocks in the scrolling region. |
 | `footer` | mapping | - | The bottom bar (see [Footer](footer.md)). |
 | `card_mod` | mapping | - | card-mod styling for the whole sidebar (see [Styling](styling.md)). |
+
+## Push or overlay
+
+By default the sidebar **pushes**: the dashboard view sits beside it and narrows
+by the sidebar's width, so nothing is ever covered. Set `overlay: true` and the
+sidebar **floats** over the view instead, which keeps the dashboard at full
+width at the cost of hiding whatever is underneath the sidebar. Collapsing works
+the same either way, so an overlay sidebar that starts collapsed covers only the
+icon strip until you expand it.
+
+```yaml
+dashboard_sidebar:
+  overlay: true
+  start_collapsed: true
+```
+
+An overlay sidebar draws a drop shadow so its edge reads against the content.
+Restyle or remove it with `--dsb-overlay-shadow` (see
+[Styling](styling.md#theme-variables)).
 
 ## Collapsing
 

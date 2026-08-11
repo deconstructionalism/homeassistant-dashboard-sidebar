@@ -14,6 +14,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `position` | `SidebarPosition` | no | Edge the sidebar docks to. Default left. |
 | `width` | `number` | no | Expanded width in pixels. Default 240. |
 | `start_collapsed` | `boolean` | no | Whether the sidebar starts collapsed, before any stored preference. |
+| `overlay` | `boolean` | no | Whether the sidebar floats over the dashboard content instead of pushing it aside. Default false (push): the view narrows by the sidebar's width. |
 | `hide_on_mobile` | `boolean` | no | Hide the sidebar on narrow (mobile) viewports. |
 | `background` | `string` | no | Sidebar background: any CSS `background` value (color, gradient, image, …), applied as the `background` shorthand. Defaults to the theme card background. |
 | `header` | `SidebarBlock[]` | no | Blocks pinned to the top, above the scrolling body. |

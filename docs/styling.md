@@ -1,5 +1,57 @@
 # Styling
 
+## Themes
+
+The sidebar follows the active Home Assistant theme without any configuration.
+Its chrome reads the same variables themes already use for Home Assistant's own
+navigation sidebar, so a theme that styles that rail styles this one to match:
+
+| What | Theme variable | Falls back to |
+| --- | --- | --- |
+| Panel and popover background | `sidebar-background-color` | `card-background-color`, then `primary-background-color` |
+| Text | `sidebar-text-color` | `primary-text-color` |
+| Icons | `sidebar-icon-color` | `paper-item-icon-color`, then `primary-text-color` |
+| Active (current page) item | `sidebar-selected-icon-color` / `sidebar-selected-text-color` | `primary-color` |
+| Dividers, hover | `divider-color` | a translucent grey |
+| Corner radius | `ha-card-border-radius` | the built-in 10-12px |
+| Borders | `ha-card-border-width` / `ha-card-border-color` | 1px of `divider-color` |
+| Shadows | `ha-card-box-shadow` | the built-in shadows |
+| Type | `ha-font-size-*`, `ha-font-weight-*`, `ha-font-family-body` | the built-in rem sizes |
+
+Each falls back to the general card and text tokens, so a theme that defines
+none of the sidebar-specific ones still renders correctly. A theme that flattens
+its cards (`ha-card-box-shadow: none`) flattens the sidebar's popovers too; they
+keep a border so they still read as a separate surface.
+
+### Theme variables
+
+Every color, radius, and shadow resolves through a `--dsb-*` variable. Set one
+from [Card Mod](#card-mod) (or from a theme) and every element that uses it
+changes at once, without hunting for selectors:
+
+| Variable | Applies to |
+| --- | --- |
+| `--dsb-background` | the sidebar panel |
+| `--dsb-surface-background` | popovers, tooltips, the collapse toggle |
+| `--dsb-text-color` / `--dsb-icon-color` | label text / icons |
+| `--dsb-accent-color` / `--dsb-accent-text-color` | the active item's tint and text |
+| `--dsb-on-accent-color` | text on a filled active icon |
+| `--dsb-divider-color` / `--dsb-hover-background` | dividers and guide lines / row hover |
+| `--dsb-item-radius` / `--dsb-radius` / `--dsb-tooltip-radius` | rows and buttons / popovers / tooltips |
+| `--dsb-border` | the popover border |
+| `--dsb-popover-shadow` / `--dsb-tooltip-shadow` / `--dsb-toggle-shadow` | those elements' elevation |
+| `--dsb-overlay-shadow` | the sidebar's own edge in [overlay](configuration.md#push-or-overlay) mode |
+
+```yaml
+dashboard_sidebar:
+  card_mod:
+    style: |
+      :host {
+        --dsb-accent-color: #ff9800;
+        --dsb-item-radius: 0px;
+      }
+```
+
 ## Colors
 
 Most elements accept **text** and **icon** color templates: any CSS color, or a

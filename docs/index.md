@@ -208,24 +208,31 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
 
 ## Highlights
 
-- **Three regions**: a pinned **header**, a scrolling **body**, and a pinned
-  **footer**.
-- **Rich elements**: title, clock, date, divider, tappable items, collapsible
-  categories, a **Markdown** block (markdown + Jinja), and **Cards** (any
-  Lovelace card).
-- **Collapsible**: the whole sidebar collapses to a slim icon strip; items and
-  categories fall back to icons, with hover popovers.
-- **Actions**: tap, hold, and double-tap actions on interactive elements
-  (toggle, more-info, navigate, URL, call-service), with an active-page
-  highlight for navigation links.
-- **Templating**: Jinja in text, icon, and color fields; full markdown +
-  Jinja in Markdown blocks.
-- **Styling**: per-element text/icon colors, a sidebar background, and
-  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at the whole
+- 🧩 **Three regions**: a header pinned to the top, a body that scrolls, and a
+  footer pinned to the bottom.
+- 🧱 **Plenty to fill them with**: titles, clocks, dates, dividers, tappable items,
+  collapsible categories, [Markdown](elements.md#markdown) blocks (markdown plus
+  Jinja), and [Cards](elements.md#card), meaning any Lovelace card at all.
+- ↔️ **Collapses to an icon strip**: one toggle on the edge and the whole thing
+  narrows. Items keep hover tooltips, categories pop out their children.
+- 👆 **Tap, hold, and double tap**: [toggle, more-info, navigate, url, or
+  call-service](actions.md), each gesture with its own target. Navigation links
+  highlight the page you're on and follow you as you move.
+- 🪄 **Jinja where it counts**: text, icons, and color fields all template, so a
+  lock icon can go red when it's unlocked. Markdown blocks get markdown and Jinja
+  both.
+- 📐 **Docks where you want it**: left or right, any width, [pushing the view
+  over or floating on top of it](configuration.md#push-or-overlay).
+- 🎨 **Wears your theme**: colors, corners, shadows, and type follow the active
+  Home Assistant theme, reading the same variables as HA's own nav sidebar.
+- 🖌️ **Styleable down to the pixel**: per-element colors, any CSS background
+  including gradients, and
+  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the whole
   sidebar and per-element level.
-- **Visual editor**: a four-tab modal (Settings, Header, Body, Footer) with
-  a live preview that mirrors the real sidebar, drag-to-reorder, and per-tab
-  YAML editing. Each tab is named for the config key it edits.
+- 🖱️ **Built by clicking, not typing**: a four-tab editor (Settings, Header, Body,
+  Footer, each named for the config key it edits) with a live preview that
+  mirrors the real sidebar, drag-to-reorder, and a YAML escape hatch on every tab
+  and element.
 
 ## Requirements
 

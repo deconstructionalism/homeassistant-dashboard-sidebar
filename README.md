@@ -18,6 +18,38 @@ Footer), and everything it produces is plain YAML under a `dashboard_sidebar` ke
 </p>
 
 
+## Features
+
+- 📐 **Docks where you want it.** Left or right, any width, pushing the view
+  over or floating on top of it.
+  ([settings](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/configuration/))
+- ↔️ **Collapses to an icon strip.** One toggle on the edge, remembered per browser.
+  Items keep hover tooltips, categories pop out their children.
+- 🧩 **Three regions, plenty to fill them with.** A pinned header, a scrolling body,
+  and a pinned footer, holding titles, clocks, dates, dividers, tappable items,
+  collapsible categories, markdown, and any Lovelace card.
+  ([elements](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/elements/),
+  [footer](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/footer/))
+- 👆 **Tap, hold, and double tap.** Toggle, more-info, navigate, url, or
+  call-service, each gesture with its own target.
+  ([actions](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/actions/))
+- 📍 **Knows where you are.** Navigation links highlight the page you're on,
+  sub-paths included, and follow you as you move.
+- 🪄 **Jinja where it counts.** Text, icons, and color fields all template, so a
+  lock icon can go red when it's unlocked.
+- 🎨 **Wears your theme.** Colors, corners, shadows, and type follow the active
+  Home Assistant theme, reading the same variables as HA's own nav sidebar.
+- 🖌️ **Styleable down to the pixel.** Per-element colors, any CSS background, and
+  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the whole
+  sidebar and per-element level.
+  ([styling](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/styling/))
+- 🖱️ **Built by clicking, not typing.** A four-tab editor with a live preview,
+  drag-to-reorder, an icon picker, a Test Action button, and a YAML escape hatch
+  on every tab and element.
+- 🌱 **Starts with something real.** The **+ Sidebar** button seeds a starter built
+  from your own views and lights, not an empty box.
+  ([install](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/install/))
+
 ## Installation
 
 Install through **[HACS](https://hacs.xyz)**: add this repository as a custom

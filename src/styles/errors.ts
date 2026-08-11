@@ -6,10 +6,10 @@ export const errorStyles = css`
     margin: 12px;
     padding: 12px;
     border: 1px solid var(--error-color, #db4437);
-    border-radius: 8px;
+    border-radius: var(--dsb-item-radius);
     background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
-    color: var(--primary-text-color, #000);
-    font-size: 0.85rem;
+    color: var(--dsb-text-color);
+    font-size: var(--ha-font-size-m, 0.85rem);
     overflow-y: auto;
   }
 
@@ -17,7 +17,7 @@ export const errorStyles = css`
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 600;
+    font-weight: var(--ha-font-weight-bold, 600);
     margin-bottom: 8px;
   }
 

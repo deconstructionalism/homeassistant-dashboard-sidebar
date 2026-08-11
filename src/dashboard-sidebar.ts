@@ -163,8 +163,11 @@ export class DashboardSidebar extends LitElement {
    */
   @state() private _footerBarWidth = 0;
 
-  /** The active hover tooltip for a collapsed row, or null. */
-  @state() private _tooltip: { text: string; rect: DOMRect } | null = null;
+  /**
+   * The active hover tooltip for a collapsed row, or null. `above` places it
+   * over the control instead of beside it (see {@link _tipStyle}).
+   */
+  @state() private _tooltip: { text: string; rect: DOMRect; above: boolean } | null = null;
 
   /** Keys (`region-index`) of categories currently collapsed when expanded. */
   @state() private _collapsedCats = new Set<string>();
@@ -992,7 +995,11 @@ export class DashboardSidebar extends LitElement {
     if (!text) {
       return;
     }
-    this._tooltip = { text, rect: (ev.currentTarget as HTMLElement).getBoundingClientRect() };
+    const el = ev.currentTarget as HTMLElement;
+    // Buttons inside the footer overflow popover are packed in a grid, so a
+    // tooltip beside one covers its neighbours. Lift those above the button.
+    const above = Boolean(el.closest('.footer-popover'));
+    this._tooltip = { text, rect: el.getBoundingClientRect(), above };
   }
 
   /**
@@ -1005,18 +1012,31 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * Computes fixed-position coordinates for the tooltip beside its row, on the
-   * side away from the dock edge and vertically centered.
+   * Computes fixed-position coordinates for the tooltip. Beside its row and
+   * vertically centered by default; `above` instead sits it on top of the
+   * control, running out from the control's own edge. Either way it opens
+   * toward whichever side has more room, so the tooltip flips instead of
+   * running off-screen when the icon strip is pinned to the right edge.
    */
-  private _tipStyle(rect: DOMRect): Record<string, string> {
-    const style: Record<string, string> = { top: `${rect.top + rect.height / 2}px` };
-    // Show on whichever side of the icon has more room, so the tooltip flips to
-    // the left when the icon strip is pinned to the right edge (mobile preview)
-    // instead of running off-screen.
-    if (window.innerWidth - rect.right >= rect.left) {
-      style.left = `${rect.right + 8}px`;
+  private _tipStyle(rect: DOMRect, above: boolean): Record<string, string> {
+    const gap = 8;
+    const room = window.innerWidth - rect.right >= rect.left;
+    if (!above) {
+      const style: Record<string, string> = { top: `${rect.top + rect.height / 2}px` };
+      if (room) {
+        style.left = `${rect.right + gap}px`;
+      } else {
+        style.right = `${window.innerWidth - rect.left + gap}px`;
+      }
+      return style;
+    }
+    // Above and to the right (aligned to the control's left edge, growing
+    // right), or above and to the left (aligned to its right edge).
+    const style: Record<string, string> = { bottom: `${window.innerHeight - rect.top + gap}px` };
+    if (room) {
+      style.left = `${rect.left}px`;
     } else {
-      style.right = `${window.innerWidth - rect.left + 8}px`;
+      style.right = `${window.innerWidth - rect.right}px`;
     }
     return style;
   }
@@ -1240,8 +1260,8 @@ export class DashboardSidebar extends LitElement {
       return nothing;
     }
     return html`<div
-      class="tooltip dashboard-sidebar-tooltip"
-      style=${styleMap(this._tipStyle(this._tooltip.rect))}
+      class="tooltip dashboard-sidebar-tooltip${this._tooltip.above ? ' above' : ''}"
+      style=${styleMap(this._tipStyle(this._tooltip.rect, this._tooltip.above))}
     >
       ${this._tooltip.text}
     </div>`;
@@ -1482,7 +1502,11 @@ export class DashboardSidebar extends LitElement {
       'align-items': stringCard ? FLEX_ALIGN[align] : 'stretch',
       ...(stringCard ? { 'text-align': align, ...CHROMELESS_CARD } : {}),
       ...(block.background
-        ? { background: block.background, padding: '8px', 'border-radius': '8px' }
+        ? {
+            background: block.background,
+            padding: '8px',
+            'border-radius': 'var(--dsb-item-radius)',
+          }
         : {}),
     };
     const fill = stringCard ? '' : ' card-fill';

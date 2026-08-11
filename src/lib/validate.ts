@@ -324,6 +324,7 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     errors.push('width: must be a number');
   }
   checkBool(c.start_collapsed, 'start_collapsed', errors);
+  checkBool(c.overlay, 'overlay', errors);
   checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);

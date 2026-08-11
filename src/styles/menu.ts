@@ -21,7 +21,7 @@ export const menuStyles = css`
     width: 100%;
     padding: 10px 12px;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--dsb-item-radius);
     background: transparent;
     color: inherit;
     font: inherit;
@@ -30,7 +30,7 @@ export const menuStyles = css`
   }
 
   .row:hover {
-    background: var(--divider-color, rgb(0 0 0 / 8%));
+    background: var(--dsb-hover-background);
   }
 
   .row .label {
@@ -41,7 +41,7 @@ export const menuStyles = css`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 1rem;
+    font-size: var(--ha-font-size-l, 1rem);
   }
 
   .collapsed-row {
@@ -53,13 +53,13 @@ export const menuStyles = css`
   }
 
   .collapsed-row.active {
-    background: var(--primary-color, #03a9f4);
-    color: var(--text-primary-color, #fff);
+    background: var(--dsb-accent-color);
+    color: var(--dsb-on-accent-color);
   }
 
   .initials {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--ha-font-size-m, 0.85rem);
+    font-weight: var(--ha-font-weight-bold, 600);
   }
 
   .category {
@@ -67,7 +67,7 @@ export const menuStyles = css`
   }
 
   .category-header {
-    font-weight: 600;
+    font-weight: var(--ha-font-weight-bold, 600);
     opacity: 0.85;
   }
 
@@ -88,7 +88,7 @@ export const menuStyles = css`
     flex-direction: column;
     gap: 2px;
     padding-left: 8px;
-    border-left: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+    border-left: 1px solid var(--dsb-divider-color);
     margin-left: 18px;
   }
 
@@ -104,14 +104,15 @@ export const menuStyles = css`
     position: fixed;
     min-width: 180px;
     padding: 8px;
-    border-radius: 12px;
-    background: var(--card-background-color, var(--primary-background-color, #fff));
-    box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+    border: var(--dsb-border);
+    border-radius: var(--dsb-radius);
+    background: var(--dsb-surface-background);
+    box-shadow: var(--dsb-popover-shadow);
     z-index: 9;
   }
 
   .popover-title {
-    font-weight: 600;
+    font-weight: var(--ha-font-weight-bold, 600);
     padding: 4px 12px 8px;
   }
 
@@ -121,7 +122,7 @@ export const menuStyles = css`
     height: 1px;
     min-height: 1px;
     margin: 6px 4px;
-    background: var(--divider-color, rgb(0 0 0 / 12%));
+    background: var(--dsb-divider-color);
   }
 
   .collapsed .entry-divider {
