@@ -996,9 +996,11 @@ export class DashboardSidebar extends LitElement {
       return;
     }
     const el = ev.currentTarget as HTMLElement;
-    // Buttons inside the footer overflow popover are packed in a grid, so a
-    // tooltip beside one covers its neighbours. Lift those above the button.
-    const above = Boolean(el.closest('.footer-popover'));
+    // Footer buttons sit shoulder to shoulder, in the bar and in the overflow
+    // popover alike, so a tooltip beside one covers its neighbours. Lift every
+    // tooltip in the footer above its button; collapsed rows keep the beside
+    // placement, where the row above and below is the whole sidebar's width.
+    const above = Boolean(el.closest('.footer'));
     this._tooltip = { text, rect: el.getBoundingClientRect(), above };
   }
 

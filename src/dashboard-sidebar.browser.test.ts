@@ -684,10 +684,29 @@ describe('collapsed abbr and tooltip', () => {
     const btn = root(el).querySelector('.dashboard-sidebar-footer-btn') as HTMLElement;
     btn.dispatchEvent(new MouseEvent('mouseenter'));
     await el.updateComplete;
+    const rect = btn.getBoundingClientRect();
     const tip = root(el).querySelector('.dashboard-sidebar-tooltip') as HTMLElement;
     expect(tip?.textContent?.trim()).to.equal('Settings');
-    // A button in the bar itself keeps the beside placement: vertically
-    // centered on the button, so anchored by top rather than bottom.
+    // Footer buttons are neighbours in a row, so their tooltips sit above the
+    // button rather than beside it, where they would cover the next button.
+    expect(tip.classList.contains('above')).to.be.true;
+    expect(tip.style.bottom).to.not.equal('');
+    expect(tip.style.top).to.equal('');
+    const edge = tip.style.left
+      ? { value: parseFloat(tip.style.left), expected: rect.left }
+      : { value: window.innerWidth - parseFloat(tip.style.right), expected: rect.right };
+    expect(edge.value).to.be.closeTo(edge.expected, 1);
+  });
+
+  it('keeps the beside placement for a collapsed body row', async () => {
+    const el = await mount({
+      start_collapsed: true,
+      body: [{ type: 'item', title: 'Kitchen', tap_action: TAP }],
+    });
+    const btn = root(el).querySelector('.dashboard-sidebar-item') as HTMLElement;
+    btn.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    const tip = root(el).querySelector('.dashboard-sidebar-tooltip') as HTMLElement;
     expect(tip.classList.contains('above')).to.be.false;
     expect(tip.style.top).to.not.equal('');
     expect(tip.style.bottom).to.equal('');
