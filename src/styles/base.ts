@@ -6,20 +6,20 @@ import { css } from 'lit';
  *
  * Every color, radius, shadow, and type step in the sidebar resolves through a
  * `--dsb-*` variable defined here, and each of those reads a Home Assistant
- * theme variable first. Chrome (background, text, icons, the selected state)
- * follows the tokens themes already use for Home Assistant's own nav sidebar,
- * so a theme that styles that rail styles this one the same way; each falls
- * back to the general card/text tokens and finally to the built-in value, so a
- * theme that defines neither renders exactly as before. Overriding a `--dsb-*`
- * variable from card-mod restyles every element that uses it at once.
+ * theme variable first. Text, icons, and the selected state follow the tokens
+ * themes already use for Home Assistant's own nav sidebar, so a theme that
+ * styles that rail styles this one the same way; each falls back to the
+ * general card/text tokens and finally to the built-in value, so a theme that
+ * defines neither renders exactly as before. Overriding a `--dsb-*` variable
+ * from card-mod restyles every element that uses it at once.
  */
 export const baseStyles = css`
   :host {
-    /* Surfaces and text. */
-    --dsb-background: var(
-      --sidebar-background-color,
-      var(--card-background-color, var(--primary-background-color, #fff))
-    );
+    /* Surfaces and text. The panel deliberately takes the card background
+       rather than the nav sidebar's: themes commonly paint that rail the same
+       color as the page behind it, which leaves this sidebar with no visible
+       edge against the view it docks to. */
+    --dsb-background: var(--card-background-color, var(--primary-background-color, #fff));
     --dsb-surface-background: var(--dsb-background);
     --dsb-text-color: var(--sidebar-text-color, var(--primary-text-color, #000));
     --dsb-icon-color: var(

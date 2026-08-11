@@ -3,12 +3,15 @@
 ## Themes
 
 The sidebar follows the active Home Assistant theme without any configuration.
-Its chrome reads the same variables themes already use for Home Assistant's own
-navigation sidebar, so a theme that styles that rail styles this one to match:
+Its text, icons, and selected state read the same variables themes already use
+for Home Assistant's own navigation sidebar, so a theme that styles that rail
+styles this one to match. The panel itself takes the **card** background
+instead: themes often paint the nav rail the same color as the page behind it,
+which would leave the sidebar with no visible edge against your dashboard.
 
 | What | Theme variable | Falls back to |
 | --- | --- | --- |
-| Panel and popover background | `sidebar-background-color` | `card-background-color`, then `primary-background-color` |
+| Panel and popover background | `card-background-color` | `primary-background-color` |
 | Text | `sidebar-text-color` | `primary-text-color` |
 | Icons | `sidebar-icon-color` | `paper-item-icon-color`, then `primary-text-color` |
 | Active (current page) item | `sidebar-selected-icon-color` / `sidebar-selected-text-color` | `primary-color` |
@@ -19,7 +22,10 @@ navigation sidebar, so a theme that styles that rail styles this one to match:
 | Type | `ha-font-size-*`, `ha-font-weight-*`, `ha-font-family-body` | the built-in rem sizes |
 
 Each falls back to the general card and text tokens, so a theme that defines
-none of the sidebar-specific ones still renders correctly. A theme that flattens
+none of the sidebar-specific ones still renders correctly. To paint the panel
+with the nav rail's color after all, set
+`--dsb-background: var(--sidebar-background-color)` in the sidebar's Card Mod.
+A theme that flattens
 its cards (`ha-card-box-shadow: none`) flattens the sidebar's popovers too; they
 keep a border so they still read as a separate surface.
 
