@@ -81,3 +81,38 @@ describe('runAction', () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+describe('runAction assist', () => {
+  it('prefers the companion app message when it advertises Assist', () => {
+    const sent: unknown[] = [];
+    const hass = {
+      states: {},
+      auth: {
+        external: { config: { hasAssist: true }, fireMessage: (m: unknown) => sent.push(m) },
+      },
+    } as unknown as HomeAssistant;
+    runAction(NODE, hass, { action: 'assist', start_listening: true });
+    expect(sent[0]).toMatchObject({
+      type: 'assist/show',
+      payload: { start_listening: true },
+    });
+  });
+
+  it('falls back to the voice dialog event in a browser', () => {
+    const seen: Array<Event & { type: string; detail?: Record<string, unknown> }> = [];
+    const node = {
+      dispatchEvent: (ev: Event) => {
+        seen.push(ev as never);
+        return true;
+      },
+    } as unknown as HTMLElement;
+    runAction(node, { states: {} } as unknown as HomeAssistant, { action: 'assist' });
+    expect(seen[0]?.type).toBe('show-dialog');
+    const detail = seen[0]?.detail as {
+      dialogTag?: string;
+      dialogParams?: { start_listening?: boolean };
+    };
+    expect(detail?.dialogTag).toBe('ha-voice-command-dialog');
+    expect(detail?.dialogParams?.start_listening).toBe(false);
+  });
+});

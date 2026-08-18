@@ -25,6 +25,7 @@ the **markdown footer**) support three gestures: `tap_action`, `hold_action`
 | `navigate` | `navigation_path` | Navigates to a dashboard path. |
 | `url` | `url_path` | Opens a web address in a new tab. |
 | `call-service` | `service`, `data`, `entity` | Calls a Home Assistant service. |
+| `assist` | `pipeline_id`, `start_listening` | Opens the Assist voice dialog. |
 
 === "Visual editor"
 
@@ -48,6 +49,21 @@ the **markdown footer**) support three gestures: `tap_action`, `hold_action`
       action: navigate
       navigation_path: /lovelace/lights
     ```
+
+    An **assist** action opens the voice dialog; both keys are optional:
+
+    ```yaml
+    tap_action:
+      action: assist
+      pipeline_id: 01ABCDEF
+      start_listening: true
+    ```
+
+!!! note "Assist in the companion app"
+    In the companion app, `assist` opens the app's own Assist screen. In a
+    browser it opens the dialog Home Assistant uses for the toolbar microphone;
+    if nothing on the dashboard has loaded that dialog yet, the first press can
+    take a moment (or need a second press) while it loads.
 
 The action's own `entity` takes precedence over the element's `entity`, so one
 element can act on a different entity per gesture.

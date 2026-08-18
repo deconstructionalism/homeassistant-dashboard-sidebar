@@ -90,6 +90,7 @@ const ACTION_OPTIONS: SelectOption[] = [
   { value: 'navigate', label: 'Navigate' },
   { value: 'url', label: 'URL' },
   { value: 'call-service', label: 'Call Service' },
+  { value: 'assist', label: 'Assist' },
 ];
 
 /** Per-action explanation shown under the Tap Action dropdown. */
@@ -100,6 +101,7 @@ const TAP_ACTION_HINTS: Record<string, string> = {
   navigate: 'Navigates to another dashboard path.',
   url: 'Opens a web address in a new tab.',
   'call-service': 'Calls a Home Assistant service.',
+  assist: 'Opens the Assist voice dialog.',
 };
 
 /** Explanations shown under the tap-action fields. */
@@ -108,6 +110,8 @@ const SERVICE_HINT = 'The service to call, written as domain.service.';
 const TARGET_ENTITY_HINT = 'Entity the service is called on.';
 const NAV_PATH_HINT = 'Dashboard path to open, e.g. /lovelace/home.';
 const URL_HINT = 'Web address to open in a new tab.';
+const PIPELINE_HINT = 'Voice pipeline to use; empty uses the last one.';
+const START_LISTENING_HINT = 'Open Assist already listening for a command.';
 
 /**
  * Renders a labelled single-line text input.
@@ -886,6 +890,25 @@ export const actionFields = (
     ${
       kind === 'url'
         ? textField('URL', action.url_path, (v) => set({ url_path: v }), undefined, URL_HINT)
+        : nothing
+    }
+    ${
+      kind === 'assist'
+        ? html`
+            ${textField(
+              'Pipeline ID',
+              (action as { pipeline_id?: string }).pipeline_id,
+              (v) => set({ pipeline_id: v || undefined }),
+              undefined,
+              PIPELINE_HINT,
+            )}
+            ${checkboxField(
+              'Start Listening',
+              (action as { start_listening?: boolean }).start_listening ?? false,
+              (v) => set({ start_listening: v ? true : undefined }),
+              START_LISTENING_HINT,
+            )}
+          `
         : nothing
     }
     ${

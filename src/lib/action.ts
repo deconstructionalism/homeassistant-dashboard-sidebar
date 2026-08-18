@@ -2,8 +2,12 @@ import { type HomeAssistant, fireEvent, navigate, toggleEntity } from 'custom-ca
 
 /** The action-config fields this runner understands. */
 export interface RunnableAction {
-  /** The action kind: none/toggle/more-info/navigate/url/call-service. */
+  /** The action kind: none/toggle/more-info/navigate/url/call-service/assist. */
   action?: string;
+  /** Voice pipeline for an assist action; defaults to the last one used. */
+  pipeline_id?: string;
+  /** Whether an assist action opens straight into listening. */
+  start_listening?: boolean;
   /** Dashboard path for a navigate action. */
   navigation_path?: string;
   /** Web address for a url action. */
@@ -63,6 +67,44 @@ export const runAction = (
         window.open(action.url_path);
       }
       break;
+    case 'assist': {
+      // Home Assistant opens Assist by firing show-dialog with its own lazy
+      // import of the dialog chunk, which a custom card cannot reference. The
+      // companion app instead takes an external message, so try that first,
+      // then fall back to the dialog, waiting on the tag rather than importing
+      // it. If nothing has loaded the dialog yet this resolves late rather
+      // than never, so a second press opens it.
+      const external = (
+        hass as unknown as {
+          auth?: {
+            external?: { config?: { hasAssist?: boolean }; fireMessage?: (m: unknown) => void };
+          };
+        }
+      ).auth?.external;
+      if (external?.config?.hasAssist && typeof external.fireMessage === 'function') {
+        external.fireMessage({
+          type: 'assist/show',
+          payload: {
+            pipeline_id: action.pipeline_id,
+            start_listening: action.start_listening ?? true,
+          },
+        });
+        break;
+      }
+      fireEvent(
+        node,
+        'show-dialog' as never,
+        {
+          dialogTag: 'ha-voice-command-dialog',
+          dialogImport: () => customElements.whenDefined('ha-voice-command-dialog'),
+          dialogParams: {
+            pipeline_id: action.pipeline_id,
+            start_listening: action.start_listening ?? false,
+          },
+        } as never,
+      );
+      break;
+    }
     case 'call-service': {
       if (!action.service) {
         break;
