@@ -343,7 +343,7 @@ export const MARKDOWN_HINT =
 export const COLOR_HINT = 'Any CSS color (hex, rgb, var(--…)); a Jinja template also works.';
 
 /** id of the shared entity `<datalist>` the editor renders once per modal. */
-export const ENTITY_DATALIST_ID = 'dsb-entity-options';
+export const ENTITY_DATALIST_ID = 'dashboard-sidebar-entity-options';
 
 /**
  * Renders an entity field: a native text input backed by the shared entity
@@ -439,7 +439,7 @@ export const entityDatalist = (hass?: HomeAssistant): TemplateResult => {
 };
 
 /** id of the shared service `<datalist>` the editor renders once per modal. */
-export const SERVICE_DATALIST_ID = 'dsb-service-options';
+export const SERVICE_DATALIST_ID = 'dashboard-sidebar-service-options';
 
 /**
  * The localized description for a service, which HA keeps in the lazily-loaded

@@ -1507,7 +1507,7 @@ export class DashboardSidebar extends LitElement {
         ? {
             background: block.background,
             padding: '8px',
-            'border-radius': 'var(--dsb-item-radius)',
+            'border-radius': 'var(--dashboard-sidebar-item-radius)',
           }
         : {}),
     };

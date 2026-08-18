@@ -17,7 +17,11 @@ export const editorStyles = css`
 
     /* A subtly distinct surface shared by the active tab and the content
          area, so the two read as one region against the modal background. */
-    --dsb-surface: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
+    --dashboard-sidebar-surface: color-mix(
+      in srgb,
+      var(--primary-text-color, #212121) 6%,
+      transparent
+    );
   }
 
   /* No focus/selection outlines on the modal's own controls. */
@@ -44,7 +48,7 @@ export const editorStyles = css`
          the modal is the tinted colour and the tab/content area is the base. */
     background-color: var(--primary-background-color, #fff);
     background-image:
-      linear-gradient(var(--dsb-surface), var(--dsb-surface)),
+      linear-gradient(var(--dashboard-sidebar-surface), var(--dashboard-sidebar-surface)),
       linear-gradient(var(--card-background-color, #fff), var(--card-background-color, #fff));
     border-radius: 12px;
     box-shadow: 0 8px 40px rgb(0 0 0 / 40%);

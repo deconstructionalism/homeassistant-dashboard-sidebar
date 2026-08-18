@@ -18,7 +18,7 @@ export const footerStyles = css`
     align-items: center;
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid var(--dsb-divider-color);
+    border-top: 1px solid var(--dashboard-sidebar-divider-color);
   }
 
   .collapsed .footer {
@@ -38,7 +38,7 @@ export const footerStyles = css`
     height: 40px;
     padding: 0;
     border: none;
-    border-radius: var(--dsb-item-radius);
+    border-radius: var(--dashboard-sidebar-item-radius);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -46,7 +46,7 @@ export const footerStyles = css`
 
   .footer-btn:hover,
   .footer-btn.active {
-    background: var(--dsb-hover-background);
+    background: var(--dashboard-sidebar-hover-background);
   }
 
   .footer-popover {

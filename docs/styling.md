@@ -24,37 +24,37 @@ which would leave the sidebar with no visible edge against your dashboard.
 Each falls back to the general card and text tokens, so a theme that defines
 none of the sidebar-specific ones still renders correctly. To paint the panel
 with the nav rail's color after all, set
-`--dsb-background: var(--sidebar-background-color)` in the sidebar's Card Mod.
+`--dashboard-sidebar-background: var(--sidebar-background-color)` in the sidebar's Card Mod.
 A theme that flattens
 its cards (`ha-card-box-shadow: none`) flattens the sidebar's popovers too; they
 keep a border so they still read as a separate surface.
 
 ### Theme variables
 
-Every color, radius, and shadow resolves through a `--dsb-*` variable. Set one
+Every color, radius, and shadow resolves through a `--dashboard-sidebar-*` variable. Set one
 from [Card Mod](#card-mod) (or from a theme) and every element that uses it
 changes at once, without hunting for selectors:
 
 | Variable | Applies to |
 | --- | --- |
-| `--dsb-background` | the sidebar panel |
-| `--dsb-surface-background` | popovers, tooltips, the collapse toggle |
-| `--dsb-text-color` / `--dsb-icon-color` | label text / icons |
-| `--dsb-accent-color` / `--dsb-accent-text-color` | the active item's tint and text |
-| `--dsb-on-accent-color` | text on a filled active icon |
-| `--dsb-divider-color` / `--dsb-hover-background` | dividers and guide lines / row hover |
-| `--dsb-item-radius` / `--dsb-radius` / `--dsb-tooltip-radius` | rows and buttons / popovers / tooltips |
-| `--dsb-border` | the popover border |
-| `--dsb-popover-shadow` / `--dsb-tooltip-shadow` / `--dsb-toggle-shadow` | those elements' elevation |
-| `--dsb-overlay-shadow` | the sidebar's own edge in [overlay](configuration.md#push-or-overlay) mode |
+| `--dashboard-sidebar-background` | the sidebar panel |
+| `--dashboard-sidebar-surface-background` | popovers, tooltips, the collapse toggle |
+| `--dashboard-sidebar-text-color` / `--dashboard-sidebar-icon-color` | label text / icons |
+| `--dashboard-sidebar-accent-color` / `--dashboard-sidebar-accent-text-color` | the active item's tint and text |
+| `--dashboard-sidebar-on-accent-color` | text on a filled active icon |
+| `--dashboard-sidebar-divider-color` / `--dashboard-sidebar-hover-background` | dividers and guide lines / row hover |
+| `--dashboard-sidebar-item-radius` / `--dashboard-sidebar-radius` / `--dashboard-sidebar-tooltip-radius` | rows and buttons / popovers / tooltips |
+| `--dashboard-sidebar-border` | the popover border |
+| `--dashboard-sidebar-popover-shadow` / `--dashboard-sidebar-tooltip-shadow` / `--dashboard-sidebar-toggle-shadow` | those elements' elevation |
+| `--dashboard-sidebar-overlay-shadow` | the sidebar's own edge in [overlay](configuration.md#push-or-overlay) mode |
 
 ```yaml
 dashboard_sidebar:
   card_mod:
     style: |
       :host {
-        --dsb-accent-color: #ff9800;
-        --dsb-item-radius: 0px;
+        --dashboard-sidebar-accent-color: #ff9800;
+        --dashboard-sidebar-item-radius: 0px;
       }
 ```
 

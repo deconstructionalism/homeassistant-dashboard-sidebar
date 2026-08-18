@@ -136,7 +136,7 @@ const getHeaderHeight = (shadow: ShadowRoot): number => {
  * is stacked above the view — from overlapping the header's controls.
  */
 const applyHeaderOffset = (shadow: ShadowRoot, host: HTMLElement): void => {
-  host.style.setProperty('--dsb-header', `${getHeaderHeight(shadow)}px`);
+  host.style.setProperty('--dashboard-sidebar-header', `${getHeaderHeight(shadow)}px`);
 };
 
 /**
@@ -216,9 +216,9 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
       overflow: visible;
       align-self: flex-start;
       position: sticky;
-      top: var(--dsb-header, 0px);
-      margin-top: var(--dsb-header, 0px);
-      height: calc(100vh - var(--dsb-header, 0px));
+      top: var(--dashboard-sidebar-header, 0px);
+      margin-top: var(--dashboard-sidebar-header, 0px);
+      height: calc(100vh - var(--dashboard-sidebar-header, 0px));
       z-index: 5;
       transition: width 0.25s ease;
     }
@@ -233,7 +233,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
              transition: width 0.25s ease;
              /* Floating over the view, the sidebar needs an edge of its own.
                 Read through a variable so card-mod can drop or restyle it. */
-             box-shadow: var(--dsb-overlay-shadow, 0 0 12px rgb(0 0 0 / 25%));
+             box-shadow: var(--dashboard-sidebar-overlay-shadow, 0 0 12px rgb(0 0 0 / 25%));
            }
            #${WRAPPER_ID}.collapsed #${HOST_ID} > dashboard-sidebar {
              width: ${collapsed}px;

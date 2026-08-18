@@ -75,7 +75,7 @@ dashboard_sidebar:
 ```
 
 An overlay sidebar draws a drop shadow so its edge reads against the content.
-Restyle or remove it with `--dsb-overlay-shadow` (see
+Restyle or remove it with `--dashboard-sidebar-overlay-shadow` (see
 [Styling](styling.md#theme-variables)).
 
 ## Collapsing

@@ -21,7 +21,7 @@ export const menuStyles = css`
     width: 100%;
     padding: 10px 12px;
     border: none;
-    border-radius: var(--dsb-item-radius);
+    border-radius: var(--dashboard-sidebar-item-radius);
     background: transparent;
     color: inherit;
     font: inherit;
@@ -30,7 +30,7 @@ export const menuStyles = css`
   }
 
   .row:hover {
-    background: var(--dsb-hover-background);
+    background: var(--dashboard-sidebar-hover-background);
   }
 
   .row .label {
@@ -53,8 +53,8 @@ export const menuStyles = css`
   }
 
   .collapsed-row.active {
-    background: var(--dsb-accent-color);
-    color: var(--dsb-on-accent-color);
+    background: var(--dashboard-sidebar-accent-color);
+    color: var(--dashboard-sidebar-on-accent-color);
   }
 
   .initials {
@@ -88,7 +88,7 @@ export const menuStyles = css`
     flex-direction: column;
     gap: 2px;
     padding-left: 8px;
-    border-left: 1px solid var(--dsb-divider-color);
+    border-left: 1px solid var(--dashboard-sidebar-divider-color);
     margin-left: 18px;
   }
 
@@ -104,10 +104,10 @@ export const menuStyles = css`
     position: fixed;
     min-width: 180px;
     padding: 8px;
-    border: var(--dsb-border);
-    border-radius: var(--dsb-radius);
-    background: var(--dsb-surface-background);
-    box-shadow: var(--dsb-popover-shadow);
+    border: var(--dashboard-sidebar-border);
+    border-radius: var(--dashboard-sidebar-radius);
+    background: var(--dashboard-sidebar-surface-background);
+    box-shadow: var(--dashboard-sidebar-popover-shadow);
     z-index: 9;
   }
 
@@ -122,7 +122,7 @@ export const menuStyles = css`
     height: 1px;
     min-height: 1px;
     margin: 6px 4px;
-    background: var(--dsb-divider-color);
+    background: var(--dashboard-sidebar-divider-color);
   }
 
   .collapsed .entry-divider {

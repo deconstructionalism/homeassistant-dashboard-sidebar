@@ -6,9 +6,9 @@ export const errorStyles = css`
     margin: 12px;
     padding: 12px;
     border: 1px solid var(--error-color, #db4437);
-    border-radius: var(--dsb-item-radius);
+    border-radius: var(--dashboard-sidebar-item-radius);
     background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
-    color: var(--dsb-text-color);
+    color: var(--dashboard-sidebar-text-color);
     font-size: var(--ha-font-size-m, 0.85rem);
     overflow-y: auto;
   }
