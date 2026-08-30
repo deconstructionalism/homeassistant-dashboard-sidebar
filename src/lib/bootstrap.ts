@@ -8,6 +8,7 @@ import {
 import { generateId } from './id';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
+import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import type { DashboardSidebarEditor } from '../editor/sidebar-editor';
 
 /** DOM id of the flex wrapper that holds the sidebar host and the view. */
@@ -258,6 +259,16 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
            }`
         : ''
     }
+    ${
+      config.mobile
+        ? `dashboard-sidebar-bar { display: none; }
+           @media (max-width: ${config.mobile.breakpoint ?? 768}px) {
+             #${HOST_ID} { display: none; }
+             #${WRAPPER_ID} > #view { flex-basis: 100%; }
+             dashboard-sidebar-bar { display: block; }
+           }`
+        : ''
+    }
   `;
 };
 
@@ -314,6 +325,13 @@ const buildSidebar = (): void => {
   } else {
     wrapper.appendChild(host);
     wrapper.appendChild(view);
+  }
+
+  if (config.mobile) {
+    const bar = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
+    bar.hass = getHass();
+    bar.setConfig(config);
+    wrapper.appendChild(bar);
   }
 
   wrapper.addEventListener(TOGGLE_EVENT, (ev: Event) => {
@@ -418,12 +436,14 @@ const ensureSidebar = (): void => {
     removeAddButton(shadow);
     const element = wrapper.querySelector('dashboard-sidebar') as DashboardSidebar | null;
 
+    const bar = wrapper.querySelector('dashboard-sidebar-bar') as DashboardSidebarBar | null;
     if (wrapper.dataset.cfg !== JSON.stringify(config ?? null)) {
       const sameStructure = Boolean(
         config && element && wrapper.dataset.struct === structureKey(config),
       );
       if (config && sameStructure && element) {
         element.setConfig(config);
+        bar?.setConfig(config);
         wrapper.dataset.cfg = JSON.stringify(config);
       } else {
         teardown(shadow);
@@ -435,6 +455,9 @@ const ensureSidebar = (): void => {
     const host = shadow.getElementById(HOST_ID);
     if (host) {
       applyHeaderOffset(shadow, host);
+    }
+    if (bar) {
+      bar.hass = getHass();
     }
     if (element) {
       element.editMode = editMode;
