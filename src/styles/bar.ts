@@ -77,8 +77,7 @@ export const barStyles = css`
 
   @keyframes dashboard-sidebar-bar-drop {
     from {
-      opacity: 0;
-      transform: translateY(-12px);
+      transform: translateY(-100%);
     }
   }
 
@@ -265,13 +264,15 @@ export const barStyles = css`
     border-radius: var(--dashboard-sidebar-bar-sheet-radius, 16px)
       var(--dashboard-sidebar-bar-sheet-radius, 16px) 0 0;
     box-shadow: 0 -4px 16px rgb(0 0 0 / 25%);
-    animation: dashboard-sidebar-bar-rise 0.15s ease-out;
+
+    /* The same slide the sidebar uses when collapsing/expanding (0.25s ease):
+       the sheet slides out from behind the bar, which stacks above it. */
+    animation: dashboard-sidebar-bar-rise 0.25s ease;
   }
 
   @keyframes dashboard-sidebar-bar-rise {
     from {
-      opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(100%);
     }
   }
 
