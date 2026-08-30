@@ -136,15 +136,7 @@ export const barStyles = css`
     white-space: nowrap;
   }
 
-  /* Clock and date slots use the desktop sidebar's collapsed compact text,
-     and hug their content instead of taking a full slot share. */
-  .dashboard-sidebar-bar-slot-clock,
-  .dashboard-sidebar-bar-slot-date {
-    flex: 0 0 auto;
-    padding-right: 2px;
-    padding-left: 2px;
-  }
-
+  /* Clock and date slots use the desktop sidebar's collapsed compact text. */
   /* The dots slot is a compact pinned control, not a nav cell. */
   .dashboard-sidebar-bar-slot-overflow {
     flex: 0 0 auto;
@@ -153,7 +145,7 @@ export const barStyles = css`
   }
 
   .dashboard-sidebar-bar-time {
-    padding: 4px 6px;
+    padding: 4px 10px;
     border-radius: var(--dashboard-sidebar-item-radius);
     font-size: var(--ha-font-size-m, 0.85rem);
     font-variant-numeric: tabular-nums;
