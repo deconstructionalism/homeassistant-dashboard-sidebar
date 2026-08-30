@@ -37,9 +37,11 @@ const MIN_SLOT_WIDTH = 64;
  * The mobile bottom bar. Renders the resolved slots (items, categories,
  * clocks, dates, dividers) with icons, optional labels, live templates, and
  * the nav-active highlight. Footer buttons and any slots that do not fit the
- * viewport fold into a trailing dots menu; categories and the menu open the
- * same upward flyout. Chrome carries dashboard-sidebar-bar-* classes so
- * card-mod and themes can target every part.
+ * viewport fold into a trailing dots menu, which opens a bottom sheet with
+ * accordion categories and the footer buttons pinned across its bottom;
+ * category slots on the bar open a small upward flyout. Chrome carries
+ * dashboard-sidebar-bar-* classes so card-mod and themes can target every
+ * part.
  */
 @customElement('dashboard-sidebar-bar')
 export class DashboardSidebarBar extends LitElement {
@@ -79,6 +81,9 @@ export class DashboardSidebarBar extends LitElement {
   /** The horizontal center of the slot the open flyout anchors to. */
   @state() private _anchorX = 0;
 
+  /** Ids of categories expanded inside the open sheet. */
+  @state() private _expanded = new Set<string>();
+
   /** The current time, ticked while a clock or date slot is on the bar. */
   @state() private _now = new Date();
 
@@ -94,15 +99,21 @@ export class DashboardSidebarBar extends LitElement {
   /** Re-reads the path when the frontend navigates. */
   private readonly _onLocationChange = (): void => {
     this._path = window.location.pathname;
-    this._open = null;
+    this._close();
   };
 
   /** Closes any open flyout when a tap lands outside the bar. */
   private readonly _onOutsideClick = (ev: Event): void => {
     if (this._open !== null && !ev.composedPath().includes(this)) {
-      this._open = null;
+      this._close();
     }
   };
+
+  /** Closes any open flyout or sheet and collapses the accordion. */
+  private _close(): void {
+    this._open = null;
+    this._expanded = new Set();
+  }
 
   /**
    * Stores the config and resolves the bar. The config is expected to be
@@ -224,14 +235,14 @@ export class DashboardSidebarBar extends LitElement {
       this._toggleFlyout(el.id ?? 'category', ev);
       return;
     }
-    this._open = null;
+    this._close();
     this._run(entry.element as ItemBlock);
   }
 
   /** Opens or closes a flyout anchored to the tapped slot. */
   private _toggleFlyout(key: string, ev: Event): void {
     if (this._open === key) {
-      this._open = null;
+      this._close();
       return;
     }
     const slot = ev.currentTarget as HTMLElement;
@@ -352,7 +363,7 @@ export class DashboardSidebarBar extends LitElement {
           active ? 'dashboard-sidebar-bar-flyout-row-active' : ''
         } ${el.class ?? ''}"
         @click=${() => {
-          this._open = null;
+          this._close();
           this._run(el);
         }}
       >
@@ -368,13 +379,10 @@ export class DashboardSidebarBar extends LitElement {
     `;
   }
 
-  /** The entries of the currently open flyout, or none. */
+  /** The entries of the currently open category flyout, or none. */
   private _flyoutEntries(menu: BarEntry[]): BarEntry[] | null {
-    if (this._open === null) {
+    if (this._open === null || this._open === 'menu') {
       return null;
-    }
-    if (this._open === 'menu') {
-      return menu;
     }
     const source = [...this._resolved.slots, ...menu].find(
       (e) => e.kind === 'category' && (e.element as CategoryBlock).id === this._open,
@@ -387,6 +395,133 @@ export class DashboardSidebarBar extends LitElement {
       kind: 'item',
       element: child,
     }));
+  }
+
+  /** Toggles a category's accordion expansion inside the sheet. */
+  private _toggleExpand(id: string): void {
+    const next = new Set(this._expanded);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    this._expanded = next;
+  }
+
+  /** Renders one list row of the sheet (items, times, dividers, accordions). */
+  private _renderSheetRow(entry: BarEntry): TemplateResult {
+    if (entry.kind === 'divider') {
+      return html`<span class="dashboard-sidebar-bar-sheet-divider"></span>`;
+    }
+    if (entry.kind === 'clock' || entry.kind === 'date') {
+      return html`
+        <div class="dashboard-sidebar-bar-sheet-row dashboard-sidebar-bar-sheet-time">
+          ${this._timeText(entry)}
+        </div>
+      `;
+    }
+    if (entry.kind === 'category') {
+      const el = entry.element as CategoryBlock;
+      const id = el.id ?? '';
+      const expanded = this._expanded.has(id);
+      const children: BarEntry[] = (el.items ?? []).map((child) => ({
+        source: entry.source,
+        kind: 'item',
+        element: child,
+      }));
+      return html`
+        <button
+          class="dashboard-sidebar-bar-sheet-row dashboard-sidebar-bar-sheet-category ${el.class ?? ''}"
+          aria-expanded=${expanded ? 'true' : 'false'}
+          @click=${() => this._toggleExpand(id)}
+        >
+          ${this._renderIcon(entry)}
+          <span class="dashboard-sidebar-bar-sheet-label">${this._title(entry)}</span>
+          <ha-icon
+            class="dashboard-sidebar-bar-sheet-chevron"
+            icon=${expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+          ></ha-icon>
+        </button>
+        ${
+          expanded
+            ? html`
+                <div class="dashboard-sidebar-bar-sheet-children">
+                  ${children.map((child) => this._renderSheetRow(child))}
+                </div>
+              `
+            : nothing
+        }
+      `;
+    }
+    const el = entry.element as ItemBlock;
+    const active = this._navActive(entry);
+    return html`
+      <button
+        class="dashboard-sidebar-bar-sheet-row ${
+          active ? 'dashboard-sidebar-bar-sheet-row-active' : ''
+        } ${el.class ?? ''}"
+        aria-current=${active ? 'page' : nothing}
+        @click=${() => {
+          this._close();
+          this._run(el);
+        }}
+      >
+        ${this._renderIcon(entry)}
+        <span class="dashboard-sidebar-bar-sheet-label">${this._title(entry)}</span>
+      </button>
+    `;
+  }
+
+  /** Renders one footer button of the sheet. */
+  private _renderSheetButton(entry: BarEntry): TemplateResult {
+    const el = entry.element as FooterButtonConfig;
+    const active = this._navActive(entry);
+    return html`
+      <button
+        class="dashboard-sidebar-bar-sheet-footer-btn ${
+          active ? 'dashboard-sidebar-bar-sheet-row-active' : ''
+        } ${el.class ?? ''}"
+        aria-label=${this._title(entry) || 'footer button'}
+        @click=${() => {
+          this._close();
+          this._run(el);
+        }}
+      >
+        ${this._renderIcon(entry)}
+      </button>
+    `;
+  }
+
+  /** Renders the bottom sheet holding the dots-menu entries. */
+  private _renderSheet(menu: BarEntry[]): TemplateResult | typeof nothing {
+    if (this._open !== 'menu' || menu.length === 0) {
+      return nothing;
+    }
+    const buttons = menu.filter((e) => e.kind === 'button');
+    const rows = menu.filter((e) => e.kind !== 'button');
+    return html`
+      <div class="dashboard-sidebar-bar-sheet-scrim" @click=${() => this._close()}></div>
+      <div class="dashboard-sidebar-bar-sheet" role="menu" aria-label="More">
+        ${
+          rows.length > 0
+            ? html`
+                <div class="dashboard-sidebar-bar-sheet-rows">
+                  ${rows.map((entry) => this._renderSheetRow(entry))}
+                </div>
+              `
+            : nothing
+        }
+        ${
+          buttons.length > 0
+            ? html`
+                <div class="dashboard-sidebar-bar-sheet-footer">
+                  ${buttons.map((entry) => this._renderSheetButton(entry))}
+                </div>
+              `
+            : nothing
+        }
+      </div>
+    `;
   }
 
   /** Renders the open flyout above its anchor. */
@@ -422,7 +557,7 @@ export class DashboardSidebarBar extends LitElement {
         style=${background ? `background:${background}` : ''}
         aria-label="Dashboard bar"
       >
-        ${this._renderFlyout(menu)}
+        ${this._renderSheet(menu)} ${this._renderFlyout(menu)}
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
@@ -433,6 +568,7 @@ export class DashboardSidebarBar extends LitElement {
                       this._open === 'menu' ? 'dashboard-sidebar-bar-slot-open' : ''
                     }"
                     aria-label="More"
+                    aria-expanded=${this._open === 'menu' ? 'true' : 'false'}
                     @click=${(ev: Event) => this._toggleFlyout('menu', ev)}
                   >
                     <span class="dashboard-sidebar-bar-icon">

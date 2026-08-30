@@ -68,19 +68,57 @@ describe('<dashboard-sidebar-bar>', () => {
     ).to.equal('true');
   });
 
-  it('opens the dots menu with the footer button and runs from it', async () => {
+  it('opens the dots sheet with the footer button pinned across its bottom', async () => {
     const el = await mount({ ...base(), mobile: {} });
     const dots = root(el).querySelector(
       '.dashboard-sidebar-bar-slot-overflow',
     ) as HTMLButtonElement;
     dots.click();
     await el.updateComplete;
-    const rows = root(el).querySelectorAll('.dashboard-sidebar-bar-flyout-row');
-    expect(rows.length).to.equal(1);
-    expect(rows[0].querySelector('ha-icon')?.getAttribute('icon')).to.equal('mdi:lock');
+    expect(root(el).querySelector('.dashboard-sidebar-bar-sheet')).to.exist;
+    expect(root(el).querySelector('.dashboard-sidebar-bar-sheet-scrim')).to.exist;
+    const btns = root(el).querySelectorAll('.dashboard-sidebar-bar-sheet-footer-btn');
+    expect(btns.length).to.equal(1);
+    expect(btns[0].querySelector('ha-icon')?.getAttribute('icon')).to.equal('mdi:lock');
     dots.click();
     await el.updateComplete;
-    expect(root(el).querySelector('.dashboard-sidebar-bar-flyout')).to.equal(null);
+    expect(root(el).querySelector('.dashboard-sidebar-bar-sheet')).to.equal(null);
+  });
+
+  it('folds overflow into the sheet with accordion categories', async () => {
+    const config = base();
+    config.body = [
+      ...Array.from({ length: 25 }, (_, i) => ({
+        type: 'item' as const,
+        id: `it${i}`,
+        title: `Item ${i}`,
+        icon: 'mdi:circle',
+        tap_action: TAP,
+      })),
+      {
+        type: 'category',
+        id: 'garden',
+        title: 'Garden',
+        icon: 'mdi:flower',
+        items: [{ id: 'plants', title: 'Plants', tap_action: TAP }],
+      },
+    ];
+    const el = await mount({ ...config, mobile: {} });
+    const dots = root(el).querySelector(
+      '.dashboard-sidebar-bar-slot-overflow',
+    ) as HTMLButtonElement;
+    expect(dots).to.exist;
+    dots.click();
+    await el.updateComplete;
+    const cat = root(el).querySelector(
+      '.dashboard-sidebar-bar-sheet-category',
+    ) as HTMLButtonElement;
+    expect(cat).to.exist;
+    expect(root(el).querySelector('.dashboard-sidebar-bar-sheet-children')).to.equal(null);
+    cat.click();
+    await el.updateComplete;
+    const children = root(el).querySelector('.dashboard-sidebar-bar-sheet-children');
+    expect(children?.textContent).to.include('Plants');
   });
 
   it('opens a category flyout above its slot', async () => {
