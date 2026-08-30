@@ -1,4 +1,5 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { stampMissingIds } from './lib/id';
 
 import type { DashboardSidebar } from './dashboard-sidebar';
 import type { DashboardSidebarConfig } from './lib/types';
@@ -13,7 +14,7 @@ let createdCards: unknown[] = [];
  */
 const mount = async (config: DashboardSidebarConfig): Promise<DashboardSidebar> => {
   const el = await fixture<DashboardSidebar>(html`<dashboard-sidebar></dashboard-sidebar>`);
-  el.setConfig(config);
+  el.setConfig(stampMissingIds(config));
   await el.updateComplete;
   await aTimeout(0);
   await el.updateComplete;

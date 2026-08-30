@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { stampMissingIds } from '../lib/id';
 
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarConfig } from '../lib/types';
@@ -10,12 +11,17 @@ const TAP = { action: 'toggle' } as const;
 
 /** A config with header, body (item + category), and a footer button. */
 const cfg = (): DashboardSidebarConfig => ({
-  header: [{ type: 'title', text: 'Home' }],
+  header: [{ type: 'title', text: 'Home', id: 't1' }],
   body: [
-    { type: 'item', title: 'A', tap_action: TAP },
-    { type: 'category', title: 'Rooms', items: [{ title: 'Kitchen', tap_action: TAP }] },
+    { type: 'item', title: 'A', tap_action: TAP, id: 't2' },
+    {
+      type: 'category',
+      title: 'Rooms',
+      id: 't3',
+      items: [{ title: 'Kitchen', tap_action: TAP, id: 't4' }],
+    },
   ],
-  footer: { buttons: [{ icon: 'mdi:cog', tap_action: TAP }] },
+  footer: { buttons: [{ icon: 'mdi:cog', tap_action: TAP, id: 't5' }] },
 });
 
 /** Mounts the editor with a config and waits for its first render. */
@@ -23,7 +29,7 @@ const mount = async (config: DashboardSidebarConfig): Promise<DashboardSidebarEd
   const el = await fixture<DashboardSidebarEditor>(
     html`<dashboard-sidebar-editor></dashboard-sidebar-editor>`,
   );
-  el.config = config;
+  el.config = stampMissingIds(config);
   await el.updateComplete;
   return el;
 };

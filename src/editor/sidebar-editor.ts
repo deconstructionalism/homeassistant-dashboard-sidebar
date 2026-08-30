@@ -34,6 +34,7 @@ import {
   validateItemConfig,
 } from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
+import { collectIds } from '../lib/id';
 import {
   actionSections,
   blockFields,
@@ -958,7 +959,7 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _addBlock(region: Region, type: BlockType): void {
     const list = this._working[region] ?? (this._working[region] = []);
-    const block = defaultBlock(type);
+    const block = defaultBlock(type, collectIds(this._working));
     const selIndex = list.findIndex((b) => this._ids.get(b) === this._selected);
     if (selIndex >= 0) {
       list.splice(selIndex + 1, 0, block);
@@ -1002,7 +1003,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _addItem(region: Region, index: number): void {
     const cat = this._category(region, index);
     if (cat) {
-      const item = defaultBlock('item') as ItemBlock;
+      const item = defaultBlock('item', collectIds(this._working)) as ItemBlock;
       const selItemIndex = cat.items.findIndex((it) => this._ids.get(it) === this._selected);
       if (selItemIndex >= 0) {
         cat.items.splice(selItemIndex + 1, 0, item);
@@ -1046,7 +1047,7 @@ export class DashboardSidebarEditor extends LitElement {
     const divider = this._working.footer?.divider;
     // Switching to a button row seeds one starter button so the footer is not
     // left in its empty state.
-    const starter = defaultFooterButton();
+    const starter = defaultFooterButton(collectIds(this._working));
     const base =
       mode === 'card'
         ? { card: { type: 'markdown', content: 'Card content' } as LovelaceCardConfig }
@@ -1083,7 +1084,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _addFooterButton(): void {
     const footer = this._working.footer ?? (this._working.footer = {});
     const list = footer.buttons ?? (footer.buttons = []);
-    const btn = defaultFooterButton();
+    const btn = defaultFooterButton(collectIds(this._working));
     const selIndex = list.findIndex((b) => this._ids.get(b) === this._selected);
     if (selIndex >= 0) {
       list.splice(selIndex + 1, 0, btn);

@@ -5,6 +5,7 @@ import {
   EDIT_EVENT,
   TOGGLE_EVENT,
 } from './const';
+import { generateId } from './id';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarEditor } from '../editor/sidebar-editor';
@@ -31,10 +32,11 @@ export const starterConfig = (hass: any, lovelace: any): DashboardSidebarConfig 
   // Greet by name. Home Assistant's server-side templates do not reliably
   // expose the current user, so bake the name in from hass at seed time.
   const name = typeof hass?.user?.name === 'string' ? hass.user.name.trim() : '';
+  const ids = new Set<string>();
   const header = [
-    { type: 'clock', align: 'center' },
-    { type: 'date', align: 'center' },
-    { type: 'title', text: name ? `Hello ${name}` : 'Hello', align: 'center' },
+    { type: 'clock', align: 'center', id: generateId(ids) },
+    { type: 'date', align: 'center', id: generateId(ids) },
+    { type: 'title', text: name ? `Hello ${name}` : 'Hello', align: 'center', id: generateId(ids) },
   ];
 
   // The base path is the current dashboard's URL segment (e.g. /lovelace or
@@ -46,6 +48,7 @@ export const starterConfig = (hass: any, lovelace: any): DashboardSidebarConfig 
     .filter((v) => v?.subview !== true)
     .map((v, i) => ({
       type: 'item',
+      id: generateId(ids),
       title: v.title || v.path || `View ${i + 1}`,
       icon: v.icon || 'mdi:view-dashboard',
       tap_action: { action: 'navigate', navigation_path: `${base}/${v.path ?? i}` },
@@ -57,6 +60,7 @@ export const starterConfig = (hass: any, lovelace: any): DashboardSidebarConfig 
     .filter((id) => id.startsWith('light.'))
     .slice(0, 4)
     .map((id) => ({
+      id: generateId(ids),
       icon: states[id]?.attributes?.icon || 'mdi:lightbulb',
       icon_color: `{{ '#ffb74d' if is_state('${id}', 'on') else 'var(--secondary-text-color)' }}`,
       title: states[id]?.attributes?.friendly_name || id,

@@ -100,12 +100,16 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
 };
 
 /**
- * Validates the optional card-mod hooks (`class`, `id`, and `card_mod`).
+ * Validates the styling hooks (`class`, `card_mod`) and the required `id`.
  */
 const checkHooks = (block: unknown, ctx: string, errors: string[]): void => {
   const b = block as { class?: unknown; id?: unknown; card_mod?: unknown };
   checkString(b.class, `${ctx}.class`, errors);
-  checkString(b.id, `${ctx}.id`, errors);
+  if (b.id === undefined || b.id === '') {
+    errors.push(`${ctx}: needs a unique id (the editor generates one for new elements)`);
+  } else {
+    checkString(b.id, `${ctx}.id`, errors);
+  }
   checkMapping(b.card_mod, `${ctx}.card_mod`, errors);
 };
 
@@ -333,7 +337,42 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     errors.push('dashboard_sidebar: needs a header or body with at least one block');
   }
   validateFooter(config.footer, 'footer', errors);
+  checkUniqueIds(config, errors);
   return errors;
+};
+
+/**
+ * Reports duplicate element ids across header and body blocks, items nested
+ * in categories, and footer buttons. Presence is checked per element; this
+ * pass only adds the cross-element uniqueness errors.
+ */
+const checkUniqueIds = (config: DashboardSidebarConfig, errors: string[]): void => {
+  const seen = new Map<string, string>();
+  const claim = (el: unknown, ctx: string): void => {
+    const id = (el as { id?: unknown })?.id;
+    if (typeof id !== 'string' || !id) {
+      return;
+    }
+    const prior = seen.get(id);
+    if (prior) {
+      errors.push(`${ctx}: id "${id}" is already used by ${prior}; ids must be unique`);
+    } else {
+      seen.set(id, ctx);
+    }
+  };
+  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+  (['header', 'body'] as const).forEach((region) => {
+    list(config[region]).forEach((block, i) => {
+      const ctx = `${region}[${i}]`;
+      claim(block, ctx);
+      list((block as { items?: unknown[] }).items).forEach((child, j) => {
+        claim(child, `${ctx}.items[${j}]`);
+      });
+    });
+  });
+  list(config.footer?.buttons).forEach((btn, i) => {
+    claim(btn, `footer.buttons[${i}]`);
+  });
 };
 
 /**
