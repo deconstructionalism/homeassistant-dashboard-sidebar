@@ -145,11 +145,14 @@ export const barStyles = css`
   }
 
   .dashboard-sidebar-bar-time {
-    padding: 4px 10px;
+    padding: 0 10px;
     border-radius: var(--dashboard-sidebar-item-radius);
     font-size: var(--ha-font-size-m, 0.85rem);
     font-variant-numeric: tabular-nums;
-    line-height: 1.3;
+
+    /* Match the icon box height so time, date, and icons share one center
+       line and the two texts sit on a common baseline. */
+    line-height: calc(var(--dashboard-sidebar-bar-icon-size, 28px) + 4px);
     white-space: nowrap;
   }
 
