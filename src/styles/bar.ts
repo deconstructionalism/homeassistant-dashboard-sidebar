@@ -24,6 +24,7 @@ export const barStyles = css`
     );
     --dashboard-sidebar-item-radius: var(--ha-card-border-radius, 10px);
     --dashboard-sidebar-hover-background: var(--divider-color, rgb(0 0 0 / 8%));
+    --dashboard-sidebar-on-accent-color: var(--text-primary-color, #fff);
   }
 
   .dashboard-sidebar-bar {
@@ -134,13 +135,15 @@ export const barStyles = css`
     }
   }
 
+  /* An open category or menu trigger matches the desktop collapsed rail's
+     open state: a solid accent pill with on-accent text. */
   .dashboard-sidebar-bar-slot-open {
-    color: var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-text-color));
+    color: var(--dashboard-sidebar-on-accent-color);
   }
 
   .dashboard-sidebar-bar-slot-open .dashboard-sidebar-bar-icon,
   .dashboard-sidebar-bar-slot-open .dashboard-sidebar-bar-time {
-    background: var(--dashboard-sidebar-hover-background);
+    background: var(--dashboard-sidebar-accent-color);
   }
 
   .dashboard-sidebar-bar-divider {
@@ -272,7 +275,8 @@ export const barStyles = css`
   }
 
   .dashboard-sidebar-bar-sheet-row:hover,
-  .dashboard-sidebar-bar-sheet-row:focus-visible {
+  .dashboard-sidebar-bar-sheet-row:focus-visible,
+  .dashboard-sidebar-bar-sheet-category[aria-expanded='true'] {
     background: var(--dashboard-sidebar-hover-background);
   }
 
