@@ -366,6 +366,7 @@ export const barStyles = css`
   /* The pinned button row follows the desktop footer's styling. */
   .dashboard-sidebar-bar-sheet-footer {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     align-items: center;
     margin-top: 8px;
