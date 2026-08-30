@@ -145,6 +145,13 @@ export const barStyles = css`
     padding-left: 2px;
   }
 
+  /* The dots slot is a compact pinned control, not a nav cell. */
+  .dashboard-sidebar-bar-slot-overflow {
+    flex: 0 0 auto;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
   .dashboard-sidebar-bar-time {
     padding: 4px 6px;
     border-radius: var(--dashboard-sidebar-item-radius);
