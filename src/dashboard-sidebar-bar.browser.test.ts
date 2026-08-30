@@ -85,6 +85,37 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(root(el).querySelector('.dashboard-sidebar-bar-sheet')).to.equal(null);
   });
 
+  it('shows the dots for a markdown footer and hosts it in the sheet', async () => {
+    (window as unknown as { loadCardHelpers?: () => Promise<unknown> }).loadCardHelpers =
+      async () => ({
+        createCardElement: () => {
+          const div = document.createElement('div');
+          div.className = 'stub-card';
+          return div;
+        },
+      });
+    try {
+      const config = base();
+      config.footer = { markdown: 'hello' };
+      const el = await mount({ ...config, mobile: {} });
+      const dots = root(el).querySelector(
+        '.dashboard-sidebar-bar-slot-overflow',
+      ) as HTMLButtonElement;
+      expect(dots).to.exist;
+      dots.click();
+      await el.updateComplete;
+      await aTimeout(0);
+      await el.updateComplete;
+      const content = root(el).querySelector('.dashboard-sidebar-bar-sheet-footer-content');
+      expect(content?.querySelector('.stub-card')).to.exist;
+      expect(root(el).querySelectorAll('.dashboard-sidebar-bar-sheet-footer-btn').length).to.equal(
+        0,
+      );
+    } finally {
+      delete (window as unknown as { loadCardHelpers?: unknown }).loadCardHelpers;
+    }
+  });
+
   it('folds overflow into the sheet with accordion categories', async () => {
     const config = base();
     config.body = [

@@ -38,7 +38,8 @@ const MIN_SLOT_WIDTH = 64;
  * clocks, dates, dividers) with icons, optional labels, live templates, and
  * the nav-active highlight. Footer buttons and any slots that do not fit the
  * viewport fold into a trailing dots menu, which opens a bottom sheet with
- * accordion categories and the footer buttons pinned across its bottom;
+ * accordion categories and the desktop footer pinned across its bottom
+ * (icon buttons, or a card/markdown footer built via the card helpers);
  * category slots on the bar open a small upward flyout. Chrome carries
  * dashboard-sidebar-bar-* classes so card-mod and themes can target every
  * part.
@@ -53,6 +54,9 @@ export class DashboardSidebarBar extends LitElement {
   public set hass(value: HomeAssistant | undefined) {
     this._hass = value;
     this._templates.setHass(value);
+    if (this._footerCard) {
+      this._footerCard.hass = value;
+    }
   }
 
   /** The stored Home Assistant object. */
@@ -80,6 +84,9 @@ export class DashboardSidebarBar extends LitElement {
 
   /** The horizontal center of the slot the open flyout anchors to. */
   @state() private _anchorX = 0;
+
+  /** The built card element of a card/markdown footer, for the sheet. */
+  @state() private _footerCard?: HTMLElement & { hass?: HomeAssistant };
 
   /** Ids of categories expanded inside the open sheet. */
   @state() private _expanded = new Set<string>();
@@ -133,9 +140,46 @@ export class DashboardSidebarBar extends LitElement {
         body.push(entry.element as SidebarBlock);
       }
     }
-    this._templates.collect({ body, footer: { buttons } });
+    this._templates.collect({ body, footer: { ...(config.footer ?? {}), buttons } });
     this._templates.setHass(this._hass);
     this._restartTimer();
+    void this._buildFooterCard();
+  }
+
+  /** Whether the desktop footer is a card or markdown footer. */
+  private _footerHasContent(): boolean {
+    const footer = this._config?.footer;
+    return footer !== undefined && (footer.card !== undefined || footer.markdown !== undefined);
+  }
+
+  /**
+   * Instantiates the footer card element for a card/markdown footer via Home
+   * Assistant's card helpers, mirroring the desktop footer.
+   */
+  private async _buildFooterCard(): Promise<void> {
+    const footer = this._config?.footer;
+    if (!this._footerHasContent()) {
+      this._footerCard = undefined;
+      return;
+    }
+    const spec =
+      footer?.card !== undefined
+        ? footer.card
+        : { type: 'markdown', content: footer?.markdown as string };
+    const helpers = await (
+      window as unknown as {
+        loadCardHelpers?: () => Promise<{
+          createCardElement: (cfg: unknown) => HTMLElement & { hass?: HomeAssistant };
+        }>;
+      }
+    ).loadCardHelpers?.();
+    if (!helpers) {
+      return;
+    }
+    const cardConfig = typeof spec === 'string' ? { type: 'markdown', content: spec } : spec;
+    const el = helpers.createCardElement(cardConfig);
+    el.hass = this._hass;
+    this._footerCard = el;
   }
 
   /**
@@ -196,7 +240,7 @@ export class DashboardSidebarBar extends LitElement {
   /** The visible slots and the effective menu, after width folding. */
   private _layout(): { visible: BarEntry[]; menu: BarEntry[] } {
     const { slots, menu } = this._resolved;
-    if (menu.length === 0 && slots.length <= this._capacity) {
+    if (menu.length === 0 && !this._footerHasContent() && slots.length <= this._capacity) {
       return { visible: slots, menu: [] };
     }
     const room = Math.max(1, this._capacity - 1);
@@ -492,12 +536,56 @@ export class DashboardSidebarBar extends LitElement {
     `;
   }
 
-  /** Renders the bottom sheet holding the dots-menu entries. */
-  private _renderSheet(menu: BarEntry[]): TemplateResult | typeof nothing {
-    if (this._open !== 'menu' || menu.length === 0) {
+  /**
+   * Renders a card/markdown footer inside the sheet footer, with the desktop
+   * footer's chrome-less treatment, markdown color, and tap action.
+   */
+  private _renderSheetFooterContent(): TemplateResult | typeof nothing {
+    const footer = this._config?.footer;
+    const el = this._footerCard;
+    if (!footer || !el) {
       return nothing;
     }
-    const buttons = menu.filter((e) => e.kind === 'button');
+    const markdown = footer.markdown !== undefined;
+    const mdColor =
+      markdown && footer.markdown_color ? this._templates.resolve(footer.markdown_color) : '';
+    const chromeless = markdown || typeof footer.card === 'string';
+    const style = [
+      chromeless
+        ? '--ha-card-background:transparent;--ha-card-box-shadow:none;--ha-card-border-width:0px'
+        : '',
+      mdColor ? `color:${mdColor};--primary-text-color:${mdColor}` : '',
+    ]
+      .filter(Boolean)
+      .join(';');
+    const action = markdown ? (footer.tap_action as RunnableAction | undefined) : undefined;
+    return html`
+      <div
+        class="dashboard-sidebar-bar-sheet-footer-content ${action ? 'clickable' : ''}"
+        style=${style}
+        @click=${
+          action
+            ? () => {
+                this._close();
+                if (this._hass) {
+                  runAction(this, this._hass, action, undefined);
+                }
+              }
+            : nothing
+        }
+      >
+        ${el}
+      </div>
+    `;
+  }
+
+  /** Renders the bottom sheet holding the dots-menu entries. */
+  private _renderSheet(menu: BarEntry[]): TemplateResult | typeof nothing {
+    const content = this._renderSheetFooterContent();
+    if (this._open !== 'menu' || (menu.length === 0 && content === nothing)) {
+      return nothing;
+    }
+    const buttons = content === nothing ? menu.filter((e) => e.kind === 'button') : [];
     const rows = menu.filter((e) => e.kind !== 'button');
     return html`
       <div class="dashboard-sidebar-bar-sheet-scrim" @click=${() => this._close()}></div>
@@ -517,14 +605,14 @@ export class DashboardSidebarBar extends LitElement {
             : nothing
         }
         ${
-          buttons.length > 0
+          buttons.length > 0 || content !== nothing
             ? html`
                 <div
                   class="dashboard-sidebar-bar-sheet-footer ${
                     this._config?.footer?.divider === false ? 'no-divider' : ''
                   }"
                 >
-                  ${buttons.map((entry) => this._renderSheetButton(entry))}
+                  ${content !== nothing ? content : buttons.map((entry) => this._renderSheetButton(entry))}
                 </div>
               `
             : nothing
@@ -570,7 +658,7 @@ export class DashboardSidebarBar extends LitElement {
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
-            menu.length > 0
+            menu.length > 0 || this._footerHasContent()
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${

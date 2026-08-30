@@ -383,6 +383,15 @@ export const barStyles = css`
     padding: 0;
   }
 
+  .dashboard-sidebar-bar-sheet-footer-content {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .dashboard-sidebar-bar-sheet-footer-content.clickable {
+    cursor: pointer;
+  }
+
   .dashboard-sidebar-bar-flyout-label {
     overflow: hidden;
     text-overflow: ellipsis;
