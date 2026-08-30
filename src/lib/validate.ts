@@ -443,6 +443,9 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   ) {
     errors.push(`mobile.labels: must be one of ${MOBILE_LABELS.join(', ')}`);
   }
+  if (mobile.position !== undefined && mobile.position !== 'top' && mobile.position !== 'bottom') {
+    errors.push('mobile.position: must be "top" or "bottom"');
+  }
   checkString(mobile.background, 'mobile.background', errors);
   checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
 

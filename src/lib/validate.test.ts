@@ -516,12 +516,14 @@ describe('mobile config', () => {
     const errors = validateConfig(
       withMobile({
         breakpoint: -1,
+        position: 'left',
         labels: 'sometimes',
         background: 5,
         extra: true,
       }),
     );
     expect(errors.some((e) => e.includes('breakpoint'))).toBe(true);
+    expect(errors.some((e) => e.includes('position'))).toBe(true);
     expect(errors.some((e) => e.includes('labels'))).toBe(true);
     expect(errors.some((e) => e.includes('background'))).toBe(true);
     expect(errors.some((e) => e.includes('extra'))).toBe(true);

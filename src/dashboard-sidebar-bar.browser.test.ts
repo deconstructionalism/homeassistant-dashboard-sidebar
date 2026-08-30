@@ -258,6 +258,13 @@ describe('<dashboard-sidebar-bar>', () => {
     history.replaceState(null, '', '/');
   });
 
+  it('reflects the dock position on the host, defaulting to bottom', async () => {
+    const bottom = await mount({ ...base(), mobile: {} });
+    expect(bottom.getAttribute('data-position')).to.equal('bottom');
+    const top = await mount({ ...base(), mobile: { position: 'top' } });
+    expect(top.getAttribute('data-position')).to.equal('top');
+  });
+
   it('applies the labels mode as a data attribute for styling hooks', async () => {
     const el = await mount({ ...base(), mobile: { labels: 'active' } });
     expect(root(el).querySelector('.dashboard-sidebar-bar')?.getAttribute('data-labels')).to.equal(

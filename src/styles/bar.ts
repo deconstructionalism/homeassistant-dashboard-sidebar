@@ -7,6 +7,10 @@ import { css } from 'lit';
  * home-indicator safe area.
  */
 export const barStyles = css`
+  :host([data-position='top']) {
+    inset: 0 0 auto;
+  }
+
   :host {
     position: fixed;
     inset: auto 0 0;
@@ -46,6 +50,36 @@ export const barStyles = css`
       var(--ha-card-background, var(--card-background-color, #fff))
     );
     border-top: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: 0;
+    border-top: none;
+    border-bottom: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar-flyout {
+    top: calc(100% + 8px);
+    bottom: auto;
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar-sheet {
+    top: 100%;
+    bottom: auto;
+    border-top: none;
+    border-bottom: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+    border-radius: 0 0 var(--dashboard-sidebar-bar-sheet-radius, 16px)
+      var(--dashboard-sidebar-bar-sheet-radius, 16px);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+    animation-name: dashboard-sidebar-bar-drop;
+  }
+
+  @keyframes dashboard-sidebar-bar-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
   }
 
   .dashboard-sidebar-bar-slots {

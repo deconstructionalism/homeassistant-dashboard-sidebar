@@ -135,6 +135,7 @@ export class DashboardSidebarBar extends LitElement {
   public setConfig(config: DashboardSidebarConfig): void {
     this._config = config;
     this._resolved = resolveBar(config);
+    this.setAttribute('data-position', config.mobile?.position ?? 'bottom');
     // Collect templates from the resolved elements by presenting them to the
     // manager as a synthetic config in the shape it already understands.
     const body: SidebarBlock[] = [];

@@ -345,6 +345,8 @@ export interface MobileConfig {
   menu?: MobileMenuEntry[];
   /** Viewport width in pixels at and below which the bar shows. Default 768. */
   breakpoint?: number;
+  /** Screen edge the bar docks to. Default bottom. */
+  position?: 'top' | 'bottom';
   /** Label rendering on the bar. Default never. */
   labels?: MobileLabels;
   /**

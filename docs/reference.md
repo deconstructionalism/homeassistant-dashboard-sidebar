@@ -249,6 +249,7 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
 | `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
 | `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
+| `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
 | `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
