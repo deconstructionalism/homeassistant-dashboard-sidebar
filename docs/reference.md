@@ -20,6 +20,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `header` | `SidebarBlock[]` | no | Blocks pinned to the top, above the scrolling body. |
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
 | `footer` | `FooterConfig` | no | The bottom bar configuration. |
+| `mobile` | `MobileConfig` | no | The mobile bar configuration. |
 | `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration (when installed) to style the sidebar. Target the dashboard-sidebar-* classes on the rendered elements. |
 
 ## Common fields (every block and footer button)
@@ -208,6 +209,50 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 | `double_tap_action` | `ActionConfig` | no | Optional action performed when double-tapped. Not templatable. |
 | `active_highlight` | `boolean` | no | Whether to highlight this element while its navigate tap action targets the current page. Default true; set false to disable the active highlight. |
 
+## MobileOverride
+
+The properties of a reused element that mobile may replace. A patch never carries `id` (the reference itself) or `type` (identity is not patchable).
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `title` | `MaybeTemplate` | no | Replacement label. Templatable. |
+| `icon` | `MaybeTemplate` | no | Replacement mdi icon. Templatable. |
+| `abbr` | `string` | no | Replacement collapsed glyph for an icon-less element. |
+| `text_color` | `MaybeTemplate` | no | Replacement label color, any CSS color. Templatable. |
+| `icon_color` | `MaybeTemplate` | no | Replacement icon color, any CSS color. Templatable. |
+| `entity` | `string` | no | Replacement target entity for toggle / more-info actions. |
+| `tap_action` | `ActionConfig` | no | Replacement tap action. |
+| `hold_action` | `ActionConfig` | no | Replacement hold action. |
+| `double_tap_action` | `ActionConfig` | no | Replacement double-tap action. |
+| `active_highlight` | `boolean` | no | Replacement active-highlight flag. |
+| `class` | `string` | no | Extra CSS class(es) on the bar rendering of this element. |
+| `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config for the bar rendering of this element. |
+
+## MobileUseEntry
+
+One entry of an explicit mobile bar: a desktop element reused by id, with any of the override properties applied inline.
+
+Also accepts the [MobileOverride](#mobileoverride) below.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `use` | `string` | yes | The id of the desktop item, category, or footer button to reuse. |
+
+## MobileConfig
+
+The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. Without `items` the bar derives from the desktop nav (items and categories in document order) amended by `hide` and `override`; with `items` the list is the whole bar and `hide`/`override` are rejected.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `hide` | `string[]` | no | Ids of derived elements to leave off the bar. Derive mode only. |
+| `override` | `Record<string, MobileOverride>` | no | Per-id property patches applied to derived elements. Derive mode only. |
+| `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
+| `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
+| `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
+| `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
+| `max_visible` | `number` | no | Cap on visible slots before overflow; unset fits to the viewport. |
+| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
+
 ## Field types
 
 The types used in the tables above.
@@ -247,6 +292,18 @@ Date format: an alias (`iso` = %Y-%m-%d, `locale`) or a strftime pattern using o
 `TitleBlock | ClockBlock | DateBlock | DividerBlock | ItemBlock | CategoryBlock | MarkdownBlock | CardBlock`
 
 Any block that can appear in the header or body region.
+
+### `MobileLabels`
+
+`'always' | 'never' | 'active'`
+
+How bar elements label themselves: always, never, or only when active.
+
+### `MobileBarEntry`
+
+`MobileUseEntry | ItemBlock`
+
+An explicit bar entry: a reuse of a desktop element, or an inline item.
 
 ### `ActionConfig`
 

@@ -4,8 +4,17 @@ import {
   FOOTER_BUTTON_FIELDS,
   FOOTER_FIELDS,
   TOP_FIELDS,
+  MOBILE_FIELDS,
+  MOBILE_LABELS,
+  MOBILE_OVERRIDE_FIELDS,
 } from './schema.generated';
-import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
+import type {
+  DashboardSidebarConfig,
+  ItemBlock,
+  MobileOverride,
+  MobileUseEntry,
+  SidebarBlock,
+} from './types';
 
 /** Accepted alignment values, as a set for lookups. */
 const ALIGN_SET = new Set<string>(ALIGNS);
@@ -310,6 +319,193 @@ const validateFooterButton = (btn: unknown, ctx: string, errors: string[]): void
   );
 };
 
+/** Keys allowed on the mobile config. */
+const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
+
+/** Keys a mobile override (or the patch part of a use entry) may set. */
+const MOBILE_OVERRIDE_KEYS = new Set<string>(MOBILE_OVERRIDE_FIELDS);
+
+/** The element kinds that can appear on the mobile bar. */
+type BarKind = 'item' | 'category' | 'button';
+
+/**
+ * Maps every element id to what kind of element carries it, so mobile
+ * references can be resolved and their eligibility checked.
+ */
+export const barEligibility = (config: DashboardSidebarConfig): Map<string, BarKind | 'other'> => {
+  const kinds = new Map<string, BarKind | 'other'>();
+  const put = (el: unknown, kind: BarKind | 'other'): void => {
+    const id = (el as { id?: unknown })?.id;
+    if (typeof id === 'string' && id) {
+      kinds.set(id, kind);
+    }
+  };
+  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+  for (const block of [...list(config.header), ...list(config.body)]) {
+    const type = (block as { type?: string }).type ?? 'item';
+    put(block, type === 'item' ? 'item' : type === 'category' ? 'category' : 'other');
+    if (type === 'category') {
+      for (const child of list((block as { items?: unknown[] }).items)) {
+        put(child, 'item');
+      }
+    }
+  }
+  for (const btn of list(config.footer?.buttons)) {
+    put(btn, 'button');
+  }
+  return kinds;
+};
+
+/**
+ * Reports an unknown or bar-ineligible reference, listing what is known.
+ */
+const checkRef = (
+  id: string,
+  kinds: Map<string, BarKind | 'other'>,
+  ctx: string,
+  errors: string[],
+): void => {
+  const kind = kinds.get(id);
+  if (kind === undefined) {
+    const known = [...kinds.keys()].filter((k) => kinds.get(k) !== 'other');
+    errors.push(`${ctx}: unknown id "${id}" (known: ${known.join(', ') || 'none'})`);
+  } else if (kind === 'other') {
+    errors.push(
+      `${ctx}: "${id}" is not bar-eligible; only items, categories, and footer buttons can appear on the bar`,
+    );
+  }
+};
+
+/**
+ * Validates an override patch: allowed keys only, with light type checks.
+ */
+const checkOverridePatch = (patch: unknown, ctx: string, errors: string[]): void => {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    errors.push(`${ctx}: must be a mapping of properties to replace`);
+    return;
+  }
+  for (const key of Object.keys(patch)) {
+    if (key !== 'use' && !MOBILE_OVERRIDE_KEYS.has(key)) {
+      errors.push(`${ctx}.${key}: not an overridable property`);
+    }
+  }
+  const p = patch as MobileOverride;
+  checkString(p.title, `${ctx}.title`, errors);
+  checkString(p.icon, `${ctx}.icon`, errors);
+  checkString(p.abbr, `${ctx}.abbr`, errors);
+  checkString(p.text_color, `${ctx}.text_color`, errors);
+  checkString(p.icon_color, `${ctx}.icon_color`, errors);
+  checkString(p.entity, `${ctx}.entity`, errors);
+  checkString(p.class, `${ctx}.class`, errors);
+  checkBool(p.active_highlight, `${ctx}.active_highlight`, errors);
+  checkMapping(p.card_mod, `${ctx}.card_mod`, errors);
+};
+
+/**
+ * Validates the mobile bar config: known keys, mode exclusivity, resolvable
+ * and bar-eligible references, patch shapes, and the bar options.
+ */
+const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void => {
+  const mobile = config.mobile;
+  if (mobile === undefined) {
+    return;
+  }
+  if (!mobile || typeof mobile !== 'object' || Array.isArray(mobile)) {
+    errors.push('mobile: must be a mapping');
+    return;
+  }
+  unknownKeys(mobile, MOBILE_KEYS, 'mobile', errors);
+  if (config.hide_on_mobile) {
+    errors.push(
+      'mobile: cannot be combined with hide_on_mobile (a mobile config already hides the sidebar and shows the bar)',
+    );
+  }
+  const explicit = mobile.items !== undefined;
+  if (explicit && (mobile.hide !== undefined || mobile.override !== undefined)) {
+    errors.push(
+      'mobile: `items` defines the whole bar; `hide`/`override` only apply in derive mode',
+    );
+  }
+
+  if (
+    mobile.breakpoint !== undefined &&
+    (typeof mobile.breakpoint !== 'number' || mobile.breakpoint <= 0)
+  ) {
+    errors.push('mobile.breakpoint: must be a positive number of pixels');
+  }
+  if (
+    mobile.labels !== undefined &&
+    !(MOBILE_LABELS as readonly string[]).includes(mobile.labels)
+  ) {
+    errors.push(`mobile.labels: must be one of ${MOBILE_LABELS.join(', ')}`);
+  }
+  checkString(mobile.background, 'mobile.background', errors);
+  if (
+    mobile.max_visible !== undefined &&
+    (typeof mobile.max_visible !== 'number' ||
+      !Number.isInteger(mobile.max_visible) ||
+      mobile.max_visible < 1)
+  ) {
+    errors.push('mobile.max_visible: must be a positive integer');
+  }
+  checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
+
+  const kinds = barEligibility(config);
+
+  if (mobile.hide !== undefined) {
+    if (!Array.isArray(mobile.hide)) {
+      errors.push('mobile.hide: must be a list of element ids');
+    } else {
+      mobile.hide.forEach((id, i) => {
+        if (typeof id !== 'string' || !id) {
+          errors.push(`mobile.hide[${i}]: must be an element id`);
+        } else {
+          checkRef(id, kinds, `mobile.hide[${i}]`, errors);
+          if (mobile.override && Object.prototype.hasOwnProperty.call(mobile.override, id)) {
+            errors.push(`mobile.hide[${i}]: "${id}" is both hidden and overridden; pick one`);
+          }
+        }
+      });
+    }
+  }
+
+  if (mobile.override !== undefined) {
+    if (!mobile.override || typeof mobile.override !== 'object' || Array.isArray(mobile.override)) {
+      errors.push('mobile.override: must be a mapping of element id to properties');
+    } else {
+      for (const [id, patch] of Object.entries(mobile.override)) {
+        checkRef(id, kinds, `mobile.override.${id}`, errors);
+        checkOverridePatch(patch, `mobile.override.${id}`, errors);
+      }
+    }
+  }
+
+  if (explicit) {
+    if (!Array.isArray(mobile.items)) {
+      errors.push('mobile.items: must be a list');
+      return;
+    }
+    mobile.items.forEach((entry, i) => {
+      const ctx = `mobile.items[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${ctx}: must be a mapping`);
+        return;
+      }
+      if ('use' in entry) {
+        const use = (entry as MobileUseEntry).use;
+        if (typeof use !== 'string' || !use) {
+          errors.push(`${ctx}.use: must be an element id`);
+        } else {
+          checkRef(use, kinds, `${ctx}.use`, errors);
+        }
+        checkOverridePatch(entry, ctx, errors);
+      } else {
+        validateItem(entry as ItemBlock, ctx, errors);
+      }
+    });
+  }
+};
+
 /**
  * Validates a full sidebar config and returns every problem found, so the
  * element can surface them all at once. The list is empty when valid.
@@ -337,6 +533,7 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     errors.push('dashboard_sidebar: needs a header or body with at least one block');
   }
   validateFooter(config.footer, 'footer', errors);
+  validateMobile(config, errors);
   checkUniqueIds(config, errors);
   return errors;
 };
@@ -372,6 +569,11 @@ const checkUniqueIds = (config: DashboardSidebarConfig, errors: string[]): void 
   });
   list(config.footer?.buttons).forEach((btn, i) => {
     claim(btn, `footer.buttons[${i}]`);
+  });
+  list(config.mobile?.items).forEach((entry, i) => {
+    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
+      claim(entry, `mobile.items[${i}]`);
+    }
   });
 };
 

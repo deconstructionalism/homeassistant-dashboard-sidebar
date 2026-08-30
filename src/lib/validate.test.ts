@@ -10,7 +10,6 @@ const valid = (): DashboardSidebarConfig => ({
   body: [{ type: 'item', title: 'Home', tap_action: { action: 'toggle' } }],
 });
 
-
 /**
  * Stamps sequential ids onto any element missing one, so fixtures can stay
  * focused on what each test is about. Id presence itself is covered by the
@@ -50,9 +49,7 @@ describe('validateConfig', () => {
   });
 
   it('requires a header or body', () => {
-    expect(vc({})).toContain(
-      'dashboard_sidebar: needs a header or body with at least one block',
-    );
+    expect(vc({})).toContain('dashboard_sidebar: needs a header or body with at least one block');
   });
 
   it('rejects a non-mapping config', () => {
@@ -62,9 +59,9 @@ describe('validateConfig', () => {
   });
 
   it('checks the position enum', () => {
-    expect(
-      vc({ ...valid(), position: 'up' } as unknown as DashboardSidebarConfig),
-    ).toContain('position: must be "left" or "right"');
+    expect(vc({ ...valid(), position: 'up' } as unknown as DashboardSidebarConfig)).toContain(
+      'position: must be "left" or "right"',
+    );
   });
 
   it('flags unknown keys and non-list regions', () => {
@@ -77,22 +74,20 @@ describe('validateConfig', () => {
   });
 
   it('checks the overlay flag is a boolean', () => {
-    expect(
-      vc({ ...valid(), overlay: 'yes' } as unknown as DashboardSidebarConfig),
-    ).toContain('overlay: must be true or false');
+    expect(vc({ ...valid(), overlay: 'yes' } as unknown as DashboardSidebarConfig)).toContain(
+      'overlay: must be true or false',
+    );
     expect(vc({ ...valid(), overlay: true })).toHaveLength(0);
   });
 
   it('checks numeric types', () => {
-    expect(
-      vc({ ...valid(), width: '240' } as unknown as DashboardSidebarConfig),
-    ).toContain('width: must be a number');
+    expect(vc({ ...valid(), width: '240' } as unknown as DashboardSidebarConfig)).toContain(
+      'width: must be a number',
+    );
   });
 
   it('requires a valid block type and flags unknown block keys', () => {
-    expect(
-      vc({ body: [{ text: 'x' }] } as unknown as DashboardSidebarConfig),
-    ).toContain(
+    expect(vc({ body: [{ text: 'x' }] } as unknown as DashboardSidebarConfig)).toContain(
       'body[0]: needs a valid type (title, clock, date, divider, item, category, markdown, card)',
     );
     expect(
@@ -148,9 +143,9 @@ describe('validateConfig', () => {
   });
 
   it('rejects a non-mapping card_mod', () => {
-    expect(
-      vc({ ...valid(), card_mod: 'nope' } as unknown as DashboardSidebarConfig),
-    ).toContain('card_mod: must be a mapping');
+    expect(vc({ ...valid(), card_mod: 'nope' } as unknown as DashboardSidebarConfig)).toContain(
+      'card_mod: must be a mapping',
+    );
     expect(
       vc({
         body: [{ type: 'item', title: 'i', tap_action: { action: 'toggle' }, card_mod: ['x'] }],
@@ -159,9 +154,9 @@ describe('validateConfig', () => {
   });
 
   it('validates title, clock, and date blocks', () => {
-    expect(
-      vc({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig),
-    ).toContain('header[0]: title needs text');
+    expect(vc({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig)).toContain(
+      'header[0]: title needs text',
+    );
     expect(
       vc({
         header: [{ type: 'title', text: 'x', align: 'middle' }],
@@ -186,9 +181,9 @@ describe('validateConfig', () => {
         body: [{ type: 'item', tap_action: { action: 'toggle' } }],
       } as DashboardSidebarConfig),
     ).toContain('body[0]: needs a title');
-    expect(
-      vc({ body: [{ type: 'item', title: 'A' }] } as DashboardSidebarConfig),
-    ).toContain('body[0]: needs a tap_action');
+    expect(vc({ body: [{ type: 'item', title: 'A' }] } as DashboardSidebarConfig)).toContain(
+      'body[0]: needs a tap_action',
+    );
     expect(
       vc({
         body: [{ type: 'category', title: 'C', items: [] }],
@@ -203,12 +198,12 @@ describe('validateConfig', () => {
   });
 
   it('validates markdown and card blocks', () => {
-    expect(
-      vc({ body: [{ type: 'card' }] } as unknown as DashboardSidebarConfig),
-    ).toContain('body[0]: card needs a card config');
-    expect(
-      vc({ body: [{ type: 'markdown' }] } as unknown as DashboardSidebarConfig),
-    ).toContain('body[0]: markdown needs content');
+    expect(vc({ body: [{ type: 'card' }] } as unknown as DashboardSidebarConfig)).toContain(
+      'body[0]: card needs a card config',
+    );
+    expect(vc({ body: [{ type: 'markdown' }] } as unknown as DashboardSidebarConfig)).toContain(
+      'body[0]: markdown needs content',
+    );
   });
 
   it('validates the footer', () => {
@@ -411,5 +406,114 @@ describe('element ids', () => {
       ],
     } as DashboardSidebarConfig);
     expect(errors).toHaveLength(0);
+  });
+});
+
+describe('mobile config', () => {
+  const withMobile = (mobile: unknown): DashboardSidebarConfig =>
+    ({
+      body: [
+        { type: 'item', id: 'rooms', title: 'Rooms', tap_action: { action: 'toggle' } },
+        {
+          type: 'category',
+          id: 'garden',
+          title: 'Garden',
+          items: [{ id: 'plants', title: 'Plants', tap_action: { action: 'toggle' } }],
+        },
+        { type: 'markdown', id: 'md', content: 'x' },
+      ],
+      footer: {
+        buttons: [{ id: 'lock', icon: 'mdi:lock', tap_action: { action: 'toggle' } }],
+      },
+      mobile,
+    }) as DashboardSidebarConfig;
+
+  it('accepts an empty mobile config (pure derive)', () => {
+    expect(validateConfig(withMobile({}))).toHaveLength(0);
+  });
+
+  it('accepts derive-mode hide and override of items, children, and buttons', () => {
+    const errors = validateConfig(
+      withMobile({
+        hide: ['plants'],
+        override: { rooms: { icon: 'mdi:home' }, lock: { title: 'Door' } },
+      }),
+    );
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects items combined with hide or override', () => {
+    const errors = validateConfig(withMobile({ items: [{ use: 'rooms' }], hide: ['lock'] }));
+    expect(errors.some((e) => e.includes('defines the whole bar'))).toBe(true);
+  });
+
+  it('rejects mobile together with hide_on_mobile', () => {
+    const config = withMobile({});
+    (config as { hide_on_mobile?: boolean }).hide_on_mobile = true;
+    expect(validateConfig(config).some((e) => e.includes('hide_on_mobile'))).toBe(true);
+  });
+
+  it('rejects unknown and bar-ineligible references with guidance', () => {
+    const errors = validateConfig(withMobile({ hide: ['nope', 'md'] }));
+    expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
+    expect(errors.some((e) => e.includes('not bar-eligible'))).toBe(true);
+  });
+
+  it('rejects hiding and overriding the same id', () => {
+    const errors = validateConfig(
+      withMobile({ hide: ['rooms'], override: { rooms: { title: 'X' } } }),
+    );
+    expect(errors.some((e) => e.includes('both hidden and overridden'))).toBe(true);
+  });
+
+  it('rejects patching identity properties', () => {
+    const errors = validateConfig(
+      withMobile({ override: { rooms: { id: 'other', type: 'card' } } }),
+    );
+    expect(errors.filter((e) => e.includes('not an overridable property'))).toHaveLength(2);
+  });
+
+  it('validates use entries and inline items in explicit mode', () => {
+    const good = validateConfig(
+      withMobile({
+        items: [
+          { use: 'garden', title: 'Yard' },
+          { use: 'rooms' },
+          { use: 'rooms' },
+          { type: 'item', id: 'extra', title: 'Extra', tap_action: { action: 'toggle' } },
+        ],
+      }),
+    );
+    expect(good).toHaveLength(0);
+    const bad = validateConfig(
+      withMobile({ items: [{ type: 'item', title: 'NoId', tap_action: { action: 'toggle' } }] }),
+    );
+    expect(bad.some((e) => e.includes('needs a unique id'))).toBe(true);
+  });
+
+  it('inline mobile ids join the global uniqueness check', () => {
+    const errors = validateConfig(
+      withMobile({
+        items: [{ type: 'item', id: 'rooms', title: 'Dup', tap_action: { action: 'toggle' } }],
+      }),
+    );
+    expect(errors.some((e) => e.includes('already used'))).toBe(true);
+  });
+
+  it('checks the bar options', () => {
+    const errors = validateConfig(
+      withMobile({
+        breakpoint: -1,
+        labels: 'sometimes',
+        max_visible: 0,
+        background: 5,
+        extra: true,
+      }),
+    );
+    expect(errors.some((e) => e.includes('breakpoint'))).toBe(true);
+    expect(errors.some((e) => e.includes('labels'))).toBe(true);
+    expect(errors.some((e) => e.includes('max_visible'))).toBe(true);
+    expect(errors.some((e) => e.includes('background'))).toBe(true);
+    expect(errors.some((e) => e.includes('extra'))).toBe(true);
   });
 });

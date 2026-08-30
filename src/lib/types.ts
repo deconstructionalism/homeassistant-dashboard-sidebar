@@ -271,6 +271,81 @@ export interface FooterConfig {
   double_tap_action?: ActionConfig;
 }
 
+/** How bar elements label themselves: always, never, or only when active. */
+export type MobileLabels = 'always' | 'never' | 'active';
+
+/**
+ * The properties of a reused element that mobile may replace. A patch never
+ * carries `id` (the reference itself) or `type` (identity is not patchable).
+ */
+export interface MobileOverride {
+  /** Replacement label. Templatable. */
+  title?: MaybeTemplate;
+  /** Replacement mdi icon. Templatable. */
+  icon?: MaybeTemplate;
+  /** Replacement collapsed glyph for an icon-less element. */
+  abbr?: string;
+  /** Replacement label color, any CSS color. Templatable. */
+  text_color?: MaybeTemplate;
+  /** Replacement icon color, any CSS color. Templatable. */
+  icon_color?: MaybeTemplate;
+  /** Replacement target entity for toggle / more-info actions. */
+  entity?: string;
+  /** Replacement tap action. */
+  tap_action?: ActionConfig;
+  /** Replacement hold action. */
+  hold_action?: ActionConfig;
+  /** Replacement double-tap action. */
+  double_tap_action?: ActionConfig;
+  /** Replacement active-highlight flag. */
+  active_highlight?: boolean;
+  /** Extra CSS class(es) on the bar rendering of this element. */
+  class?: string;
+  /** Per-element card-mod config for the bar rendering of this element. */
+  card_mod?: Record<string, unknown>;
+}
+
+/**
+ * One entry of an explicit mobile bar: a desktop element reused by id, with
+ * any of the override properties applied inline.
+ */
+export interface MobileUseEntry extends MobileOverride {
+  /** The id of the desktop item, category, or footer button to reuse. */
+  use: string;
+}
+
+/** An explicit bar entry: a reuse of a desktop element, or an inline item. */
+export type MobileBarEntry = MobileUseEntry | ItemBlock;
+
+/**
+ * The mobile bar. Its presence hides the sidebar on narrow viewports and
+ * renders a bottom bar instead. Without `items` the bar derives from the
+ * desktop nav (items and categories in document order) amended by `hide` and
+ * `override`; with `items` the list is the whole bar and `hide`/`override`
+ * are rejected.
+ */
+export interface MobileConfig {
+  /** Ids of derived elements to leave off the bar. Derive mode only. */
+  hide?: string[];
+  /** Per-id property patches applied to derived elements. Derive mode only. */
+  override?: Record<string, MobileOverride>;
+  /** The explicit bar: `use:` references and inline items. */
+  items?: MobileBarEntry[];
+  /** Viewport width in pixels at and below which the bar shows. Default 768. */
+  breakpoint?: number;
+  /** Label rendering on the bar. Default never. */
+  labels?: MobileLabels;
+  /**
+   * Bar background: any CSS `background` value. Defaults to the sidebar's
+   * `background`, and through it to the theme card background.
+   */
+  background?: string;
+  /** Cap on visible slots before overflow; unset fits to the viewport. */
+  max_visible?: number;
+  /** Passed to the card-mod integration to style the bar. */
+  card_mod?: Record<string, unknown>;
+}
+
 /** The full configuration read from the Lovelace `dashboard_sidebar` key. */
 export interface DashboardSidebarConfig {
   /** Edge the sidebar docks to. Default left. */
@@ -297,6 +372,8 @@ export interface DashboardSidebarConfig {
   body?: SidebarBlock[];
   /** The bottom bar configuration. */
   footer?: FooterConfig;
+  /** The mobile bar configuration. */
+  mobile?: MobileConfig;
   /**
    * Passed to the card-mod integration (when installed) to style the sidebar.
    * Target the dashboard-sidebar-* classes on the rendered elements.

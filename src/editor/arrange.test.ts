@@ -6,7 +6,10 @@ import { canPlace, defaultBlock, defaultFooterButton, moveBlock, starterSidebar 
 
 /** A two-region sidebar the move cases operate on. */
 const cfg = (): DashboardSidebarConfig => ({
-  header: [{ type: 'title', text: 'Home', id: 't1' }, { type: 'clock', id: 't2' }],
+  header: [
+    { type: 'title', text: 'Home', id: 't1' },
+    { type: 'clock', id: 't2' },
+  ],
   body: [
     { type: 'item', title: 'A', tap_action: { action: 'toggle' }, id: 't3' },
     { type: 'divider', id: 't4' },

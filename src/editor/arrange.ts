@@ -95,5 +95,7 @@ export const defaultFooterButton = (existing: Set<string> = new Set()): FooterBu
  * Creates a starter sidebar config for a newly added side.
  */
 export const starterSidebar = (): DashboardSidebarConfig => {
-  return { body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION, id: generateId(new Set()) }] };
+  return {
+    body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION, id: generateId(new Set()) }],
+  };
 };
