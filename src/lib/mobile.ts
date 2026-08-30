@@ -19,7 +19,7 @@ import type {
 } from './types';
 
 /** What kind of desktop element a bar entry renders as. */
-export type BarEntryKind = 'item' | 'category' | 'button' | 'clock' | 'date' | 'divider';
+export type BarEntryKind = 'item' | 'category' | 'button' | 'divider';
 
 /** Where a bar entry came from. */
 export type BarEntrySource = 'derived' | 'use' | 'inline';
@@ -103,7 +103,7 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
             block.id ? overrides[block.id] : undefined,
           ),
         });
-      } else if (type !== 'title' && type !== 'markdown' && type !== 'card') {
+      } else if (type === 'item' || type === 'divider') {
         slots.push({
           source: 'derived',
           kind: type as BarEntryKind,
@@ -127,12 +127,7 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   >();
   for (const block of blocks) {
     const type = block.type ?? 'item';
-    const usable =
-      type === 'item' ||
-      type === 'category' ||
-      type === 'clock' ||
-      type === 'date' ||
-      type === 'divider';
+    const usable = type === 'item' || type === 'category' || type === 'divider';
     if (block.id && usable) {
       byId.set(block.id, { kind: type as BarEntryKind, element: block });
     }

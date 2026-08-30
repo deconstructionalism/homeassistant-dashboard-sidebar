@@ -104,12 +104,6 @@ export const barStyles = css`
     background: var(--divider-color, rgb(127 127 127 / 30%));
   }
 
-  .dashboard-sidebar-bar-time {
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
   .dashboard-sidebar-bar-flyout {
     position: absolute;
     bottom: calc(100% + 8px);

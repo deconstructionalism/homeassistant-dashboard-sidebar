@@ -93,17 +93,14 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(rows[0].textContent).to.include('Plants');
   });
 
-  it('renders clock and divider slots when derived', async () => {
+  it('renders dividers as rules and never clocks or dates', async () => {
     const config = base();
     config.header = [
       { type: 'clock', id: 'clk', format: '%H:%M' },
       { type: 'divider', id: 'div1' },
     ];
     const el = await mount({ ...config, mobile: {} });
-    expect(
-      root(el).querySelector('.dashboard-sidebar-bar-slot-clock .dashboard-sidebar-bar-time')
-        ?.textContent,
-    ).to.match(/\d{2}:\d{2}/);
+    expect(root(el).querySelector('.dashboard-sidebar-bar-slot-clock')).to.equal(null);
     expect(root(el).querySelector('.dashboard-sidebar-bar-divider')).to.exist;
   });
 

@@ -33,20 +33,15 @@ describe('resolveBar, derive mode', () => {
   it('mirrors the nav in order, footer buttons to the menu, non-bar blocks skipped', () => {
     const config = { ...base(), mobile: {} };
     const { slots, menu } = resolveBar(config);
-    expect(slots.map((e) => e.kind)).toEqual(['clock', 'item', 'item', 'category']);
-    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual([
-      'clk',
-      'rooms',
-      'weather',
-      'garden',
-    ]);
+    expect(slots.map((e) => e.kind)).toEqual(['item', 'item', 'category']);
+    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['rooms', 'weather', 'garden']);
     expect(slots.every((e) => e.source === 'derived')).toBe(true);
     expect(menu.map((e) => (e.element as ItemBlock).id)).toEqual(['lock']);
     expect(menu[0].kind).toBe('button');
   });
 
   it('applies hide to slots, category children, and menu buttons', () => {
-    const config = { ...base(), mobile: { hide: ['weather', 'soil', 'lock', 'clk'] } };
+    const config = { ...base(), mobile: { hide: ['weather', 'soil', 'lock'] } };
     const { slots, menu } = resolveBar(config);
     expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['rooms', 'garden']);
     const garden = slots[1].element as { items: { id?: string }[] };
@@ -65,11 +60,16 @@ describe('resolveBar, derive mode', () => {
       },
     };
     const { slots: bar } = resolveBar(config);
-    expect((bar[1].element as ItemBlock).icon).toBe('mdi:home-variant');
-    const garden = bar[3].element as { items: { title?: string }[] };
+    expect((bar[0].element as ItemBlock).icon).toBe('mdi:home-variant');
+    const garden = bar[2].element as { items: { title?: string }[] };
     expect(garden.items[0].title).toBe('Green');
     expect((config.body?.[0] as ItemBlock).icon).toBe('mdi:home');
     expect((config.body?.[2] as { items: { title?: string }[] }).items[0].title).toBe('Plants');
+  });
+
+  it('excludes clocks and dates from the bar', () => {
+    const { slots } = resolveBar({ ...base(), mobile: {} });
+    expect(slots.some((e) => e.kind === 'clock' || e.kind === 'date')).toBe(false);
   });
 });
 

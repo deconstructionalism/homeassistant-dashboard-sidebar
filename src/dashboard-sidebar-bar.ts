@@ -3,15 +3,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 
 import { runAction, type RunnableAction } from './lib/action';
 import { applyCardMod } from './lib/card-mod';
-import { formatClock, formatDate } from './lib/format';
 import { resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
 import { barStyles } from './styles/bar';
 import type {
   CategoryBlock,
-  ClockBlock,
   DashboardSidebarConfig,
-  DateBlock,
   FooterButtonConfig,
   ItemBlock,
   SidebarBlock,
@@ -67,14 +64,8 @@ export class DashboardSidebarBar extends LitElement {
   /** The horizontal center of the slot the open flyout anchors to. */
   @state() private _anchorX = 0;
 
-  /** The current tick for clock and date slots. */
-  @state() private _now = new Date();
-
   /** Live template subscriptions for entry titles, icons, and colors. */
   private readonly _templates = new TemplateManager(() => this.requestUpdate());
-
-  /** The clock tick handle, running only while a clock or date slot exists. */
-  private _tick?: ReturnType<typeof setInterval>;
 
   /** Re-measures capacity as the viewport changes. */
   private readonly _resize = new ResizeObserver(() => this._measure());
@@ -112,9 +103,6 @@ export class DashboardSidebarBar extends LitElement {
     }
     this._templates.collect({ body, footer: { buttons } });
     this._templates.setHass(this._hass);
-    const timed = this._resolved.slots.some((e) => e.kind === 'clock' || e.kind === 'date');
-    clearInterval(this._tick);
-    this._tick = timed ? setInterval(() => (this._now = new Date()), 1000) : undefined;
   }
 
   /** Subscribes to navigation, resize, and outside taps while connected. */
@@ -133,7 +121,6 @@ export class DashboardSidebarBar extends LitElement {
     window.removeEventListener('click', this._onOutsideClick, true);
     this._resize.disconnect();
     this._templates.clear();
-    clearInterval(this._tick);
   }
 
   /** Applies the bar-level card-mod after each render. */
@@ -259,25 +246,6 @@ export class DashboardSidebarBar extends LitElement {
       return html`<span class="dashboard-sidebar-bar-divider"></span>`;
     }
     const el = entry.element as ItemBlock;
-    if (entry.kind === 'clock' || entry.kind === 'date') {
-      const block = entry.element as ClockBlock | DateBlock;
-      const locale = this._hass?.locale?.language ?? navigator.language;
-      const text =
-        entry.kind === 'clock'
-          ? formatClock(this._now, (block as ClockBlock).format || '%H:%M', locale)
-          : formatDate(this._now, (block as DateBlock).format || '', locale);
-      return html`
-        <button
-          class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-${entry.kind} ${
-            el.class ?? ''
-          }"
-          id=${el.id ?? `bar-slot-${index}`}
-          @click=${() => this._run(el)}
-        >
-          <span class="dashboard-sidebar-bar-time">${text}</span>
-        </button>
-      `;
-    }
     const active = this._navActive(entry);
     const label = this._label(entry, active);
     const title = this._title(entry);
