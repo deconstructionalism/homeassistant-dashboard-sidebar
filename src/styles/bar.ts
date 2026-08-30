@@ -44,12 +44,14 @@ export const barStyles = css`
     flex: 1 1 auto;
     min-width: 0;
     align-items: stretch;
+    justify-content: center;
   }
 
   .dashboard-sidebar-bar-slot {
     display: flex;
     flex: 1 1 0;
     min-width: 0;
+    max-width: var(--dashboard-sidebar-bar-slot-max-width, 88px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -69,18 +71,18 @@ export const barStyles = css`
   }
 
   .dashboard-sidebar-bar-icon {
-    --mdc-icon-size: 24px;
+    --mdc-icon-size: var(--dashboard-sidebar-bar-icon-size, 28px);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 12px;
+    padding: 2px 10px;
     border-radius: var(--dashboard-sidebar-item-radius);
   }
 
   .dashboard-sidebar-bar-abbr {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
-    line-height: 24px;
+    line-height: var(--dashboard-sidebar-bar-icon-size, 28px);
   }
 
   .dashboard-sidebar-bar-label {
