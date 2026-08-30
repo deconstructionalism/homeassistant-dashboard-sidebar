@@ -138,11 +138,6 @@ export const barStyles = css`
   }
 
   /* Clock and date slots use the desktop sidebar's collapsed compact text. */
-  /* The dots slot is a compact pinned control, not a nav cell. */
-  .dashboard-sidebar-bar-slot-overflow {
-    flex: 0 0 auto;
-  }
-
   .dashboard-sidebar-bar-time {
     padding: 0 8px;
     border-radius: var(--dashboard-sidebar-item-radius);
