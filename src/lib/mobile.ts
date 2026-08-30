@@ -2,7 +2,8 @@
  * Mobile bar resolution.
  *
  * Turns a validated config into the effective ordered bar: derive mode
- * mirrors the desktop nav (items and categories, in document order) minus
+ * mirrors the desktop nav (items, categories, clocks, dates, and dividers,
+ * in document order) minus
  * `hide` and with `override` patches applied; explicit mode maps the
  * `items` list, resolving `use:` references and passing inline items
  * through. Pure logic, no rendering.
@@ -19,7 +20,7 @@ import type {
 } from './types';
 
 /** What kind of desktop element a bar entry renders as. */
-export type BarEntryKind = 'item' | 'category' | 'button' | 'divider';
+export type BarEntryKind = 'item' | 'category' | 'button' | 'divider' | 'clock' | 'date';
 
 /** Where a bar entry came from. */
 export type BarEntrySource = 'derived' | 'use' | 'inline';
@@ -103,7 +104,7 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
             block.id ? overrides[block.id] : undefined,
           ),
         });
-      } else if (type === 'item' || type === 'divider') {
+      } else if (type === 'item' || type === 'divider' || type === 'clock' || type === 'date') {
         slots.push({
           source: 'derived',
           kind: type as BarEntryKind,
@@ -127,7 +128,12 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   >();
   for (const block of blocks) {
     const type = block.type ?? 'item';
-    const usable = type === 'item' || type === 'category' || type === 'divider';
+    const usable =
+      type === 'item' ||
+      type === 'category' ||
+      type === 'divider' ||
+      type === 'clock' ||
+      type === 'date';
     if (block.id && usable) {
       byId.set(block.id, { kind: type as BarEntryKind, element: block });
     }

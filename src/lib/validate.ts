@@ -326,7 +326,7 @@ const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
 const MOBILE_OVERRIDE_KEYS = new Set<string>(MOBILE_OVERRIDE_FIELDS);
 
 /** The element kinds that can appear on the mobile bar. */
-type BarKind = 'item' | 'category' | 'button' | 'divider';
+type BarKind = 'item' | 'category' | 'button' | 'divider' | 'clock' | 'date';
 
 /**
  * Maps every element id to what kind of element carries it, so mobile
@@ -343,7 +343,7 @@ export const barEligibility = (config: DashboardSidebarConfig): Map<string, BarK
   const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
   for (const block of [...list(config.header), ...list(config.body)]) {
     const type = (block as { type?: string }).type ?? 'item';
-    const barKinds = ['item', 'category', 'divider'];
+    const barKinds = ['item', 'category', 'divider', 'clock', 'date'];
     put(block, barKinds.includes(type) ? (type as BarKind) : 'other');
     if (type === 'category') {
       for (const child of list((block as { items?: unknown[] }).items)) {
@@ -372,7 +372,7 @@ const checkRef = (
     errors.push(`${ctx}: unknown id "${id}" (known: ${known.join(', ') || 'none'})`);
   } else if (kind === 'other') {
     errors.push(
-      `${ctx}: "${id}" is not bar-eligible; only items, categories, and footer buttons can appear on the bar`,
+      `${ctx}: "${id}" is not bar-eligible; only items, categories, dividers, clocks, dates, and footer buttons can appear on the bar`,
     );
   }
 };

@@ -11,6 +11,18 @@ export const barStyles = css`
     position: fixed;
     inset: auto 0 0;
     z-index: 6;
+
+    /* The same accent chain the sidebar uses, so the bar's active treatment
+       matches the desktop nav-active look under any theme. */
+    --dashboard-sidebar-accent-color: var(
+      --sidebar-selected-icon-color,
+      var(--primary-color, #03a9f4)
+    );
+    --dashboard-sidebar-accent-text-color: var(
+      --sidebar-selected-text-color,
+      var(--dashboard-sidebar-accent-color)
+    );
+    --dashboard-sidebar-item-radius: var(--ha-card-border-radius, 10px);
   }
 
   .dashboard-sidebar-bar {
@@ -59,6 +71,10 @@ export const barStyles = css`
   .dashboard-sidebar-bar-icon {
     --mdc-icon-size: 24px;
     display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 12px;
+    border-radius: var(--dashboard-sidebar-item-radius);
   }
 
   .dashboard-sidebar-bar-abbr {
@@ -76,25 +92,40 @@ export const barStyles = css`
     white-space: nowrap;
   }
 
+  /* Clock and date slots use the desktop sidebar's collapsed compact text. */
+  .dashboard-sidebar-bar-time {
+    padding: 4px 10px;
+    border-radius: var(--dashboard-sidebar-item-radius);
+    font-size: var(--ha-font-size-m, 0.85rem);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .dashboard-sidebar-bar-slot-date .dashboard-sidebar-bar-time {
+    font-size: var(--ha-font-size-s, 0.7rem);
+    opacity: 0.75;
+  }
+
+  /* An element whose navigate action targets the current page gets the same
+     treatment as the desktop sidebar's nav-active: accent text plus a tinted
+     pill behind the icon or time. Inline icon colors still win, as they do
+     on desktop. */
   .dashboard-sidebar-bar-slot-active {
-    color: var(--dashboard-sidebar-bar-active-color, var(--primary-color));
+    color: var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-text-color));
   }
 
-  .dashboard-sidebar-bar-slot-category .dashboard-sidebar-bar-icon {
-    position: relative;
-  }
-
-  .dashboard-sidebar-bar-caret {
-    --mdc-icon-size: 12px;
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0.6;
+  .dashboard-sidebar-bar-slot-active .dashboard-sidebar-bar-icon,
+  .dashboard-sidebar-bar-slot-active .dashboard-sidebar-bar-time {
+    background: color-mix(
+      in srgb,
+      var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-color)) 14%,
+      transparent
+    );
   }
 
   .dashboard-sidebar-bar-slot-open {
-    color: var(--dashboard-sidebar-bar-active-color, var(--primary-color));
+    color: var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-text-color));
   }
 
   .dashboard-sidebar-bar-divider {
@@ -141,8 +172,17 @@ export const barStyles = css`
     background: rgb(127 127 127 / 12%);
   }
 
+  .dashboard-sidebar-bar-flyout-row .dashboard-sidebar-bar-icon {
+    padding: 0;
+  }
+
   .dashboard-sidebar-bar-flyout-row-active {
-    color: var(--dashboard-sidebar-bar-active-color, var(--primary-color));
+    color: var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-text-color));
+    background: color-mix(
+      in srgb,
+      var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-color)) 14%,
+      transparent
+    );
   }
 
   .dashboard-sidebar-bar-flyout-label {

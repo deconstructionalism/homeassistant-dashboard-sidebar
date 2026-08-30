@@ -60,7 +60,7 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(slots.length).to.equal(4);
     expect(slots[0].classList.contains('dashboard-sidebar-bar-slot-item')).to.equal(true);
     expect(slots[2].classList.contains('dashboard-sidebar-bar-slot-category')).to.equal(true);
-    expect(slots[2].querySelector('.dashboard-sidebar-bar-caret')).to.exist;
+    expect(slots[2].querySelector('.dashboard-sidebar-bar-caret')).to.equal(null);
     expect(slots[0].id).to.equal('rooms');
     expect(slots[3].classList.contains('dashboard-sidebar-bar-slot-overflow')).to.equal(true);
     expect(
@@ -93,14 +93,18 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(rows[0].textContent).to.include('Plants');
   });
 
-  it('renders dividers as rules and never clocks or dates', async () => {
+  it('renders dividers as rules and clocks/dates in compact form', async () => {
     const config = base();
     config.header = [
-      { type: 'clock', id: 'clk', format: '%H:%M' },
+      { type: 'clock', id: 'clk' },
+      { type: 'date', id: 'dt' },
       { type: 'divider', id: 'div1' },
     ];
     const el = await mount({ ...config, mobile: {} });
-    expect(root(el).querySelector('.dashboard-sidebar-bar-slot-clock')).to.equal(null);
+    const clock = root(el).querySelector('.dashboard-sidebar-bar-slot-clock');
+    const date = root(el).querySelector('.dashboard-sidebar-bar-slot-date');
+    expect(clock?.textContent?.trim()).to.match(/^\d{1,2}:\d{2}$/);
+    expect(date?.textContent?.trim()).to.match(/^\d{1,2}-\d{1,2}$/);
     expect(root(el).querySelector('.dashboard-sidebar-bar-divider')).to.exist;
   });
 

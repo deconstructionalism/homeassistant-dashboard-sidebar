@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 
 import { runAction, type RunnableAction } from './lib/action';
 import { applyCardMod } from './lib/card-mod';
+import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
 import { barStyles } from './styles/bar';
@@ -14,6 +15,20 @@ import type {
   SidebarBlock,
 } from './lib/types';
 import type { HomeAssistant } from 'custom-card-helpers';
+
+/** The display-relevant shape shared by clock and date elements. */
+interface TimeElement {
+  /** The clock's strftime pattern or legacy 12h/24h keyword. */
+  format?: string;
+  /** An optional IANA timezone. */
+  timezone?: string;
+  /** An optional text color, possibly a template. */
+  text_color?: string;
+  /** Legacy hour-format key. */
+  hour_format?: string;
+  /** Legacy collapsed-format key. */
+  collapsed_format?: string;
+}
 
 /** The minimum width one bar slot needs before the tail folds into the menu. */
 const MIN_SLOT_WIDTH = 64;
@@ -64,6 +79,12 @@ export class DashboardSidebarBar extends LitElement {
   /** The horizontal center of the slot the open flyout anchors to. */
   @state() private _anchorX = 0;
 
+  /** The current time, ticked while a clock or date slot is on the bar. */
+  @state() private _now = new Date();
+
+  /** Handle of the clock/date interval timer, when running. */
+  private _timer?: number;
+
   /** Live template subscriptions for entry titles, icons, and colors. */
   private readonly _templates = new TemplateManager(() => this.requestUpdate());
 
@@ -103,6 +124,27 @@ export class DashboardSidebarBar extends LitElement {
     }
     this._templates.collect({ body, footer: { buttons } });
     this._templates.setHass(this._hass);
+    this._restartTimer();
+  }
+
+  /**
+   * Restarts the clock/date timer: every second when a clock is on the bar,
+   * every minute for dates alone, stopped when neither is present.
+   */
+  private _restartTimer(): void {
+    window.clearInterval(this._timer);
+    this._timer = undefined;
+    const kinds = new Set(this._resolved.slots.map((e) => e.kind));
+    if (!kinds.has('clock') && !kinds.has('date')) {
+      return;
+    }
+    this._now = new Date();
+    this._timer = window.setInterval(
+      () => {
+        this._now = new Date();
+      },
+      kinds.has('clock') ? 1000 : 60000,
+    );
   }
 
   /** Subscribes to navigation, resize, and outside taps while connected. */
@@ -112,6 +154,7 @@ export class DashboardSidebarBar extends LitElement {
     window.addEventListener('click', this._onOutsideClick, true);
     this._resize.observe(this);
     this._measure();
+    this._restartTimer();
   }
 
   /** Unsubscribes on disconnect. */
@@ -121,6 +164,8 @@ export class DashboardSidebarBar extends LitElement {
     window.removeEventListener('click', this._onOutsideClick, true);
     this._resize.disconnect();
     this._templates.clear();
+    window.clearInterval(this._timer);
+    this._timer = undefined;
   }
 
   /** Applies the bar-level card-mod after each render. */
@@ -162,8 +207,9 @@ export class DashboardSidebarBar extends LitElement {
     if (action?.action !== 'navigate' || !action.navigation_path) {
       return false;
     }
-    const target = String(action.navigation_path).split('?')[0].split('#')[0];
-    return target !== '' && (this._path === target || this._path.startsWith(`${target}/`));
+    const target = String(action.navigation_path).split(/[?#]/)[0].replace(/\/+$/, '');
+    const current = this._path.replace(/\/+$/, '');
+    return target !== '' && (current === target || current.startsWith(`${target}/`));
   }
 
   /** Runs an element's tap action. */
@@ -211,8 +257,30 @@ export class DashboardSidebarBar extends LitElement {
     return this._templates.resolve(el.title ?? (el as FooterButtonConfig).title);
   }
 
+  /**
+   * The compact time or date text of a clock/date entry, matching the desktop
+   * sidebar's collapsed format (including the legacy hour-format keys).
+   */
+  private _timeText(entry: BarEntry): string {
+    const el = entry.element as TimeElement;
+    const now = zonedDate(this._now, el.timezone ?? '');
+    if (entry.kind === 'date') {
+      return formatCollapsedDate(now);
+    }
+    const raw = typeof el.format === 'string' ? el.format.trim() : '';
+    let twelve: boolean;
+    if (raw !== '' && raw !== '12h' && raw !== '24h') {
+      twelve = /%-?[Il]|%p|%P/.test(raw);
+    } else {
+      const hour =
+        raw === '12h' || raw === '24h' ? raw : (el.hour_format ?? el.collapsed_format ?? '24h');
+      twelve = hour === '12h';
+    }
+    return formatCollapsedClock(now, twelve);
+  }
+
   /** Renders the icon (or initials) span shared by slots and flyout rows. */
-  private _renderIcon(entry: BarEntry, caret: boolean): TemplateResult {
+  private _renderIcon(entry: BarEntry): TemplateResult {
     const el = entry.element as ItemBlock;
     const icon = this._templates.resolve(el.icon);
     const iconColor = this._templates.resolve(el.icon_color);
@@ -231,11 +299,6 @@ export class DashboardSidebarBar extends LitElement {
             ? html`<ha-icon icon=${icon}></ha-icon>`
             : html`<span class="dashboard-sidebar-bar-abbr">${abbr}</span>`
         }
-        ${
-          caret
-            ? html`<ha-icon class="dashboard-sidebar-bar-caret" icon="mdi:chevron-up"></ha-icon>`
-            : nothing
-        }
       </span>
     `;
   }
@@ -246,9 +309,13 @@ export class DashboardSidebarBar extends LitElement {
       return html`<span class="dashboard-sidebar-bar-divider"></span>`;
     }
     const el = entry.element as ItemBlock;
+    const time = entry.kind === 'clock' || entry.kind === 'date';
     const active = this._navActive(entry);
-    const label = this._label(entry, active);
+    const label = time ? undefined : this._label(entry, active);
     const title = this._title(entry);
+    const textColor = time
+      ? this._templates.resolve((entry.element as TimeElement).text_color)
+      : '';
     const classes = [
       'dashboard-sidebar-bar-slot',
       `dashboard-sidebar-bar-slot-${entry.kind}`,
@@ -262,11 +329,16 @@ export class DashboardSidebarBar extends LitElement {
       <button
         class=${classes}
         id=${el.id ?? `bar-slot-${index}`}
-        aria-label=${title || 'bar item'}
+        aria-label=${title || (time ? entry.kind : 'bar item')}
         aria-current=${active ? 'page' : nothing}
+        style=${textColor ? `color:${textColor}` : ''}
         @click=${(ev: Event) => this._onSlotTap(entry, ev)}
       >
-        ${this._renderIcon(entry, entry.kind === 'category')}
+        ${
+          time
+            ? html`<span class="dashboard-sidebar-bar-time">${this._timeText(entry)}</span>`
+            : this._renderIcon(entry)
+        }
         ${label ? html`<span class="dashboard-sidebar-bar-label">${label}</span>` : nothing}
       </button>
     `;
@@ -286,8 +358,14 @@ export class DashboardSidebarBar extends LitElement {
           this._run(el);
         }}
       >
-        ${this._renderIcon(entry, false)}
-        <span class="dashboard-sidebar-bar-flyout-label">${this._title(entry)}</span>
+        ${entry.kind === 'clock' || entry.kind === 'date' ? nothing : this._renderIcon(entry)}
+        <span class="dashboard-sidebar-bar-flyout-label">
+          ${
+            entry.kind === 'clock' || entry.kind === 'date'
+              ? this._timeText(entry)
+              : this._title(entry)
+          }
+        </span>
       </button>
     `;
   }

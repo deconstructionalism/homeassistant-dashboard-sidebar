@@ -33,8 +33,13 @@ describe('resolveBar, derive mode', () => {
   it('mirrors the nav in order, footer buttons to the menu, non-bar blocks skipped', () => {
     const config = { ...base(), mobile: {} };
     const { slots, menu } = resolveBar(config);
-    expect(slots.map((e) => e.kind)).toEqual(['item', 'item', 'category']);
-    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['rooms', 'weather', 'garden']);
+    expect(slots.map((e) => e.kind)).toEqual(['clock', 'item', 'item', 'category']);
+    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual([
+      'clk',
+      'rooms',
+      'weather',
+      'garden',
+    ]);
     expect(slots.every((e) => e.source === 'derived')).toBe(true);
     expect(menu.map((e) => (e.element as ItemBlock).id)).toEqual(['lock']);
     expect(menu[0].kind).toBe('button');
@@ -43,8 +48,8 @@ describe('resolveBar, derive mode', () => {
   it('applies hide to slots, category children, and menu buttons', () => {
     const config = { ...base(), mobile: { hide: ['weather', 'soil', 'lock'] } };
     const { slots, menu } = resolveBar(config);
-    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['rooms', 'garden']);
-    const garden = slots[1].element as { items: { id?: string }[] };
+    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['clk', 'rooms', 'garden']);
+    const garden = slots[2].element as { items: { id?: string }[] };
     expect(garden.items.map((c) => c.id)).toEqual(['plants']);
     expect(menu).toEqual([]);
   });
@@ -60,16 +65,22 @@ describe('resolveBar, derive mode', () => {
       },
     };
     const { slots: bar } = resolveBar(config);
-    expect((bar[0].element as ItemBlock).icon).toBe('mdi:home-variant');
-    const garden = bar[2].element as { items: { title?: string }[] };
+    expect((bar[1].element as ItemBlock).icon).toBe('mdi:home-variant');
+    const garden = bar[3].element as { items: { title?: string }[] };
     expect(garden.items[0].title).toBe('Green');
     expect((config.body?.[0] as ItemBlock).icon).toBe('mdi:home');
     expect((config.body?.[2] as { items: { title?: string }[] }).items[0].title).toBe('Plants');
   });
 
-  it('excludes clocks and dates from the bar', () => {
-    const { slots } = resolveBar({ ...base(), mobile: {} });
-    expect(slots.some((e) => e.kind === 'clock' || e.kind === 'date')).toBe(false);
+  it('carries clocks and dates onto the bar and skips cards and markdown', () => {
+    const config = base();
+    config.header = [
+      { type: 'clock', id: 'clk' },
+      { type: 'date', id: 'dt' },
+    ];
+    const { slots } = resolveBar({ ...config, mobile: {} });
+    expect(slots.slice(0, 2).map((e) => e.kind)).toEqual(['clock', 'date']);
+    expect(slots.some((e) => (e.element as ItemBlock).id === 'md')).toBe(false);
   });
 });
 
