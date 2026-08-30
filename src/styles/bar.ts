@@ -88,6 +88,7 @@ export const barStyles = css`
     flex: 1 1 auto;
     min-width: 0;
     align-items: stretch;
+    gap: var(--dashboard-sidebar-bar-gap, 8px);
   }
 
   .dashboard-sidebar-bar-slot {
@@ -140,12 +141,10 @@ export const barStyles = css`
   /* The dots slot is a compact pinned control, not a nav cell. */
   .dashboard-sidebar-bar-slot-overflow {
     flex: 0 0 auto;
-    padding-right: 8px;
-    padding-left: 8px;
   }
 
   .dashboard-sidebar-bar-time {
-    padding: 0 10px;
+    padding: 0 8px;
     border-radius: var(--dashboard-sidebar-item-radius);
     font-size: var(--ha-font-size-m, 0.85rem);
     font-variant-numeric: tabular-nums;
@@ -196,7 +195,7 @@ export const barStyles = css`
   .dashboard-sidebar-bar-divider {
     flex: 0 0 1px;
     align-self: stretch;
-    margin: 10px 2px;
+    margin: 10px 0;
     background: var(--divider-color, rgb(127 127 127 / 30%));
   }
 
