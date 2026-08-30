@@ -165,8 +165,7 @@ export const barStyles = css`
     color: var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-text-color));
   }
 
-  .dashboard-sidebar-bar-slot-active .dashboard-sidebar-bar-icon,
-  .dashboard-sidebar-bar-slot-active .dashboard-sidebar-bar-time {
+  .dashboard-sidebar-bar-slot-active .dashboard-sidebar-bar-icon {
     background: color-mix(
       in srgb,
       var(--dashboard-sidebar-bar-active-color, var(--dashboard-sidebar-accent-color)) 14%,
@@ -175,8 +174,7 @@ export const barStyles = css`
   }
 
   @media (hover: hover) {
-    .dashboard-sidebar-bar-slot:hover .dashboard-sidebar-bar-icon,
-    .dashboard-sidebar-bar-slot:hover .dashboard-sidebar-bar-time {
+    .dashboard-sidebar-bar-slot:hover .dashboard-sidebar-bar-icon {
       background: var(--dashboard-sidebar-hover-background);
     }
   }
@@ -187,8 +185,7 @@ export const barStyles = css`
     color: var(--dashboard-sidebar-on-accent-color);
   }
 
-  .dashboard-sidebar-bar-slot-open .dashboard-sidebar-bar-icon,
-  .dashboard-sidebar-bar-slot-open .dashboard-sidebar-bar-time {
+  .dashboard-sidebar-bar-slot-open .dashboard-sidebar-bar-icon {
     background: var(--dashboard-sidebar-accent-color);
   }
 
