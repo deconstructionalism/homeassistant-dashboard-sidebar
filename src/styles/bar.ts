@@ -276,6 +276,38 @@ export const barStyles = css`
     }
   }
 
+  .dashboard-sidebar-bar-sheet.closing {
+    animation: dashboard-sidebar-bar-rise-out 0.25s ease forwards;
+    pointer-events: none;
+  }
+
+  @keyframes dashboard-sidebar-bar-rise-out {
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar-sheet.closing {
+    animation-name: dashboard-sidebar-bar-drop-out;
+  }
+
+  @keyframes dashboard-sidebar-bar-drop-out {
+    to {
+      transform: translateY(-100%);
+    }
+  }
+
+  .dashboard-sidebar-bar-sheet-scrim.closing {
+    animation: dashboard-sidebar-bar-fade-out 0.25s ease forwards;
+    pointer-events: none;
+  }
+
+  @keyframes dashboard-sidebar-bar-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes dashboard-sidebar-bar-fade {
     from {
       opacity: 0;
@@ -284,8 +316,15 @@ export const barStyles = css`
 
   @media (prefers-reduced-motion: reduce) {
     .dashboard-sidebar-bar-sheet,
-    .dashboard-sidebar-bar-sheet-scrim {
+    .dashboard-sidebar-bar-sheet-scrim,
+    .dashboard-sidebar-bar-sheet.closing,
+    .dashboard-sidebar-bar-sheet-scrim.closing {
       animation: none;
+    }
+
+    .dashboard-sidebar-bar-sheet.closing,
+    .dashboard-sidebar-bar-sheet-scrim.closing {
+      visibility: hidden;
     }
   }
 

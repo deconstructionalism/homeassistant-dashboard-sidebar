@@ -97,6 +97,9 @@ export class DashboardSidebarBar extends LitElement {
   /** Ids of categories expanded inside the open sheet. */
   @state() private _expanded = new Set<string>();
 
+  /** Whether the sheet is playing its slide-out before unmounting. */
+  @state() private _sheetClosing = false;
+
   /** The current time, ticked while a clock or date slot is on the bar. */
   @state() private _now = new Date();
 
@@ -124,6 +127,14 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Closes any open flyout or sheet and collapses the accordion. */
   private _close(): void {
+    if (this._open === 'menu') {
+      // Keep the sheet mounted while it slides back behind the bar; the
+      // timeout backstops reduced-motion, where animationend never fires.
+      this._sheetClosing = true;
+      window.setTimeout(() => {
+        this._sheetClosing = false;
+      }, 400);
+    }
     this._open = null;
     this._expanded = new Set();
   }
@@ -334,6 +345,7 @@ export class DashboardSidebarBar extends LitElement {
     const rect = slot.getBoundingClientRect();
     this._anchorX = rect.left + rect.width / 2;
     this._open = key;
+    this._sheetClosing = false;
   }
 
   /** The label text an entry shows, per the labels mode. */
@@ -676,21 +688,25 @@ export class DashboardSidebarBar extends LitElement {
   private _renderSheet(menu: BarEntry[]): TemplateResult | typeof nothing {
     const content = this._renderSheetFooterContent();
     const extras = this._resolved.extras;
-    if (
-      this._open !== 'menu' ||
-      (menu.length === 0 && extras.length === 0 && content === nothing)
-    ) {
+    const shown = this._open === 'menu' || this._sheetClosing;
+    if (!shown || (menu.length === 0 && extras.length === 0 && content === nothing)) {
       return nothing;
     }
+    const closing = this._sheetClosing ? ' closing' : '';
     const buttons = content === nothing ? menu.filter((e) => e.kind === 'button') : [];
     const rows = menu.filter((e) => e.kind !== 'button');
     return html`
-      <div class="dashboard-sidebar-bar-sheet-scrim" @click=${() => this._close()}></div>
+      <div class="dashboard-sidebar-bar-sheet-scrim${closing}" @click=${() => this._close()}></div>
       <div
-        class="dashboard-sidebar-bar-sheet"
+        class="dashboard-sidebar-bar-sheet${closing}"
         role="menu"
         aria-label="More"
         style=${this._config?.background ? `background:${this._config.background}` : ''}
+        @animationend=${() => {
+          if (this._sheetClosing) {
+            this._sheetClosing = false;
+          }
+        }}
       >
         ${
           rows.length > 0 || extras.length > 0
@@ -745,6 +761,7 @@ export class DashboardSidebarBar extends LitElement {
     const { visible, menu } = this._layout();
     const background = mobile.background ?? this._config?.background;
     return html`
+      ${this._renderSheet(menu)}
       <nav
         class="dashboard-sidebar-bar"
         data-labels=${mobile.labels ?? 'never'}
@@ -752,7 +769,7 @@ export class DashboardSidebarBar extends LitElement {
         style=${background ? `background:${background}` : ''}
         aria-label="Dashboard bar"
       >
-        ${this._renderSheet(menu)} ${this._renderFlyout(menu)}
+        ${this._renderFlyout(menu)}
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${

@@ -82,6 +82,10 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(btns[0].querySelector('ha-icon')?.getAttribute('icon')).to.equal('mdi:lock');
     dots.click();
     await el.updateComplete;
+    expect(
+      root(el).querySelector('.dashboard-sidebar-bar-sheet')?.classList.contains('closing'),
+    ).to.equal(true);
+    await aTimeout(450);
     expect(root(el).querySelector('.dashboard-sidebar-bar-sheet')).to.equal(null);
   });
 
