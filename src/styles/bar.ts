@@ -51,12 +51,12 @@ export const barStyles = css`
     display: flex;
     flex: 1 1 0;
     min-width: 0;
-    max-width: var(--dashboard-sidebar-bar-slot-max-width, 88px);
+    max-width: var(--dashboard-sidebar-bar-slot-max-width, 64px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 6px 2px;
+    padding: 6px 0;
     border: none;
     background: none;
     color: var(--primary-text-color);
@@ -75,7 +75,7 @@ export const barStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 10px;
+    padding: 2px 8px;
     border-radius: var(--dashboard-sidebar-item-radius);
   }
 
