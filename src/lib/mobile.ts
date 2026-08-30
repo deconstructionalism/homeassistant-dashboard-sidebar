@@ -15,13 +15,22 @@ import type {
   ItemBlock,
   MobileOverride,
   MobileUseEntry,
+  SidebarBlock,
 } from './types';
 
 /** What kind of desktop element a bar entry renders as. */
-export type BarEntryKind = 'item' | 'category' | 'button';
+export type BarEntryKind = 'item' | 'category' | 'button' | 'clock' | 'date' | 'divider';
 
 /** Where a bar entry came from. */
 export type BarEntrySource = 'derived' | 'use' | 'inline';
+
+/** The resolved bar: the slot row, and the entries of the trailing menu. */
+export interface ResolvedBar {
+  /** Elements on the bar itself, in order. Width overflow folds the tail. */
+  slots: BarEntry[];
+  /** Entries that always live behind the trailing dots menu (footer buttons). */
+  menu: BarEntry[];
+}
 
 /** One resolved slot of the mobile bar. */
 export interface BarEntry {
@@ -30,7 +39,7 @@ export interface BarEntry {
   /** What it renders as. */
   kind: BarEntryKind;
   /** The element with any mobile patches applied. Categories keep their items. */
-  element: ItemBlock | CategoryBlock | FooterButtonConfig;
+  element: ItemBlock | CategoryBlock | FooterButtonConfig | SidebarBlock;
 }
 
 /** The subset of a use entry that patches the referenced element. */
@@ -67,30 +76,24 @@ const mergedCategory = (
  * @param config - A validated sidebar config with a `mobile` section.
  * @returns The ordered bar entries; empty when there is no mobile config.
  */
-export const resolveBar = (config: DashboardSidebarConfig): BarEntry[] => {
+export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   const mobile = config.mobile;
   if (!mobile) {
-    return [];
+    return { slots: [], menu: [] };
   }
   const hidden = new Set(mobile.hide ?? []);
   const overrides = mobile.override ?? {};
   const blocks = [...(config.header ?? []), ...(config.body ?? [])];
 
   if (mobile.items === undefined) {
-    const bar: BarEntry[] = [];
+    const slots: BarEntry[] = [];
     for (const block of blocks) {
       const type = block.type ?? 'item';
       if (block.id && hidden.has(block.id)) {
         continue;
       }
-      if (type === 'item') {
-        bar.push({
-          source: 'derived',
-          kind: 'item',
-          element: merged(block as ItemBlock, block.id ? overrides[block.id] : undefined),
-        });
-      } else if (type === 'category') {
-        bar.push({
+      if (type === 'category') {
+        slots.push({
           source: 'derived',
           kind: 'category',
           element: mergedCategory(
@@ -100,19 +103,38 @@ export const resolveBar = (config: DashboardSidebarConfig): BarEntry[] => {
             block.id ? overrides[block.id] : undefined,
           ),
         });
+      } else if (type !== 'title' && type !== 'markdown' && type !== 'card') {
+        slots.push({
+          source: 'derived',
+          kind: type as BarEntryKind,
+          element: merged(block, block.id ? overrides[block.id] : undefined),
+        });
       }
     }
-    return bar;
+    const menu: BarEntry[] = (config.footer?.buttons ?? [])
+      .filter((btn) => !(btn.id && hidden.has(btn.id)))
+      .map((btn) => ({
+        source: 'derived' as const,
+        kind: 'button' as const,
+        element: merged(btn, btn.id ? overrides[btn.id] : undefined),
+      }));
+    return { slots, menu };
   }
 
   const byId = new Map<
     string,
-    { kind: BarEntryKind; element: ItemBlock | CategoryBlock | FooterButtonConfig }
+    { kind: BarEntryKind; element: ItemBlock | CategoryBlock | FooterButtonConfig | SidebarBlock }
   >();
   for (const block of blocks) {
     const type = block.type ?? 'item';
-    if (block.id && (type === 'item' || type === 'category')) {
-      byId.set(block.id, { kind: type, element: block as ItemBlock | CategoryBlock });
+    const usable =
+      type === 'item' ||
+      type === 'category' ||
+      type === 'clock' ||
+      type === 'date' ||
+      type === 'divider';
+    if (block.id && usable) {
+      byId.set(block.id, { kind: type as BarEntryKind, element: block });
     }
     if (type === 'category') {
       for (const child of (block as CategoryBlock).items ?? []) {
@@ -128,7 +150,7 @@ export const resolveBar = (config: DashboardSidebarConfig): BarEntry[] => {
     }
   }
 
-  const bar: BarEntry[] = [];
+  const slots: BarEntry[] = [];
   for (const entry of mobile.items) {
     if ('use' in entry) {
       const target = byId.get(entry.use);
@@ -136,7 +158,7 @@ export const resolveBar = (config: DashboardSidebarConfig): BarEntry[] => {
         continue; // validation reports this; resolution just skips it
       }
       const patch = patchOf(entry);
-      bar.push({
+      slots.push({
         source: 'use',
         kind: target.kind,
         element:
@@ -145,8 +167,8 @@ export const resolveBar = (config: DashboardSidebarConfig): BarEntry[] => {
             : merged(target.element, patch),
       });
     } else {
-      bar.push({ source: 'inline', kind: 'item', element: { ...entry } });
+      slots.push({ source: 'inline', kind: 'item', element: { ...entry } });
     }
   }
-  return bar;
+  return { slots, menu: [] };
 };

@@ -54,14 +54,57 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(root(el).querySelector('.dashboard-sidebar-bar')).to.equal(null);
   });
 
-  it('derives nav items and categories into classed slots', async () => {
+  it('derives nav items and categories into classed slots, buttons behind dots', async () => {
     const el = await mount({ ...base(), mobile: {} });
     const slots = root(el).querySelectorAll('.dashboard-sidebar-bar-slot');
-    expect(slots.length).to.equal(3);
+    expect(slots.length).to.equal(4);
     expect(slots[0].classList.contains('dashboard-sidebar-bar-slot-item')).to.equal(true);
     expect(slots[2].classList.contains('dashboard-sidebar-bar-slot-category')).to.equal(true);
     expect(slots[2].querySelector('.dashboard-sidebar-bar-caret')).to.exist;
     expect(slots[0].id).to.equal('rooms');
+    expect(slots[3].classList.contains('dashboard-sidebar-bar-slot-overflow')).to.equal(true);
+    expect(
+      root(el).querySelector('.dashboard-sidebar-bar')?.getAttribute('data-overflowing'),
+    ).to.equal('true');
+  });
+
+  it('opens the dots menu with the footer button and runs from it', async () => {
+    const el = await mount({ ...base(), mobile: {} });
+    const dots = root(el).querySelector(
+      '.dashboard-sidebar-bar-slot-overflow',
+    ) as HTMLButtonElement;
+    dots.click();
+    await el.updateComplete;
+    const rows = root(el).querySelectorAll('.dashboard-sidebar-bar-flyout-row');
+    expect(rows.length).to.equal(1);
+    expect(rows[0].querySelector('ha-icon')?.getAttribute('icon')).to.equal('mdi:lock');
+    dots.click();
+    await el.updateComplete;
+    expect(root(el).querySelector('.dashboard-sidebar-bar-flyout')).to.equal(null);
+  });
+
+  it('opens a category flyout above its slot', async () => {
+    const el = await mount({ ...base(), mobile: {} });
+    const cat = root(el).querySelector('.dashboard-sidebar-bar-slot-category') as HTMLButtonElement;
+    cat.click();
+    await el.updateComplete;
+    const rows = root(el).querySelectorAll('.dashboard-sidebar-bar-flyout-row');
+    expect(rows.length).to.equal(1);
+    expect(rows[0].textContent).to.include('Plants');
+  });
+
+  it('renders clock and divider slots when derived', async () => {
+    const config = base();
+    config.header = [
+      { type: 'clock', id: 'clk', format: '%H:%M' },
+      { type: 'divider', id: 'div1' },
+    ];
+    const el = await mount({ ...config, mobile: {} });
+    expect(
+      root(el).querySelector('.dashboard-sidebar-bar-slot-clock .dashboard-sidebar-bar-time')
+        ?.textContent,
+    ).to.match(/\d{2}:\d{2}/);
+    expect(root(el).querySelector('.dashboard-sidebar-bar-divider')).to.exist;
   });
 
   it('exposes targetable chrome classes', async () => {
@@ -75,7 +118,7 @@ describe('<dashboard-sidebar-bar>', () => {
   it('honors hide and override in derive mode', async () => {
     const el = await mount({
       ...base(),
-      mobile: { hide: ['weather'], override: { rooms: { icon: 'mdi:home-variant' } } },
+      mobile: { hide: ['weather', 'lock'], override: { rooms: { icon: 'mdi:home-variant' } } },
     });
     const slots = root(el).querySelectorAll('.dashboard-sidebar-bar-slot');
     expect(slots.length).to.equal(2);
@@ -95,7 +138,7 @@ describe('<dashboard-sidebar-bar>', () => {
   });
 
   it('labels always shows titles; never hides them', async () => {
-    const labeled = await mount({ ...base(), mobile: { labels: 'always' } });
+    const labeled = await mount({ ...base(), mobile: { labels: 'always', hide: ['lock'] } });
     expect(root(labeled).querySelectorAll('.dashboard-sidebar-bar-label').length).to.equal(3);
     const bare = await mount({ ...base(), mobile: {} });
     expect(root(bare).querySelectorAll('.dashboard-sidebar-bar-label').length).to.equal(0);

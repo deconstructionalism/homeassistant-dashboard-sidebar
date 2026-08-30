@@ -92,4 +92,68 @@ export const barStyles = css`
     transform: translateX(-50%);
     opacity: 0.6;
   }
+
+  .dashboard-sidebar-bar-slot-open {
+    color: var(--dashboard-sidebar-bar-active-color, var(--primary-color));
+  }
+
+  .dashboard-sidebar-bar-divider {
+    flex: 0 0 1px;
+    align-self: stretch;
+    margin: 10px 2px;
+    background: var(--divider-color, rgb(127 127 127 / 30%));
+  }
+
+  .dashboard-sidebar-bar-time {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .dashboard-sidebar-bar-flyout {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    display: flex;
+    flex-direction: column;
+    width: var(--dashboard-sidebar-bar-flyout-width, 200px);
+    max-height: 60vh;
+    padding: 6px;
+    overflow-y: auto;
+    background: var(
+      --dashboard-sidebar-bar-background,
+      var(--ha-card-background, var(--card-background-color, #fff))
+    );
+    border: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  }
+
+  .dashboard-sidebar-bar-flyout-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--primary-text-color);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dashboard-sidebar-bar-flyout-row:hover,
+  .dashboard-sidebar-bar-flyout-row:focus-visible {
+    background: rgb(127 127 127 / 12%);
+  }
+
+  .dashboard-sidebar-bar-flyout-row-active {
+    color: var(--dashboard-sidebar-bar-active-color, var(--primary-color));
+  }
+
+  .dashboard-sidebar-bar-flyout-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 `;

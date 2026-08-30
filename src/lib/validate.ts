@@ -326,7 +326,7 @@ const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
 const MOBILE_OVERRIDE_KEYS = new Set<string>(MOBILE_OVERRIDE_FIELDS);
 
 /** The element kinds that can appear on the mobile bar. */
-type BarKind = 'item' | 'category' | 'button';
+type BarKind = 'item' | 'category' | 'button' | 'clock' | 'date' | 'divider';
 
 /**
  * Maps every element id to what kind of element carries it, so mobile
@@ -343,7 +343,8 @@ export const barEligibility = (config: DashboardSidebarConfig): Map<string, BarK
   const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
   for (const block of [...list(config.header), ...list(config.body)]) {
     const type = (block as { type?: string }).type ?? 'item';
-    put(block, type === 'item' ? 'item' : type === 'category' ? 'category' : 'other');
+    const barKinds = ['item', 'category', 'clock', 'date', 'divider'];
+    put(block, barKinds.includes(type) ? (type as BarKind) : 'other');
     if (type === 'category') {
       for (const child of list((block as { items?: unknown[] }).items)) {
         put(child, 'item');
