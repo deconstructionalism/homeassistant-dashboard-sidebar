@@ -57,6 +57,9 @@ export class DashboardSidebarBar extends LitElement {
     if (this._footerCard) {
       this._footerCard.hass = value;
     }
+    for (const card of this._extraCards.values()) {
+      card.hass = value;
+    }
   }
 
   /** The stored Home Assistant object. */
@@ -87,6 +90,9 @@ export class DashboardSidebarBar extends LitElement {
 
   /** The built card element of a card/markdown footer, for the sheet. */
   @state() private _footerCard?: HTMLElement & { hass?: HomeAssistant };
+
+  /** Built card elements for card/markdown sheet-menu entries, by index. */
+  @state() private _extraCards = new Map<number, HTMLElement & { hass?: HomeAssistant }>();
 
   /** Ids of categories expanded inside the open sheet. */
   @state() private _expanded = new Set<string>();
@@ -133,7 +139,11 @@ export class DashboardSidebarBar extends LitElement {
     // manager as a synthetic config in the shape it already understands.
     const body: SidebarBlock[] = [];
     const buttons: FooterButtonConfig[] = [];
-    for (const entry of [...this._resolved.slots, ...this._resolved.menu]) {
+    for (const entry of [
+      ...this._resolved.slots,
+      ...this._resolved.menu,
+      ...this._resolved.extras,
+    ]) {
       if (entry.kind === 'button') {
         buttons.push(entry.element as FooterButtonConfig);
       } else {
@@ -143,7 +153,7 @@ export class DashboardSidebarBar extends LitElement {
     this._templates.collect({ body, footer: { ...(config.footer ?? {}), buttons } });
     this._templates.setHass(this._hass);
     this._restartTimer();
-    void this._buildFooterCard();
+    void this._buildCards();
   }
 
   /** Whether the desktop footer is a card or markdown footer. */
@@ -153,19 +163,28 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /**
-   * Instantiates the footer card element for a card/markdown footer via Home
-   * Assistant's card helpers, mirroring the desktop footer.
+   * Instantiates card elements for a card/markdown footer and for card and
+   * markdown sheet-menu entries via Home Assistant's card helpers, mirroring
+   * the desktop sidebar's card pipeline.
    */
-  private async _buildFooterCard(): Promise<void> {
+  private async _buildCards(): Promise<void> {
     const footer = this._config?.footer;
-    if (!this._footerHasContent()) {
+    const extraSpecs = new Map<number, unknown>();
+    this._resolved.extras.forEach((entry, i) => {
+      if (entry.kind === 'card') {
+        extraSpecs.set(i, (entry.element as { card?: unknown }).card);
+      } else if (entry.kind === 'markdown') {
+        extraSpecs.set(i, {
+          type: 'markdown',
+          content: (entry.element as { content?: string }).content,
+        });
+      }
+    });
+    if (!this._footerHasContent() && extraSpecs.size === 0) {
       this._footerCard = undefined;
+      this._extraCards = new Map();
       return;
     }
-    const spec =
-      footer?.card !== undefined
-        ? footer.card
-        : { type: 'markdown', content: footer?.markdown as string };
     const helpers = await (
       window as unknown as {
         loadCardHelpers?: () => Promise<{
@@ -176,10 +195,26 @@ export class DashboardSidebarBar extends LitElement {
     if (!helpers) {
       return;
     }
-    const cardConfig = typeof spec === 'string' ? { type: 'markdown', content: spec } : spec;
-    const el = helpers.createCardElement(cardConfig);
-    el.hass = this._hass;
-    this._footerCard = el;
+    const make = (spec: unknown): HTMLElement & { hass?: HomeAssistant } => {
+      const cardConfig = typeof spec === 'string' ? { type: 'markdown', content: spec } : spec;
+      const el = helpers.createCardElement(cardConfig);
+      el.hass = this._hass;
+      return el;
+    };
+    if (this._footerHasContent()) {
+      const spec =
+        footer?.card !== undefined
+          ? footer.card
+          : { type: 'markdown', content: footer?.markdown as string };
+      this._footerCard = make(spec);
+    } else {
+      this._footerCard = undefined;
+    }
+    const extras = new Map<number, HTMLElement & { hass?: HomeAssistant }>();
+    for (const [i, spec] of extraSpecs) {
+      extras.set(i, make(spec));
+    }
+    this._extraCards = extras;
   }
 
   /**
@@ -240,7 +275,12 @@ export class DashboardSidebarBar extends LitElement {
   /** The visible slots and the effective menu, after width folding. */
   private _layout(): { visible: BarEntry[]; menu: BarEntry[] } {
     const { slots, menu } = this._resolved;
-    if (menu.length === 0 && !this._footerHasContent() && slots.length <= this._capacity) {
+    if (
+      menu.length === 0 &&
+      this._resolved.extras.length === 0 &&
+      !this._footerHasContent() &&
+      slots.length <= this._capacity
+    ) {
       return { visible: slots, menu: [] };
     }
     const room = Math.max(1, this._capacity - 1);
@@ -579,10 +619,66 @@ export class DashboardSidebarBar extends LitElement {
     `;
   }
 
+  /** Renders one curated sheet-menu entry: titles and cards get their own
+   * treatments, everything else renders as a normal sheet row. */
+  private _renderSheetExtra(entry: BarEntry, index: number): TemplateResult | typeof nothing {
+    if (entry.kind === 'title') {
+      const el = entry.element as {
+        text?: string;
+        align?: string;
+        text_color?: string;
+        tap_action?: unknown;
+      };
+      const color = this._templates.resolve(el.text_color);
+      const style = [el.align ? `text-align:${el.align}` : '', color ? `color:${color}` : '']
+        .filter(Boolean)
+        .join(';');
+      return html`
+        <div
+          class="dashboard-sidebar-bar-sheet-title ${el.tap_action ? 'clickable' : ''}"
+          style=${style}
+          @click=${
+            el.tap_action
+              ? () => {
+                  this._close();
+                  this._run(entry.element as ItemBlock);
+                }
+              : nothing
+          }
+        >
+          ${this._templates.resolve(el.text)}
+        </div>
+      `;
+    }
+    if (entry.kind === 'card' || entry.kind === 'markdown') {
+      const card = this._extraCards.get(index);
+      if (!card) {
+        return nothing;
+      }
+      const el = entry.element as { text_color?: string; card?: unknown };
+      const chromeless = entry.kind === 'markdown' || typeof el.card === 'string';
+      const color = entry.kind === 'markdown' ? this._templates.resolve(el.text_color) : '';
+      const style = [
+        chromeless
+          ? '--ha-card-background:transparent;--ha-card-box-shadow:none;--ha-card-border-width:0px'
+          : '',
+        color ? `color:${color};--primary-text-color:${color}` : '',
+      ]
+        .filter(Boolean)
+        .join(';');
+      return html` <div class="dashboard-sidebar-bar-sheet-card" style=${style}>${card}</div> `;
+    }
+    return this._renderSheetRow(entry);
+  }
+
   /** Renders the bottom sheet holding the dots-menu entries. */
   private _renderSheet(menu: BarEntry[]): TemplateResult | typeof nothing {
     const content = this._renderSheetFooterContent();
-    if (this._open !== 'menu' || (menu.length === 0 && content === nothing)) {
+    const extras = this._resolved.extras;
+    if (
+      this._open !== 'menu' ||
+      (menu.length === 0 && extras.length === 0 && content === nothing)
+    ) {
       return nothing;
     }
     const buttons = content === nothing ? menu.filter((e) => e.kind === 'button') : [];
@@ -596,10 +692,11 @@ export class DashboardSidebarBar extends LitElement {
         style=${this._config?.background ? `background:${this._config.background}` : ''}
       >
         ${
-          rows.length > 0
+          rows.length > 0 || extras.length > 0
             ? html`
                 <div class="dashboard-sidebar-bar-sheet-rows">
                   ${rows.map((entry) => this._renderSheetRow(entry))}
+                  ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
                 </div>
               `
             : nothing
@@ -658,7 +755,7 @@ export class DashboardSidebarBar extends LitElement {
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
-            menu.length > 0 || this._footerHasContent()
+            menu.length > 0 || this._resolved.extras.length > 0 || this._footerHasContent()
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${

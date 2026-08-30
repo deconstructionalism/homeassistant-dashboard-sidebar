@@ -247,6 +247,7 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `hide` | `string[]` | no | Ids of derived elements to leave off the bar. Derive mode only. |
 | `override` | `Record<string, MobileOverride>` | no | Per-id property patches applied to derived elements. Derive mode only. |
 | `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
+| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
 | `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
 | `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
@@ -303,6 +304,12 @@ How bar elements label themselves: always, never, or only when active.
 `MobileUseEntry | ItemBlock`
 
 An explicit bar entry: a reuse of a desktop element, or an inline item.
+
+### `MobileMenuEntry`
+
+`MobileUseEntry | SidebarBlock`
+
+One curated sheet-menu entry: a reuse of any desktop element by id (no bar-eligibility limit), or an inline block of any kind.
 
 ### `ActionConfig`
 

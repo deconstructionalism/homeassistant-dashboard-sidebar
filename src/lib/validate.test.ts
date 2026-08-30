@@ -459,6 +459,18 @@ describe('mobile config', () => {
     expect(errors.some((e) => e.includes('not bar-eligible'))).toBe(true);
   });
 
+  it('lets the sheet menu reference any kind but not unknown ids', () => {
+    const ok = validateConfig(withMobile({ menu: [{ use: 'md' }] }));
+    expect(ok.some((e) => e.includes('mobile.menu'))).toBe(false);
+    const errors = validateConfig(withMobile({ menu: [{ use: 'nope' }] }));
+    expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
+  });
+
+  it('validates inline sheet-menu blocks by their type', () => {
+    const errors = validateConfig(withMobile({ menu: [{ type: 'title', id: 'x1' }] }));
+    expect(errors.some((e) => e.includes('mobile.menu[0]'))).toBe(true);
+  });
+
   it('rejects hiding and overriding the same id', () => {
     const errors = validateConfig(
       withMobile({ hide: ['rooms'], override: { rooms: { title: 'X' } } }),

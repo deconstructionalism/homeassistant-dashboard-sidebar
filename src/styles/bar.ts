@@ -333,6 +333,25 @@ export const barStyles = css`
     margin-left: 18px;
   }
 
+  /* Curated titles follow the desktop app-title treatment. */
+  .dashboard-sidebar-bar-sheet-title {
+    padding: 10px 12px 4px;
+    overflow: hidden;
+    font-size: var(--ha-font-size-xl, 1.25rem);
+    font-weight: var(--ha-font-weight-medium, 500);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-sidebar-bar-sheet-title.clickable {
+    cursor: pointer;
+  }
+
+  .dashboard-sidebar-bar-sheet-card {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
   .dashboard-sidebar-bar-sheet-time {
     cursor: default;
     font-variant-numeric: tabular-nums;

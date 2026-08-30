@@ -318,6 +318,12 @@ export interface MobileUseEntry extends MobileOverride {
 export type MobileBarEntry = MobileUseEntry | ItemBlock;
 
 /**
+ * One curated sheet-menu entry: a reuse of any desktop element by id (no
+ * bar-eligibility limit), or an inline block of any kind.
+ */
+export type MobileMenuEntry = MobileUseEntry | SidebarBlock;
+
+/**
  * The mobile bar. Its presence hides the sidebar on narrow viewports and
  * renders a bottom bar instead. Without `items` the bar derives from the
  * desktop nav (items and categories in document order) amended by `hide` and
@@ -331,6 +337,12 @@ export interface MobileConfig {
   override?: Record<string, MobileOverride>;
   /** The explicit bar: `use:` references and inline items. */
   items?: MobileBarEntry[];
+  /**
+   * Curated entries of the dots-menu sheet, shown between any overflowed
+   * slots and the footer. `use:` may reference any element, including
+   * titles, markdown, and cards. Applies in both derive and explicit mode.
+   */
+  menu?: MobileMenuEntry[];
   /** Viewport width in pixels at and below which the bar shows. Default 768. */
   breakpoint?: number;
   /** Label rendering on the bar. Default never. */

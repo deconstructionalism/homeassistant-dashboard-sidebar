@@ -116,6 +116,41 @@ describe('<dashboard-sidebar-bar>', () => {
     }
   });
 
+  it('shows curated menu entries: titles, markdown cards, and rows', async () => {
+    (window as unknown as { loadCardHelpers?: () => Promise<unknown> }).loadCardHelpers =
+      async () => ({
+        createCardElement: () => {
+          const div = document.createElement('div');
+          div.className = 'stub-card';
+          return div;
+        },
+      });
+    try {
+      const config = base();
+      const el = await mount({
+        ...config,
+        mobile: {
+          menu: [{ type: 'title', id: 't1', text: 'Section' }, { use: 'md' }, { use: 'weather' }],
+        },
+      });
+      const dots = root(el).querySelector(
+        '.dashboard-sidebar-bar-slot-overflow',
+      ) as HTMLButtonElement;
+      expect(dots).to.exist;
+      dots.click();
+      await el.updateComplete;
+      await aTimeout(0);
+      await el.updateComplete;
+      const title = root(el).querySelector('.dashboard-sidebar-bar-sheet-title');
+      expect(title?.textContent?.trim()).to.equal('Section');
+      expect(root(el).querySelector('.dashboard-sidebar-bar-sheet-card .stub-card')).to.exist;
+      const rows = root(el).querySelectorAll('.dashboard-sidebar-bar-sheet-row');
+      expect([...rows].some((r) => r.textContent?.includes('Weather'))).to.equal(true);
+    } finally {
+      delete (window as unknown as { loadCardHelpers?: unknown }).loadCardHelpers;
+    }
+  });
+
   it('folds overflow into the sheet with accordion categories', async () => {
     const config = base();
     config.body = [

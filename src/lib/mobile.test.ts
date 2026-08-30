@@ -27,7 +27,7 @@ const base = (): DashboardSidebarConfig => ({
 
 describe('resolveBar, derive mode', () => {
   it('returns nothing without a mobile config', () => {
-    expect(resolveBar(base())).toEqual({ slots: [], menu: [] });
+    expect(resolveBar(base())).toEqual({ slots: [], menu: [], extras: [] });
   });
 
   it('mirrors the nav in order, footer buttons to the menu, non-bar blocks skipped', () => {
@@ -81,6 +81,37 @@ describe('resolveBar, derive mode', () => {
     const { slots } = resolveBar({ ...config, mobile: {} });
     expect(slots.slice(0, 2).map((e) => e.kind)).toEqual(['clock', 'date']);
     expect(slots.some((e) => (e.element as ItemBlock).id === 'md')).toBe(false);
+  });
+});
+
+describe('resolveBar, sheet menu', () => {
+  it('resolves use references to any kind, plus inline blocks', () => {
+    const config = {
+      ...base(),
+      mobile: {
+        menu: [
+          { use: 'md' },
+          { use: 'garden', title: 'Yard' },
+          { use: 'lock' },
+          { type: 'title', id: 't1', text: 'Hello' },
+        ],
+      },
+    };
+    const { extras } = resolveBar(config);
+    expect(extras.map((e) => e.kind)).toEqual(['markdown', 'category', 'button', 'title']);
+    expect((extras[1].element as { title?: string }).title).toBe('Yard');
+    expect(extras[3].source).toBe('inline');
+  });
+
+  it('composes with explicit mode and skips unknown references', () => {
+    const config = {
+      ...base(),
+      mobile: { items: [{ use: 'rooms' }], menu: [{ use: 'nope' }, { use: 'md' }] },
+    };
+    const { slots, extras } = resolveBar(config);
+    expect(slots).toHaveLength(1);
+    expect(extras).toHaveLength(1);
+    expect(extras[0].kind).toBe('markdown');
   });
 });
 

@@ -365,12 +365,15 @@ const checkRef = (
   kinds: Map<string, BarKind | 'other'>,
   ctx: string,
   errors: string[],
+  anyKind = false,
 ): void => {
   const kind = kinds.get(id);
   if (kind === undefined) {
-    const known = [...kinds.keys()].filter((k) => kinds.get(k) !== 'other');
+    const known = anyKind
+      ? [...kinds.keys()]
+      : [...kinds.keys()].filter((k) => kinds.get(k) !== 'other');
     errors.push(`${ctx}: unknown id "${id}" (known: ${known.join(', ') || 'none'})`);
-  } else if (kind === 'other') {
+  } else if (kind === 'other' && !anyKind) {
     errors.push(
       `${ctx}: "${id}" is not bar-eligible; only items, categories, dividers, clocks, dates, and footer buttons can appear on the bar`,
     );
@@ -497,6 +500,36 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
       }
     });
   }
+
+  if (mobile.menu !== undefined) {
+    if (!Array.isArray(mobile.menu)) {
+      errors.push('mobile.menu: must be a list');
+      return;
+    }
+    mobile.menu.forEach((entry, i) => {
+      const ctx = `mobile.menu[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${ctx}: must be a mapping`);
+        return;
+      }
+      if ('use' in entry) {
+        const use = (entry as MobileUseEntry).use;
+        if (typeof use !== 'string' || !use) {
+          errors.push(`${ctx}.use: must be an element id`);
+        } else {
+          checkRef(use, kinds, `${ctx}.use`, errors, true);
+        }
+        checkOverridePatch(entry, ctx, errors);
+      } else {
+        const type = (entry as SidebarBlock).type;
+        if (type === undefined || type === 'item') {
+          validateItem(entry as ItemBlock, ctx, errors);
+        } else {
+          validateBlock(entry as SidebarBlock, ctx, errors);
+        }
+      }
+    });
+  }
 };
 
 /**
@@ -566,6 +599,11 @@ const checkUniqueIds = (config: DashboardSidebarConfig, errors: string[]): void 
   list(config.mobile?.items).forEach((entry, i) => {
     if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
       claim(entry, `mobile.items[${i}]`);
+    }
+  });
+  list(config.mobile?.menu).forEach((entry, i) => {
+    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
+      claim(entry, `mobile.menu[${i}]`);
     }
   });
 };
