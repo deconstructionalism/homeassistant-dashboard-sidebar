@@ -250,7 +250,6 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
 | `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
-| `max_visible` | `number` | no | Cap on visible slots before overflow; unset fits to the viewport. |
 | `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
 
 ## Field types

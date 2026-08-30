@@ -505,14 +505,12 @@ describe('mobile config', () => {
       withMobile({
         breakpoint: -1,
         labels: 'sometimes',
-        max_visible: 0,
         background: 5,
         extra: true,
       }),
     );
     expect(errors.some((e) => e.includes('breakpoint'))).toBe(true);
     expect(errors.some((e) => e.includes('labels'))).toBe(true);
-    expect(errors.some((e) => e.includes('max_visible'))).toBe(true);
     expect(errors.some((e) => e.includes('background'))).toBe(true);
     expect(errors.some((e) => e.includes('extra'))).toBe(true);
   });

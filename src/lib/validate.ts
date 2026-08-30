@@ -441,14 +441,6 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     errors.push(`mobile.labels: must be one of ${MOBILE_LABELS.join(', ')}`);
   }
   checkString(mobile.background, 'mobile.background', errors);
-  if (
-    mobile.max_visible !== undefined &&
-    (typeof mobile.max_visible !== 'number' ||
-      !Number.isInteger(mobile.max_visible) ||
-      mobile.max_visible < 1)
-  ) {
-    errors.push('mobile.max_visible: must be a positive integer');
-  }
   checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
 
   const kinds = barEligibility(config);

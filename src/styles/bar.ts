@@ -44,14 +44,12 @@ export const barStyles = css`
     flex: 1 1 auto;
     min-width: 0;
     align-items: stretch;
-    justify-content: center;
   }
 
   .dashboard-sidebar-bar-slot {
     display: flex;
     flex: 1 1 0;
     min-width: 0;
-    max-width: var(--dashboard-sidebar-bar-slot-max-width, 64px);
     flex-direction: column;
     align-items: center;
     justify-content: center;

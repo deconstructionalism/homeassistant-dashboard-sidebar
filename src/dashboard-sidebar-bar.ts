@@ -179,9 +179,7 @@ export class DashboardSidebarBar extends LitElement {
   /** Recomputes how many slots the current width can hold. */
   private _measure(): void {
     const width = this.clientWidth || window.innerWidth;
-    const fit = Math.max(1, Math.floor(width / MIN_SLOT_WIDTH));
-    const cap = this._config?.mobile?.max_visible;
-    this._capacity = cap ? Math.min(fit, cap) : fit;
+    this._capacity = Math.max(1, Math.floor(width / MIN_SLOT_WIDTH));
   }
 
   /** The visible slots and the effective menu, after width folding. */

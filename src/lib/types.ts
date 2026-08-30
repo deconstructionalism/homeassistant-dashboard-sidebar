@@ -340,8 +340,6 @@ export interface MobileConfig {
    * `background`, and through it to the theme card background.
    */
   background?: string;
-  /** Cap on visible slots before overflow; unset fits to the viewport. */
-  max_visible?: number;
   /** Passed to the card-mod integration to style the bar. */
   card_mod?: Record<string, unknown>;
 }
