@@ -44,7 +44,9 @@ export const barStyles = css`
     box-sizing: border-box;
     width: 100%;
     min-height: var(--dashboard-sidebar-bar-height, 56px);
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding: 0 max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-right, 0px))
+      env(safe-area-inset-bottom, 0)
+      max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
     background: var(
       --dashboard-sidebar-bar-background,
       var(--ha-card-background, var(--card-background-color, #fff))
