@@ -438,8 +438,8 @@ export class DashboardSidebarBar extends LitElement {
           ${this._renderIcon(entry)}
           <span class="dashboard-sidebar-bar-sheet-label">${this._title(entry)}</span>
           <ha-icon
-            class="dashboard-sidebar-bar-sheet-chevron"
-            icon=${expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+            class="dashboard-sidebar-bar-sheet-chevron ${expanded ? 'open' : ''}"
+            icon="mdi:chevron-down"
           ></ha-icon>
         </button>
         ${

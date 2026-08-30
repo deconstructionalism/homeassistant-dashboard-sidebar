@@ -25,6 +25,7 @@ export const barStyles = css`
     --dashboard-sidebar-item-radius: var(--ha-card-border-radius, 10px);
     --dashboard-sidebar-hover-background: var(--divider-color, rgb(0 0 0 / 8%));
     --dashboard-sidebar-on-accent-color: var(--text-primary-color, #fff);
+    --dashboard-sidebar-divider-color: var(--divider-color, rgb(0 0 0 / 12%));
   }
 
   .dashboard-sidebar-bar {
@@ -261,12 +262,13 @@ export const barStyles = css`
 
   .dashboard-sidebar-bar-sheet-row {
     display: flex;
-    gap: 10px;
+    flex: 0 0 auto;
+    gap: 12px;
     align-items: center;
-    padding: 10px;
+    padding: 10px 12px;
     border: none;
-    border-radius: 8px;
-    background: none;
+    border-radius: var(--dashboard-sidebar-item-radius);
+    background: transparent;
     color: var(--primary-text-color);
     font: inherit;
     text-align: left;
@@ -275,9 +277,15 @@ export const barStyles = css`
   }
 
   .dashboard-sidebar-bar-sheet-row:hover,
-  .dashboard-sidebar-bar-sheet-row:focus-visible,
-  .dashboard-sidebar-bar-sheet-category[aria-expanded='true'] {
+  .dashboard-sidebar-bar-sheet-row:focus-visible {
     background: var(--dashboard-sidebar-hover-background);
+  }
+
+  /* Category headers match the desktop expanded sidebar: bold, slightly
+     dimmed, with the chevron rotating shut. */
+  .dashboard-sidebar-bar-sheet-category {
+    font-weight: var(--ha-font-weight-bold, 600);
+    opacity: 0.85;
   }
 
   .dashboard-sidebar-bar-sheet-row .dashboard-sidebar-bar-icon {
@@ -295,20 +303,33 @@ export const barStyles = css`
 
   .dashboard-sidebar-bar-sheet-label {
     flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: var(--ha-font-size-l, 1rem);
   }
 
   .dashboard-sidebar-bar-sheet-chevron {
     --mdc-icon-size: 20px;
-    opacity: 0.6;
+
+    flex: 0 0 auto;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
   }
 
+  .dashboard-sidebar-bar-sheet-chevron:not(.open) {
+    transform: rotate(-90deg);
+  }
+
+  /* Children hang off the desktop guide line. */
   .dashboard-sidebar-bar-sheet-children {
     display: flex;
     flex-direction: column;
-    padding-left: 24px;
+    gap: 2px;
+    padding-left: 8px;
+    border-left: 1px solid var(--dashboard-sidebar-divider-color);
+    margin-left: 18px;
   }
 
   .dashboard-sidebar-bar-sheet-time {
