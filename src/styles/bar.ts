@@ -26,6 +26,10 @@ export const barStyles = css`
     --dashboard-sidebar-hover-background: var(--divider-color, rgb(0 0 0 / 8%));
     --dashboard-sidebar-on-accent-color: var(--text-primary-color, #fff);
     --dashboard-sidebar-divider-color: var(--divider-color, rgb(0 0 0 / 12%));
+    --dashboard-sidebar-background: var(
+      --card-background-color,
+      var(--primary-background-color, #fff)
+    );
   }
 
   .dashboard-sidebar-bar {
@@ -222,10 +226,7 @@ export const barStyles = css`
     flex-direction: column;
     max-height: 70vh;
     padding: 8px;
-    background: var(
-      --dashboard-sidebar-bar-background,
-      var(--ha-card-background, var(--card-background-color, #fff))
-    );
+    background: var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background));
     border-top: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
     border-radius: var(--dashboard-sidebar-bar-sheet-radius, 16px)
       var(--dashboard-sidebar-bar-sheet-radius, 16px) 0 0;
@@ -343,23 +344,31 @@ export const barStyles = css`
     background: var(--divider-color, rgb(127 127 127 / 30%));
   }
 
+  /* The pinned button row follows the desktop footer's styling. */
   .dashboard-sidebar-bar-sheet-footer {
     display: flex;
-    gap: 8px;
-    justify-content: space-evenly;
+    gap: 4px;
+    align-items: center;
+    margin-top: 8px;
     padding-top: 8px;
-    margin-top: 4px;
-    border-top: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+    border-top: 1px solid var(--dashboard-sidebar-divider-color);
+  }
+
+  .dashboard-sidebar-bar-sheet-footer.no-divider {
+    border-top: none;
+    padding-top: 0;
   }
 
   .dashboard-sidebar-bar-sheet-footer-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     border: none;
     border-radius: var(--dashboard-sidebar-item-radius);
-    background: none;
+    background: transparent;
     color: var(--primary-text-color);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;

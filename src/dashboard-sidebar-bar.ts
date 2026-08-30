@@ -501,7 +501,12 @@ export class DashboardSidebarBar extends LitElement {
     const rows = menu.filter((e) => e.kind !== 'button');
     return html`
       <div class="dashboard-sidebar-bar-sheet-scrim" @click=${() => this._close()}></div>
-      <div class="dashboard-sidebar-bar-sheet" role="menu" aria-label="More">
+      <div
+        class="dashboard-sidebar-bar-sheet"
+        role="menu"
+        aria-label="More"
+        style=${this._config?.background ? `background:${this._config.background}` : ''}
+      >
         ${
           rows.length > 0
             ? html`
@@ -514,7 +519,11 @@ export class DashboardSidebarBar extends LitElement {
         ${
           buttons.length > 0
             ? html`
-                <div class="dashboard-sidebar-bar-sheet-footer">
+                <div
+                  class="dashboard-sidebar-bar-sheet-footer ${
+                    this._config?.footer?.divider === false ? 'no-divider' : ''
+                  }"
+                >
                   ${buttons.map((entry) => this._renderSheetButton(entry))}
                 </div>
               `
