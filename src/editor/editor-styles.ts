@@ -343,6 +343,30 @@ export const editorStyles = css`
     min-width: 0;
   }
 
+  .mobile-pv-wrap {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    justify-content: flex-end;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .mobile-pv-handle {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0 2px;
+    color: var(--secondary-text-color, #888);
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .mobile-pv-handle:hover {
+    color: var(--primary-text-color, #000);
+  }
+
   .mobile-pv-frame {
     max-width: 100%;
     box-sizing: border-box;

@@ -134,6 +134,13 @@ const MOBILE_MODE_META: Array<{ value: string; icon: string; title: string }> = 
   { value: 'custom', icon: 'mdi:pencil-ruler', title: 'Custom bar' },
 ];
 
+/**
+ * The narrowest real phone viewport the mobile preview can be dragged to:
+ * 320 CSS px, the iPhone SE / classic small-Android width (only foldable
+ * cover screens go lower).
+ */
+const MIN_MOBILE_PREVIEW = 320;
+
 /** Icon and label for the bar dock positions. */
 const MOBILE_POSITION_META: Array<{ value: string; icon: string; title: string }> = [
   { value: 'bottom', icon: 'mdi:dock-bottom', title: 'Bottom' },
@@ -245,6 +252,12 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** The cached mobile-bar preview element. */
   private _barPreview?: DashboardSidebarBar;
+
+  /** The dragged mobile preview width, or null to follow the breakpoint. */
+  @state() private _mobilePreviewWidth: number | null = null;
+
+  /** Live drag bookkeeping for the mobile preview resize handle. */
+  private _mobileDrag?: { startX: number; startW: number };
 
   /** Last config serialized into the bar preview, to skip redundant rebuilds. */
   private _barPreviewCfg = '';
@@ -1589,13 +1602,42 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderMobilePreview(): TemplateResult {
     const bp = this._working.breakpoint ?? 768;
+    const width = Math.min(Math.max(this._mobilePreviewWidth ?? bp, MIN_MOBILE_PREVIEW), bp);
     return html`
       <div class="preview">
         <div class="preview-head">
-          <span class="preview-title">Preview (${bp}px)</span>
+          <span class="preview-title">Preview (${width}px)</span>
         </div>
-        <div class="pv-frame pv-col mobile-pv-frame" style="width: ${bp}px">
-          ${this._barPreviewEl()}
+        <div class="mobile-pv-wrap">
+          <div
+            class="mobile-pv-handle"
+            title="Drag to preview narrower screens (down to ${MIN_MOBILE_PREVIEW}px); double-click to reset"
+            @pointerdown=${(ev: PointerEvent) => {
+              this._mobileDrag = { startX: ev.clientX, startW: width };
+              (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+            }}
+            @pointermove=${(ev: PointerEvent) => {
+              if (!this._mobileDrag) {
+                return;
+              }
+              const next = this._mobileDrag.startW - (ev.clientX - this._mobileDrag.startX);
+              this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), bp);
+            }}
+            @pointerup=${() => {
+              this._mobileDrag = undefined;
+            }}
+            @pointercancel=${() => {
+              this._mobileDrag = undefined;
+            }}
+            @dblclick=${() => {
+              this._mobilePreviewWidth = null;
+            }}
+          >
+            <ha-icon icon="mdi:drag-vertical"></ha-icon>
+          </div>
+          <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
+            ${this._barPreviewEl()}
+          </div>
         </div>
       </div>
     `;
