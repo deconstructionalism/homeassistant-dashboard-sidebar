@@ -504,9 +504,15 @@ export const editorStyles = css`
     height: auto;
     max-width: 100%;
     box-sizing: border-box;
-    padding: 0;
+
+    /* A sliver of page space on the content side of the bar. */
+    padding: 12px 0 0;
     outline: none;
     overflow: hidden;
+  }
+
+  .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) {
+    padding: 0 0 12px;
   }
 
   .mobile-pv-frame::after {
