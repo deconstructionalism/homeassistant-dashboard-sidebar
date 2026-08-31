@@ -1536,7 +1536,11 @@ export class DashboardSidebarEditor extends LitElement {
             </button>
           </div>
         </div>
-        ${this._renderPreview(html`${this._previewEl('settings', previewConfig, false, true)}`, true)}
+        ${this._renderPreview(
+          html`${this._previewEl('settings', previewConfig, false, true)}`,
+          true,
+          'settings-pv-frame',
+        )}
       </div>
     `;
   }
@@ -2055,7 +2059,7 @@ export class DashboardSidebarEditor extends LitElement {
    * Renders the preview column: a heading with the collapse toggle above the
    * framed live preview content.
    */
-  private _renderPreview(content: TemplateResult, column = false): TemplateResult {
+  private _renderPreview(content: TemplateResult, column = false, frameClass = ''): TemplateResult {
     return html`
       <div class="preview">
         <div class="preview-head">
@@ -2088,7 +2092,7 @@ export class DashboardSidebarEditor extends LitElement {
           </button>
         </div>
         <div
-          class="pv-frame ${this._tabCollapsed ? 'collapsed' : ''} ${column ? 'pv-col' : ''}"
+          class="pv-frame ${this._tabCollapsed ? 'collapsed' : ''} ${column ? 'pv-col' : ''} ${frameClass}"
           style=${this._previewFrameStyle()}
         >
           ${content}

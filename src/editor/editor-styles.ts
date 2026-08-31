@@ -524,6 +524,13 @@ export const editorStyles = css`
     flex-direction: column;
   }
 
+  /* The whole-sidebar Settings preview fills its frame with an opaque
+     surface that paints over the base outline; a real border stays visible. */
+  .pv-frame.settings-pv-frame {
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    outline: none;
+  }
+
   /* Skeleton placeholder rows standing in for the content beside a pinned
        region, faded out toward the far edge. */
   .pv-ghost {
