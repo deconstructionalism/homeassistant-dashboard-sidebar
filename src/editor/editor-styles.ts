@@ -407,36 +407,42 @@ export const editorStyles = css`
      hangs to their right. All share the handle's drag behavior. */
   .mobile-pv-arrows {
     position: absolute;
-    top: -22px;
+    top: -23px;
     left: 50%;
     z-index: 1;
     display: flex;
+    height: 14px;
     align-items: center;
   }
 
   .mobile-pv-arrows ha-icon {
     --mdc-icon-size: 14px;
+
+    display: flex;
   }
 
   .mobile-pv-arrows.mid {
     transform: translateX(-50%);
-    gap: 3px;
+    gap: 0;
   }
 
+  /* The thin-arrow glyphs carry ~3px of internal padding; pull them in so
+     the arrow tails visually touch the rail. */
   .mobile-pv-arrows.min {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% + 4px));
   }
 
   .mobile-pv-arrows.max {
-    margin-left: 2px;
+    margin-left: -4px;
   }
 
   .mobile-pv-caption {
     position: absolute;
-    top: -22px;
+    top: -23px;
     left: 50%;
     z-index: 1;
-    margin-left: 26px;
+    margin-left: 24px;
+    line-height: 14px;
     white-space: nowrap;
   }
 
