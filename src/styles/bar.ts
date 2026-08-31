@@ -304,15 +304,18 @@ export const barStyles = css`
     }
   }
 
+  /* Reduced motion: swap the slide for a short crossfade rather than
+     removing feedback entirely. */
   @media (prefers-reduced-motion: reduce) {
-    .dashboard-sidebar-bar-sheet,
-    .dashboard-sidebar-bar-sheet-scrim {
-      transition: none;
+    .dashboard-sidebar-bar-sheet {
+      opacity: 0;
+      transform: none;
+      transition: opacity 0.15s ease;
     }
 
-    .dashboard-sidebar-bar-sheet.closing,
-    .dashboard-sidebar-bar-sheet-scrim.closing {
-      visibility: hidden;
+    .dashboard-sidebar-bar-sheet.open {
+      opacity: 1;
+      transform: none;
     }
   }
 
