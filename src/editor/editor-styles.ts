@@ -360,23 +360,51 @@ export const editorStyles = css`
   }
 
   .mobile-pv-wrap {
+    position: relative;
     display: flex;
     flex: 1 1 auto;
-    align-items: stretch;
     justify-content: flex-end;
     min-width: 0;
     min-height: 0;
   }
 
+  /* The resize handle rides the frame's left edge as a thin rail with the
+     direction arrow at its top; being absolute it takes no layout width. */
   .mobile-pv-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
     display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    padding: 0 2px;
+    width: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    transform: translateX(50%);
     color: var(--secondary-text-color, #888);
     cursor: ew-resize;
     touch-action: none;
     user-select: none;
+  }
+
+  .mobile-pv-handle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: currentcolor;
+    opacity: 0.6;
+  }
+
+  .mobile-pv-handle ha-icon {
+    --mdc-icon-size: 14px;
+
+    position: relative;
+    z-index: 1;
+    margin-top: 2px;
+    background: var(--card-background-color, #fff);
+    border-radius: 3px;
   }
 
   .mobile-pv-handle:hover {

@@ -1668,11 +1668,10 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _measureMobileAvail(): void {
     const wrap = this.shadowRoot?.querySelector('.mobile-pv-wrap') as HTMLElement | null;
-    const handle = this.shadowRoot?.querySelector('.mobile-pv-handle') as HTMLElement | null;
     if (!wrap) {
       return;
     }
-    const avail = Math.floor(wrap.clientWidth - (handle?.offsetWidth ?? 0));
+    const avail = Math.floor(wrap.clientWidth);
     if (avail > 0 && avail !== this._mobileAvail) {
       this._mobileAvail = avail;
     }
@@ -1695,6 +1694,7 @@ export class DashboardSidebarEditor extends LitElement {
         <div class="mobile-pv-wrap">
           <div
             class="mobile-pv-handle"
+            style="right: ${width}px"
             title="Drag to preview narrower screens (down to ${MIN_MOBILE_PREVIEW}px); double-click to reset"
             @pointerdown=${(ev: PointerEvent) => {
               this._mobileDrag = { startX: ev.clientX, startW: width };
@@ -1719,7 +1719,15 @@ export class DashboardSidebarEditor extends LitElement {
               this._mobilePreviewWidth = null;
             }}
           >
-            <ha-icon icon="mdi:arrow-split-vertical"></ha-icon>
+            <ha-icon
+              icon=${
+                width >= maxW
+                  ? 'mdi:arrow-right'
+                  : width <= MIN_MOBILE_PREVIEW
+                    ? 'mdi:arrow-left'
+                    : 'mdi:arrow-left-right'
+              }
+            ></ha-icon>
           </div>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
             ${this._barPreviewEl()}
