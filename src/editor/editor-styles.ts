@@ -374,6 +374,10 @@ export const editorStyles = css`
   .mobile-stack .form-head {
     flex: 0 0 auto;
     z-index: 6;
+
+    /* Match the Settings heading's height, whose dots button sets a 29px
+       content row that the title centers in. */
+    min-height: 29px;
   }
 
   /* Position's two buttons share a fixed width sized to "Bottom". */
