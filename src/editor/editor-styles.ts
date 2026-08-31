@@ -523,11 +523,11 @@ export const editorStyles = css`
 
   .pv-ghost-cards.fade-up {
     align-content: end;
-    mask-image: linear-gradient(to top, #000 15%, transparent 95%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 65%);
   }
 
   .pv-ghost-cards.fade-down {
-    mask-image: linear-gradient(to bottom, #000 15%, transparent 95%);
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 65%);
   }
 
   .ghost-card {
@@ -575,6 +575,7 @@ export const editorStyles = css`
   .mobile-pv-frame .pv-ghost-cards {
     flex: 0 0 auto;
     max-height: 160px;
+    opacity: 0.55;
   }
 
   .mobile-pv-frame::after {
