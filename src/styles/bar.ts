@@ -19,6 +19,11 @@ export const barStyles = css`
     z-index: auto;
     display: flex;
     flex-direction: column;
+
+    /* Anchor content to the docked edge (flex-end is the bottom in column
+       flow and the top in the top-dock's column-reverse), so a stretched
+       host keeps the bar pinned while the sheet grows over the page area. */
+    justify-content: flex-end;
     width: 100%;
     inset: auto;
   }
