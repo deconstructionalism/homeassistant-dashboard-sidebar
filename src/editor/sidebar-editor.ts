@@ -1627,6 +1627,7 @@ export class DashboardSidebarEditor extends LitElement {
         >
           <ha-icon icon="mdi:dots-vertical"></ha-icon>
         </button>`,
+        this._mobileCapNote(),
       )}
       <div class="mobile-stack">
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
@@ -1897,6 +1898,19 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * The mobile equivalent of the width-cap note: shown when the editor cannot
+   * give the preview the full breakpoint width.
+   */
+  private _mobileCapNote(): TemplateResult | typeof nothing {
+    const bp = this._working.breakpoint ?? 768;
+    return this._mobileAvail !== null && this._mobileAvail < bp
+      ? this._editorNote(
+          `The preview is capped to fit the editor, so it is narrower than the ${bp}px breakpoint.`,
+        )
+      : nothing;
+  }
+
+  /**
    * Renders the full-width notes above the split: the tab's scroll-behavior note
    * (with its divider line), then the collapsed-state note below that line when
    * the preview is collapsed.
@@ -1905,8 +1919,11 @@ export class DashboardSidebarEditor extends LitElement {
     scrollNote: string,
     collapsedNote: string,
     menu: TemplateResult | typeof nothing = nothing,
+    capNote?: TemplateResult | typeof nothing,
   ): TemplateResult {
-    const belowBar = this._tabCollapsed ? this._editorNote(collapsedNote) : this._previewCapNote();
+    const belowBar = this._tabCollapsed
+      ? this._editorNote(collapsedNote)
+      : (capNote ?? this._previewCapNote());
     return html`
       <div class="tab-notes">
         <p class="tab-note">${scrollNote}</p>
