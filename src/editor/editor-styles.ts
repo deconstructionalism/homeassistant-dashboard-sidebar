@@ -377,6 +377,9 @@ export const editorStyles = css`
   }
 
   .mobile-pv-frame {
+    /* Pin to the inline width: the base pv-frame flex-grow would otherwise
+       stretch the frame to the wrap and defeat the drag handle. */
+    flex: 0 0 auto;
     max-width: 100%;
     box-sizing: border-box;
     padding-top: 16px;
