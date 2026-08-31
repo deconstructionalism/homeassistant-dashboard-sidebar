@@ -544,28 +544,26 @@ export const editorStyles = css`
     grid-column: span 2;
   }
 
-  .ghost-dot {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    border-radius: 50%;
+  /* Sub-cards standing in for the tiles real dashboard cards contain. */
+  .ghost-sub {
+    display: block;
+    border-radius: 8px;
     background: var(--divider-color, rgb(0 0 0 / 15%));
   }
 
-  .ghost-line {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--divider-color, rgb(0 0 0 / 15%));
+  .ghost-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
-  .ghost-row-line {
+  .ghost-subrow {
     display: flex;
     gap: 8px;
-    align-items: center;
   }
 
-  .ghost-row-line .ghost-line {
-    flex: 0 0 auto;
+  .ghost-subrow .ghost-sub {
+    flex: 1 1 0;
   }
 
   .mobile-pv-frame .pv-ghost-cards {
