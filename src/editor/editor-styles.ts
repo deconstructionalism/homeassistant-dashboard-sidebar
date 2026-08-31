@@ -1410,6 +1410,15 @@ export const editorStyles = css`
     gap: 8px;
   }
 
+  /* Choice dialogs stack their options as full-width rows. */
+  .confirm-actions-stack {
+    flex-direction: column;
+  }
+
+  .confirm-actions-stack button {
+    width: 100%;
+  }
+
   .confirm-actions button {
     font: inherit;
     padding: 8px 14px;
