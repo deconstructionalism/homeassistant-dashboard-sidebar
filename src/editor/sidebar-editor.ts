@@ -1657,13 +1657,6 @@ export class DashboardSidebarEditor extends LitElement {
                         MOBILE_POSITION_META,
                         (v) => this._patchMobile({ position: v === 'bottom' ? undefined : v }),
                       )}
-                      <p class="choice-desc">
-                        ${
-                          (m.position ?? 'bottom') === 'top'
-                            ? 'The bar docks to the top edge.'
-                            : 'The bar docks to the bottom edge.'
-                        }
-                      </p>
                     </div>
                   </div>
                   ${checkboxField(

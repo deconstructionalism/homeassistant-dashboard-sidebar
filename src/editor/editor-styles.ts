@@ -384,6 +384,10 @@ export const editorStyles = css`
     grid-auto-columns: 1fr;
   }
 
+  .mobile-choice .icon-choice .choice {
+    padding: 6px 10px;
+  }
+
   .choice-desc {
     margin: 4px 0 0;
     color: var(--secondary-text-color, #888);
