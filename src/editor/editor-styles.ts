@@ -369,10 +369,11 @@ export const editorStyles = css`
     margin-top: 6px;
   }
 
-  /* The heading underline spans the full column despite the editor's
-     scrollbar inset. */
+  /* The heading lives on the stack itself so it sticks for the whole tab
+     scroll, above the preview chrome. */
   .mobile-stack .form-head {
-    margin-right: -12px;
+    flex: 0 0 auto;
+    z-index: 6;
   }
 
   /* Position's two buttons share a fixed width sized to "Bottom". */

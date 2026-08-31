@@ -1688,12 +1688,10 @@ export class DashboardSidebarEditor extends LitElement {
         this._mobileCapNote(),
       )}
       <div class="mobile-stack">
+        <div class="form-head">
+          <div class="form-title">Mobile Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}</div>
+        </div>
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
-          <div class="form-head">
-            <div class="form-title">
-              Mobile Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
-            </div>
-          </div>
           ${
             this._mobileYaml
               ? this._yamlEditor(
