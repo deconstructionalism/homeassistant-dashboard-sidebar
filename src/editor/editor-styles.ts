@@ -429,14 +429,12 @@ export const editorStyles = css`
     gap: 0;
   }
 
-  /* The thin-arrow glyphs carry ~3px of internal padding; pull them in so
-     the arrow tails visually touch the rail. */
   .mobile-pv-arrows.min {
-    transform: translateX(calc(-100% + 4px));
+    transform: translateX(-100%);
   }
 
   .mobile-pv-arrows.max {
-    margin-left: -4px;
+    margin-left: 0;
   }
 
   .mobile-pv-caption {
