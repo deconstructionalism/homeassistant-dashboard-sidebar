@@ -46,18 +46,37 @@ export const barStyles = css`
     min-height: var(--dashboard-sidebar-bar-height, 56px);
     /* The iOS home-indicator chin, trimmed: the full inset looks tall, so
        keep just enough to clear the gesture zone. Override the whole value
-       with --dashboard-sidebar-bar-safe-area. */
+       with --dashboard-sidebar-bar-safe-area. The chin strip paints in its
+       own color (below) rather than the bar background. */
+    --_chin: var(
+      --dashboard-sidebar-bar-safe-area,
+      max(0px, calc(env(safe-area-inset-bottom, 0px) - 14px))
+    );
+
     padding: 0 max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-right, 0px))
-      var(
-        --dashboard-sidebar-bar-safe-area,
-        max(0px, calc(env(safe-area-inset-bottom, 0px) - 14px))
-      )
-      max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
+      var(--_chin) max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
     background: var(
       --dashboard-sidebar-bar-background,
       var(--ha-card-background, var(--card-background-color, #fff))
     );
     border-top: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
+  }
+
+  /* The safe-area strip shows the theme's page background, not the bar's. */
+  .dashboard-sidebar-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: var(--_chin);
+    background: var(--dashboard-sidebar-bar-chin-background, var(--primary-background-color, #111));
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar::after {
+    top: 0;
+    bottom: auto;
+    height: env(safe-area-inset-top, 0);
   }
 
   :host([data-position='top']) .dashboard-sidebar-bar {
