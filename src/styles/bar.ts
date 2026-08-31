@@ -44,8 +44,14 @@ export const barStyles = css`
     box-sizing: border-box;
     width: 100%;
     min-height: var(--dashboard-sidebar-bar-height, 56px);
+    /* The iOS home-indicator chin, trimmed: the full inset looks tall, so
+       keep just enough to clear the gesture zone. Override the whole value
+       with --dashboard-sidebar-bar-safe-area. */
     padding: 0 max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-right, 0px))
-      env(safe-area-inset-bottom, 0)
+      var(
+        --dashboard-sidebar-bar-safe-area,
+        max(0px, calc(env(safe-area-inset-bottom, 0px) - 14px))
+      )
       max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
     background: var(
       --dashboard-sidebar-bar-background,
