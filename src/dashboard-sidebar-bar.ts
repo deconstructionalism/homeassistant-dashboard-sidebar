@@ -365,12 +365,15 @@ export class DashboardSidebarBar extends LitElement {
     this._sheetClosing = false;
     if (key === 'menu' && this.preview) {
       // The in-flow preview sheet grows the frame; keep the bar itself in
-      // view by nudging the editor's scroll container after the render.
+      // view by nudging the editor's scroll container after the render. A
+      // top-docked bar scrolls to the top so the sheet expanding below it
+      // is visible too.
+      const top = this.getAttribute('data-position') === 'top';
       void this.updateComplete.then(() => {
         requestAnimationFrame(() => {
           this.shadowRoot
             ?.querySelector('.dashboard-sidebar-bar')
-            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            ?.scrollIntoView({ block: top ? 'start' : 'nearest', behavior: 'smooth' });
         });
       });
     }
