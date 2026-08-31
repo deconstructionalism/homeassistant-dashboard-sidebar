@@ -1749,12 +1749,12 @@ export class DashboardSidebarEditor extends LitElement {
             >
               ${
                 width <= MIN_MOBILE_PREVIEW || (width < maxW && width > MIN_MOBILE_PREVIEW)
-                  ? html`<ha-icon icon="mdi:arrow-left-thin"></ha-icon>`
+                  ? html`<ha-icon icon="mdi:arrow-left-thick"></ha-icon>`
                   : nothing
               }
               ${
                 width >= maxW || (width < maxW && width > MIN_MOBILE_PREVIEW)
-                  ? html`<ha-icon icon="mdi:arrow-right-thin"></ha-icon>`
+                  ? html`<ha-icon icon="mdi:arrow-right-thick"></ha-icon>`
                   : nothing
               }
             </div>
