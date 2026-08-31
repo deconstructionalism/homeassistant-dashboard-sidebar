@@ -366,6 +366,8 @@ export const editorStyles = css`
     justify-content: flex-end;
     min-width: 0;
     min-height: 0;
+    /* Room for the drag arrow floating above the bar. */
+    margin-top: 18px;
   }
 
   /* The resize handle rides the frame's left edge as a thin rail with the
@@ -400,11 +402,9 @@ export const editorStyles = css`
   .mobile-pv-handle ha-icon {
     --mdc-icon-size: 14px;
 
-    position: relative;
+    position: absolute;
+    top: -18px;
     z-index: 1;
-    margin-top: 2px;
-    background: var(--card-background-color, #fff);
-    border-radius: 3px;
   }
 
   .mobile-pv-handle:hover {
