@@ -1758,8 +1758,8 @@ export class DashboardSidebarEditor extends LitElement {
                   : nothing
               }
             </div>
-            <span class="mobile-pv-caption preview-title">Preview (${width}px)</span>
           </div>
+          <span class="mobile-pv-caption preview-title">Preview (${width}px)</span>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
             ${this._barPreviewEl()}
           </div>

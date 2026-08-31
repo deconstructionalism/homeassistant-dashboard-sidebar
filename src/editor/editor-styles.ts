@@ -440,12 +440,12 @@ export const editorStyles = css`
     margin-left: 0;
   }
 
+  /* The width caption sits at the frame's left edge, above the bar. */
   .mobile-pv-caption {
     position: absolute;
     top: -23px;
-    left: 50%;
+    left: 0;
     z-index: 1;
-    margin-left: 16px;
     line-height: 14px;
     white-space: nowrap;
   }
