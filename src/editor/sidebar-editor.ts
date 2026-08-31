@@ -1540,7 +1540,7 @@ export class DashboardSidebarEditor extends LitElement {
         'The mobile bar replaces the sidebar on narrow screens. Mirror mode follows the desktop nav; the dots menu holds the footer and overflow.',
         'The mobile bar previews at phone width.',
       )}
-      <div class="split">
+      <div class="mobile-stack">
         <div class="editor settings">
           ${iconChoiceField('Mode', custom ? 'custom' : 'mirror', MOBILE_MODE_META, (v) =>
             this._setMobileMode(v),

@@ -331,15 +331,30 @@ export const editorStyles = css`
     scrollbar-width: none;
   }
 
-  /* The mobile tab's preview: a phone-width frame the fixed-position bar
-     renders into via its preview mode; room above for the sheet to rise. */
-  .mobile-pv-frame {
-    width: 390px;
-    max-width: 100%;
-    margin: 0 auto;
-    padding-top: 240px;
+  /* The mobile tab stacks the form above a full-width preview, since the
+     bar is a horizontal strip that needs the modal's whole width to read. */
+  .mobile-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .mobile-stack .editor {
+    flex: 0 0 auto;
     overflow: visible;
-    align-self: flex-start;
+  }
+
+  .mobile-stack .preview {
+    flex: 0 0 auto;
+  }
+
+  /* The bar preview frame: full width, with headroom for the sheet to rise. */
+  .mobile-pv-frame {
+    width: 100%;
+    padding-top: 220px;
+    overflow: visible;
   }
 
   .pv-frame::-webkit-scrollbar {
