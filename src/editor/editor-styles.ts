@@ -364,35 +364,6 @@ export const editorStyles = css`
     margin-left: auto;
   }
 
-  /* Mode and Position side by side, each with equal-width choice buttons
-     and a one-line description of the selected option. */
-  .mobile-choice-row {
-    display: flex;
-    gap: 16px;
-  }
-
-  .mobile-choice {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  /* Equal-width buttons within each pair, sized to the wider label rather
-     than stretched across the column. */
-  .mobile-choice .icon-choice {
-    display: inline-grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-  }
-
-  .mobile-choice .icon-choice .choice {
-    padding: 6px 10px;
-  }
-
-  .mobile-choice .field-desc {
-    display: block;
-    margin-top: 4px;
-  }
-
   .mobile-pv-hint {
     display: block;
     margin-top: 6px;
@@ -401,6 +372,12 @@ export const editorStyles = css`
   .mobile-mode-line {
     display: block;
     margin-bottom: 4px;
+  }
+
+  /* Match the Settings tab's air around the section heading. */
+  .mobile-stack .form-head {
+    margin-top: 10px;
+    margin-bottom: 8px;
   }
 
   .mobile-pv-wrap {

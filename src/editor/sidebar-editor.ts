@@ -1709,16 +1709,9 @@ export class DashboardSidebarEditor extends LitElement {
                         : 'The bar strictly derives from the desktop sidebar. Switch modes from the menu in the top right.'
                     }
                   </small>
-                  <div class="mobile-choice-row">
-                    <div class="mobile-choice">
-                      ${iconChoiceField(
-                        'Position',
-                        m.position ?? 'bottom',
-                        MOBILE_POSITION_META,
-                        (v) => this._patchMobile({ position: v === 'bottom' ? undefined : v }),
-                      )}
-                    </div>
-                  </div>
+                  ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
+                    this._patchMobile({ position: v === 'bottom' ? undefined : v }),
+                  )}
                   ${checkboxField(
                     'Show Labels',
                     m.labels ?? false,
