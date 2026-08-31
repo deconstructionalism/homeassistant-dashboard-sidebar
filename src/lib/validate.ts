@@ -522,7 +522,9 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         } else {
           const kind = kinds.get(use);
           if (kind === undefined) {
-            errors.push(`${ctx}.use: unknown id "${use}" (known: ${[...kinds.keys()].join(', ') || 'none'})`);
+            errors.push(
+              `${ctx}.use: unknown id "${use}" (known: ${[...kinds.keys()].join(', ') || 'none'})`,
+            );
           } else if (kind !== 'item' && kind !== 'button') {
             errors.push(
               `${ctx}.use: "${use}" cannot be a footer-strip button; only items and footer buttons can`,

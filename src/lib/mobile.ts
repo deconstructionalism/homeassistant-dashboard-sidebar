@@ -114,10 +114,7 @@ const elementIndex = (
 };
 
 /** Resolves one curated list (`mobile.menu` / `mobile.footer`) to entries. */
-const resolveCurated = (
-  config: DashboardSidebarConfig,
-  entries: unknown,
-): BarEntry[] => {
+const resolveCurated = (config: DashboardSidebarConfig, entries: unknown): BarEntry[] => {
   if (!Array.isArray(entries)) {
     return [];
   }
