@@ -369,15 +369,18 @@ export const editorStyles = css`
     margin-top: 6px;
   }
 
-  .mobile-mode-line {
-    display: block;
-    margin-bottom: 4px;
+  /* The heading underline spans the full column despite the editor's
+     scrollbar inset. */
+  .mobile-stack .form-head {
+    margin-right: -12px;
   }
 
-  /* Match the Settings tab's air around the section heading. */
-  .mobile-stack .form-head {
-    margin-top: 10px;
-    margin-bottom: 8px;
+  /* Position's two buttons share the width of the wider label. */
+  .mobile-position .icon-choice {
+    display: inline-grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 6px;
   }
 
   .mobile-pv-wrap {
