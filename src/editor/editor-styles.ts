@@ -419,6 +419,9 @@ export const editorStyles = css`
     --mdc-icon-size: 14px;
 
     display: flex;
+
+    /* Match the rail, which draws at 60% of the same color. */
+    opacity: 0.6;
   }
 
   .mobile-pv-arrows.mid {
