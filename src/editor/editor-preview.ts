@@ -47,6 +47,9 @@ export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
           <span class="ghost-line" style="width: 38%"></span>
         </span>
         <span class="ghost-line" style="width: 86%"></span>
+        <span class="ghost-line" style="width: 64%"></span>
+        <span class="ghost-line" style="width: 78%"></span>
+        <span class="ghost-line" style="width: 52%"></span>
       </div>
     </div>
   `;
