@@ -488,13 +488,17 @@ export const editorStyles = css`
   .mobile-pv-frame {
     /* Pin to the inline width: the base pv-frame flex-grow would otherwise
        stretch the frame to the wrap and defeat the drag handle. Height hugs
-       the content: just the bar when closed, plus the sheet when opened. */
+       the content: just the bar when closed, plus the sheet when opened. A
+       real border (not the base outline) so the bar's opaque background
+       cannot paint over it. */
     flex: 0 0 auto;
     position: relative;
     height: auto;
     max-width: 100%;
     box-sizing: border-box;
     padding: 0;
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    outline: none;
     overflow: hidden;
   }
 
