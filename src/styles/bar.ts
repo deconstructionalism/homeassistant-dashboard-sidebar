@@ -238,6 +238,8 @@ export const barStyles = css`
     max-height: 60vh;
     padding: 6px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--divider-color, rgb(127 127 127 / 40%)) transparent;
     background: var(
       --dashboard-sidebar-bar-background,
       var(--ha-card-background, var(--card-background-color, #fff))
@@ -355,6 +357,8 @@ export const barStyles = css`
     flex: 1 1 auto;
     flex-direction: column;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--divider-color, rgb(127 127 127 / 40%)) transparent;
   }
 
   .dashboard-sidebar-bar-sheet-row {

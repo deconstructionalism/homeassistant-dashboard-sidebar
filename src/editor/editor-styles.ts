@@ -341,6 +341,8 @@ export const editorStyles = css`
     gap: 12px;
     min-height: 0;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--divider-color, rgb(0 0 0 / 30%)) transparent;
   }
 
   .mobile-stack .editor {
