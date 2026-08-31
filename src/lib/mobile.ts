@@ -101,7 +101,7 @@ const mergedCategory = (
  * element (titles, markdown, and cards included) and inline blocks.
  */
 /** An id index of every element in the config, for curated-list resolution. */
-const elementIndex = (
+export const elementIndex = (
   config: DashboardSidebarConfig,
 ): Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }> => {
   const all = new Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }>();

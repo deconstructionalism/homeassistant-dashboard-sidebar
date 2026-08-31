@@ -79,6 +79,27 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
   });
 
+  it('edits the custom bar list: rows, reorder, and remove', async () => {
+    const el = await mount({
+      ...cfg(),
+      mobile: {
+        items: [{ use: 't2' }, { type: 'item', id: 'x9', title: 'Xtra', tap_action: TAP }],
+      },
+    });
+    await tab(el, 'Mobile Bar');
+    let rows = [...root(el).querySelectorAll('.mobile-elem-row')];
+    expect(rows.length).to.equal(2);
+    expect(rows[0].querySelector('.mobile-elem-chip')?.textContent).to.equal('reused');
+    expect(rows[1].textContent).to.include('Xtra');
+    (rows[0].querySelector('[title="Move down"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    rows = [...root(el).querySelectorAll('.mobile-elem-row')];
+    expect(rows[0].textContent).to.include('Xtra');
+    (rows[0].querySelector('[title="Remove from bar"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(root(el).querySelectorAll('.mobile-elem-row').length).to.equal(1);
+  });
+
   it('disables the Mobile tab until On Mobile is the bar, then previews it', async () => {
     const el = await mount(cfg());
     const mobileTab = [...root(el).querySelectorAll('.tab')].find(

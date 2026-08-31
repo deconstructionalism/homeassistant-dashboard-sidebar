@@ -17,7 +17,7 @@ import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import '../dashboard-sidebar-bar';
-import { mobileMode, resolveBar } from '../lib/mobile';
+import { elementIndex, mobileMode, resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
 import { renderEmptyState, renderGhost, renderGhostCards } from './editor-preview';
@@ -1702,31 +1702,13 @@ export class DashboardSidebarEditor extends LitElement {
                   (parsed) =>
                     validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
                 )
-              : html` <div class="mobile-position">
-                    ${iconChoiceField(
-                      'Position',
-                      m.position ?? 'bottom',
-                      MOBILE_POSITION_META,
-                      (v) => this._patchMobile({ position: v === 'bottom' ? undefined : v }),
-                    )}
-                  </div>
-                  ${checkboxField(
-                    'Show Labels',
-                    m.labels ?? false,
-                    (v) => this._patchMobile({ labels: v || undefined }),
-                    'Show element titles under the bar icons.',
-                  )}
-                  <details class="advanced">
-                    <summary>Advanced</summary>
-                    ${colorField(
-                      'Bar Background CSS',
-                      m.background,
-                      (v) => this._patchMobile({ background: v || undefined }),
-                      'Any valid CSS background. Defaults to the sidebar background.',
-                    )}
-                    ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
-                    ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
-                  </details>`
+              : custom
+                ? html`<details class="advanced">
+                      <summary>Bar Settings</summary>
+                      ${this._renderMobileSettingsFields(m)}
+                    </details>
+                    ${this._renderBarElements()}`
+                : this._renderMobileSettingsFields(m)
           }
         </div>
         ${this._renderMobilePreview()}
@@ -1737,6 +1719,153 @@ export class DashboardSidebarEditor extends LitElement {
   /**
    * Renders the phone-width live preview of the mobile bar.
    */
+  /**
+   * The shared mobile settings fields: position, labels, and Advanced.
+   */
+  private _renderMobileSettingsFields(
+    m: NonNullable<DashboardSidebarConfig['mobile']>,
+  ): TemplateResult {
+    return html`
+      <div class="mobile-position">
+        ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
+          this._patchMobile({ position: v === 'bottom' ? undefined : v }),
+        )}
+      </div>
+      ${checkboxField(
+        'Show Labels',
+        m.labels ?? false,
+        (v) => this._patchMobile({ labels: v || undefined }),
+        'Show element titles under the bar icons.',
+      )}
+      <details class="advanced">
+        <summary>Advanced</summary>
+        ${colorField(
+          'Bar Background CSS',
+          m.background,
+          (v) => this._patchMobile({ background: v || undefined }),
+          'Any valid CSS background. Defaults to the sidebar background.',
+        )}
+        ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
+        ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
+      </details>
+    `;
+  }
+
+  /**
+   * Applies a mutation to a copy of the custom bar's items list.
+   */
+  private _patchBarItems(mutate: (list: unknown[]) => void): void {
+    const items = [...((this._working.mobile?.items as unknown[]) ?? [])];
+    mutate(items);
+    this._patchMobile({ items });
+  }
+
+  /**
+   * Renders the Bar Elements section of custom mode: the ordered list with
+   * move/remove tools and the add menu (reuse a desktop element or a new
+   * inline item).
+   */
+  private _renderBarElements(): TemplateResult {
+    const entries = (this._working.mobile?.items ?? []) as Array<Record<string, unknown>>;
+    const index = elementIndex(this._working);
+    const eligible: Array<{ label: string; run: () => void }> = [];
+    for (const [id, info] of index) {
+      if (!['item', 'category', 'divider', 'clock', 'date', 'button'].includes(info.kind)) {
+        continue;
+      }
+      const el = info.element as { title?: string; icon?: string };
+      const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
+      eligible.push({
+        label: `Reuse: ${name}`,
+        run: () => this._patchBarItems((list) => list.push({ use: id })),
+      });
+    }
+    const addChoices = [
+      {
+        label: 'New Item',
+        run: () =>
+          this._patchBarItems((list) =>
+            list.push(
+              defaultBlock('item', collectIds(this._working)) as unknown as Record<string, unknown>,
+            ),
+          ),
+      },
+      ...eligible,
+    ];
+    return html`
+      <div class="mobile-section-title">Bar Elements</div>
+      <div class="mobile-elem-list">
+        ${
+          entries.length === 0
+            ? html`<p class="tab-note">No elements on the bar yet; add some below.</p>`
+            : entries.map((entry, i) => this._renderBarEntryRow(entry, i, entries.length, index))
+        }
+      </div>
+      ${this._renderAddMenu(addChoices)}
+    `;
+  }
+
+  /**
+   * Renders one row of the Bar Elements list: icon, title, source chip, and
+   * the move/remove tools.
+   */
+  private _renderBarEntryRow(
+    entry: Record<string, unknown>,
+    i: number,
+    count: number,
+    index: ReturnType<typeof elementIndex>,
+  ): TemplateResult {
+    const use = typeof entry.use === 'string' ? entry.use : null;
+    const target = use ? index.get(use) : undefined;
+    const el = {
+      ...(target?.element as Record<string, unknown> | undefined),
+      ...entry,
+    } as { title?: string; icon?: string; type?: string };
+    const kind = use ? (target?.kind ?? 'missing') : ((entry.type as string) ?? 'item');
+    const title =
+      typeof el.title === 'string' && el.title
+        ? el.title
+        : kind === 'missing'
+          ? 'Missing element'
+          : `(${kind})`;
+    return html`
+      <div class="mobile-elem-row ${kind === 'missing' ? 'missing' : ''}">
+        <span class="mobile-elem-icon">
+          ${
+            typeof el.icon === 'string' && el.icon
+              ? html`<ha-icon icon=${el.icon}></ha-icon>`
+              : html`<span class="mobile-elem-abbr">${title.slice(0, 2)}</span>`
+          }
+        </span>
+        <span class="mobile-elem-title">${title}</span>
+        <span class="mobile-elem-chip">${use ? 'reused' : 'new'}</span>
+        <button
+          class="tool"
+          title="Move up"
+          ?disabled=${i === 0}
+          @click=${() => this._patchBarItems((list) => list.splice(i - 1, 0, ...list.splice(i, 1)))}
+        >
+          <ha-icon icon="mdi:arrow-up"></ha-icon>
+        </button>
+        <button
+          class="tool"
+          title="Move down"
+          ?disabled=${i === count - 1}
+          @click=${() => this._patchBarItems((list) => list.splice(i + 1, 0, ...list.splice(i, 1)))}
+        >
+          <ha-icon icon="mdi:arrow-down"></ha-icon>
+        </button>
+        <button
+          class="tool"
+          title="Remove from bar"
+          @click=${() => this._patchBarItems((list) => list.splice(i, 1))}
+        >
+          <ha-icon icon="mdi:close"></ha-icon>
+        </button>
+      </div>
+    `;
+  }
+
   /**
    * Measures how much width the preview actually has inside the modal, so
    * the drag range tops out at what is really renderable.
