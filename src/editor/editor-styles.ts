@@ -366,8 +366,8 @@ export const editorStyles = css`
     justify-content: flex-end;
     min-width: 0;
     min-height: 0;
-    /* Room for the drag arrow floating above the bar. */
-    margin-top: 18px;
+    /* Room for the drag arrow + caption floating above the bar. */
+    margin-top: 24px;
   }
 
   /* The resize handle rides the frame's left edge as a thin rail with the
@@ -399,12 +399,21 @@ export const editorStyles = css`
     opacity: 0.6;
   }
 
-  .mobile-pv-handle ha-icon {
-    --mdc-icon-size: 14px;
-
+  /* The arrow + width caption float above the bar, inline, starting at the
+     frame edge; they share the handle's drag behavior. */
+  .mobile-pv-float {
     position: absolute;
-    top: -18px;
+    top: -22px;
+    left: 50%;
     z-index: 1;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .mobile-pv-float ha-icon {
+    --mdc-icon-size: 14px;
   }
 
   .mobile-pv-handle:hover {

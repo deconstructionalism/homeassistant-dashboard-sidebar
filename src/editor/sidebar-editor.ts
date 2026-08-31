@@ -1688,9 +1688,6 @@ export class DashboardSidebarEditor extends LitElement {
     const width = Math.min(Math.max(this._mobilePreviewWidth ?? maxW, MIN_MOBILE_PREVIEW), maxW);
     return html`
       <div class="preview">
-        <div class="preview-head">
-          <span class="preview-title">Preview (${width}px)</span>
-        </div>
         <div class="mobile-pv-wrap">
           <div
             class="mobile-pv-handle"
@@ -1719,15 +1716,18 @@ export class DashboardSidebarEditor extends LitElement {
               this._mobilePreviewWidth = null;
             }}
           >
-            <ha-icon
-              icon=${
-                width >= maxW
-                  ? 'mdi:arrow-collapse-right'
-                  : width <= MIN_MOBILE_PREVIEW
-                    ? 'mdi:arrow-expand-left'
-                    : 'mdi:arrow-expand-horizontal'
-              }
-            ></ha-icon>
+            <div class="mobile-pv-float">
+              <ha-icon
+                icon=${
+                  width >= maxW
+                    ? 'mdi:arrow-collapse-right'
+                    : width <= MIN_MOBILE_PREVIEW
+                      ? 'mdi:arrow-expand-left'
+                      : 'mdi:arrow-expand-horizontal'
+                }
+              ></ha-icon>
+              <span class="preview-title">Preview (${width}px)</span>
+            </div>
           </div>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
             ${this._barPreviewEl()}
