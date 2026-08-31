@@ -1646,6 +1646,33 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * Scrolls the mobile tab's own scroll container so the opened sheet stays
+   * in view: a top-docked frame aligns under the sticky Preview label, a
+   * bottom-docked one aligns its bar to the container bottom. Only the
+   * nearest scrollable ancestor moves, never the modal or page.
+   */
+  private _scrollMobilePreview(): void {
+    const frame = this.shadowRoot?.querySelector('.mobile-pv-frame') as HTMLElement | null;
+    if (!frame) {
+      return;
+    }
+    let scroller: HTMLElement | null = frame.parentElement;
+    while (scroller && scroller.scrollHeight <= scroller.clientHeight + 1) {
+      scroller = scroller.parentElement;
+    }
+    if (!scroller) {
+      return;
+    }
+    const frameRect = frame.getBoundingClientRect();
+    const scRect = scroller.getBoundingClientRect();
+    const top = this._working.mobile?.position === 'top';
+    const target = top
+      ? scroller.scrollTop + frameRect.top - scRect.top - 40
+      : scroller.scrollTop + frameRect.bottom - scRect.bottom;
+    scroller.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+  }
+
+  /**
    * The cached mobile-bar preview element, reconfigured only when the working
    * config changes so live templates and cards are not re-instantiated on
    * every keystroke.
@@ -1656,6 +1683,7 @@ export class DashboardSidebarEditor extends LitElement {
       el = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
       el.preview = true;
       el.setAttribute('preview', '');
+      el.addEventListener('bar-preview-sheet-open', () => this._scrollMobilePreview());
       this._barPreview = el;
     }
     el.hass = this.hass;
