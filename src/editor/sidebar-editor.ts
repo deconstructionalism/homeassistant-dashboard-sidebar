@@ -107,6 +107,34 @@ const TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
   { sel: '.dashboard-sidebar-tooltip', desc: 'Collapsed hover tooltip' },
 ];
 
+/** The stable bar classes card-mod / themes can target, for the Mobile tab. */
+const BAR_TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
+  { sel: 'dashboard-sidebar-bar', desc: 'The bar chrome' },
+  { sel: '.dashboard-sidebar-bar-slots', desc: 'The slot row' },
+  { sel: '.dashboard-sidebar-bar-slot', desc: 'One bar slot' },
+  { sel: '.dashboard-sidebar-bar-slot-active', desc: 'Slot navigating to the current page' },
+  { sel: '.dashboard-sidebar-bar-slot-open', desc: 'Open category or menu trigger' },
+  { sel: '.dashboard-sidebar-bar-slot-overflow', desc: 'The trailing dots slot' },
+  { sel: '.dashboard-sidebar-bar-icon', desc: 'Slot icon pill' },
+  { sel: '.dashboard-sidebar-bar-time', desc: 'Clock/date compact text' },
+  { sel: '.dashboard-sidebar-bar-label', desc: 'Slot label' },
+  { sel: '.dashboard-sidebar-bar-divider', desc: 'Divider rule on the bar' },
+  { sel: '.dashboard-sidebar-bar-flyout', desc: 'Category flyout panel' },
+  { sel: '.dashboard-sidebar-bar-flyout-row', desc: 'One flyout row' },
+  { sel: '.dashboard-sidebar-bar-sheet', desc: 'The dots-menu sheet' },
+  { sel: '.dashboard-sidebar-bar-sheet-scrim', desc: 'Scrim behind the open sheet' },
+  { sel: '.dashboard-sidebar-bar-sheet-rows', desc: 'The sheet list region' },
+  { sel: '.dashboard-sidebar-bar-sheet-row', desc: 'One sheet row' },
+  { sel: '.dashboard-sidebar-bar-sheet-row-active', desc: 'Sheet row for the current page' },
+  { sel: '.dashboard-sidebar-bar-sheet-category', desc: 'Accordion category header' },
+  { sel: '.dashboard-sidebar-bar-sheet-children', desc: 'Accordion children (guide line)' },
+  { sel: '.dashboard-sidebar-bar-sheet-title', desc: 'Curated title in the sheet' },
+  { sel: '.dashboard-sidebar-bar-sheet-card', desc: 'Curated card/markdown in the sheet' },
+  { sel: '.dashboard-sidebar-bar-sheet-footer', desc: 'Pinned footer strip' },
+  { sel: '.dashboard-sidebar-bar-sheet-footer-btn', desc: 'One footer-strip button' },
+  { sel: '.dashboard-sidebar-bar-sheet-footer-content', desc: 'Card/markdown footer in the sheet' },
+];
+
 /** Every block type, offered when adding to the header. */
 const ALL_TYPES: BlockType[] = [
   'title',
@@ -1585,6 +1613,7 @@ export class DashboardSidebarEditor extends LitElement {
               'Any valid CSS background. Defaults to the sidebar background.',
             )}
             ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
+            ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
           </details>
           <div class="form-actions">
             <button class="add-btn danger" @click=${() => this._setOnMobile('sidebar')}>
@@ -1700,11 +1729,11 @@ export class DashboardSidebarEditor extends LitElement {
    * (and `:host`) that Card Mod / external CSS can target, each with a short
    * description of the element it selects.
    */
-  private _cardModClassRef(): TemplateResult {
+  private _cardModClassRef(classes = TARGETABLE_CLASSES): TemplateResult {
     return html`<details class="advanced class-ref">
       <summary>Targetable CSS classes</summary>
       <div class="class-ref-list">
-        ${TARGETABLE_CLASSES.map(
+        ${classes.map(
           (c) => html`<div class="class-ref-row"><code>${c.sel}</code><span>${c.desc}</span></div>`,
         )}
       </div>
