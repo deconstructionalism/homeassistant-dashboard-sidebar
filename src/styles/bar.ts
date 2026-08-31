@@ -48,14 +48,13 @@ export const barStyles = css`
        keep just enough to clear the gesture zone. Override the whole value
        with --dashboard-sidebar-bar-safe-area. The chin strip paints in its
        own color (below) rather than the bar background. */
-    --dashboard-sidebar-bar-chin: var(
+    --_chin: var(
       --dashboard-sidebar-bar-safe-area,
       max(0px, calc(env(safe-area-inset-bottom, 0px) - 14px))
     );
 
     padding: 0 max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-right, 0px))
-      var(--dashboard-sidebar-bar-chin)
-      max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
+      var(--_chin) max(var(--dashboard-sidebar-bar-padding, 12px), env(safe-area-inset-left, 0px));
     background: var(
       --dashboard-sidebar-bar-background,
       var(--ha-card-background, var(--card-background-color, #fff))
@@ -70,7 +69,7 @@ export const barStyles = css`
     right: 0;
     bottom: 0;
     left: 0;
-    height: var(--dashboard-sidebar-bar-chin);
+    height: var(--_chin);
     background: var(--dashboard-sidebar-bar-chin-background, var(--primary-background-color, #111));
   }
 
