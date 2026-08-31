@@ -273,10 +273,14 @@ export const barStyles = css`
     scrollbar-width: thin;
     scrollbar-color: var(--divider-color, rgb(127 127 127 / 40%)) transparent;
 
-    /* The sheet's opaque background chain, not the bar's: the bar background
-       is often a gradient with transparency that would let the page bleed
-       through the popup. */
-    background: var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background));
+    /* Composite the theme surface over an opaque base: themes commonly give
+       card backgrounds alpha, which would let the page bleed through. */
+    background:
+      linear-gradient(
+        var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background)),
+        var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background))
+      ),
+      var(--primary-background-color, #111);
     border: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
     border-radius: 12px;
     box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
@@ -337,7 +341,13 @@ export const barStyles = css`
     flex-direction: column;
     max-height: 70vh;
     padding: 8px;
-    background: var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background));
+    /* Composited over an opaque base like the flyout, for alpha themes. */
+    background:
+      linear-gradient(
+        var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background)),
+        var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background))
+      ),
+      var(--primary-background-color, #111);
     border-top: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
     border-radius: var(--dashboard-sidebar-bar-sheet-radius, 16px)
       var(--dashboard-sidebar-bar-sheet-radius, 16px) 0 0;
