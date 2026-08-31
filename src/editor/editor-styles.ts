@@ -378,13 +378,11 @@ export const editorStyles = css`
 
   .mobile-pv-frame {
     /* Pin to the inline width: the base pv-frame flex-grow would otherwise
-       stretch the frame to the wrap and defeat the drag handle. A fixed
-       height makes it a mini phone viewport: the bar anchors to its bottom
-       edge and the opened sheet is clipped inside instead of overrunning
-       the form. */
+       stretch the frame to the wrap and defeat the drag handle. Height hugs
+       the content: just the bar when closed, plus the sheet when opened. */
     flex: 0 0 auto;
     position: relative;
-    height: var(--dashboard-sidebar-mobile-preview-height, 420px);
+    height: auto;
     max-width: 100%;
     box-sizing: border-box;
     padding: 0;

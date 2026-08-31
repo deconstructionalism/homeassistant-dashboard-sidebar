@@ -11,24 +11,29 @@ export const barStyles = css`
     inset: 0 0 auto;
   }
 
-  /* Editor preview: the frame is a mini viewport; the bar anchors to its
-     bottom (or top) edge and the sheet stays inside it. */
+  /* Editor preview: everything joins normal flow so the frame hugs the
+     content: the sheet sits above the bar (below it when top-docked) and
+     there is no scrim to dim. */
   :host([preview]) {
-    position: absolute;
+    position: static;
     z-index: auto;
-    display: block;
-    inset: auto 0 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    inset: auto;
   }
 
   :host([preview][data-position='top']) {
-    inset: 0 0 auto;
+    flex-direction: column-reverse;
+    inset: auto;
   }
 
   :host([preview]) .dashboard-sidebar-bar-sheet-scrim {
-    position: absolute;
+    display: none;
   }
 
   :host([preview]) .dashboard-sidebar-bar-sheet {
+    position: static;
     max-height: 320px;
   }
 
