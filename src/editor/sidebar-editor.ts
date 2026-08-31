@@ -1402,32 +1402,32 @@ export class DashboardSidebarEditor extends LitElement {
                     (v) => this._patchConfig({ overlay: v || undefined }),
                     'Float the sidebar over the dashboard instead of pushing the content aside.',
                   )}
-                  ${selectField(
-                    'On Desktop',
-                    c.on_desktop ?? 'sidebar',
-                    [
-                      { label: 'Sidebar', value: 'sidebar' },
-                      { label: 'Nothing', value: 'hidden' },
-                    ],
-                    (v) => this._patchConfig({ on_desktop: v === 'sidebar' ? undefined : v }),
-                    { description: 'What renders on wide screens.' },
-                  )}
-                  ${selectField(
-                    'On Mobile',
-                    mobileMode(c),
-                    [
-                      { label: 'Sidebar', value: 'sidebar' },
-                      { label: 'Mobile Bar', value: 'bar' },
-                      { label: 'Nothing', value: 'hidden' },
-                    ],
-                    (v) => this._setOnMobile(v),
-                    {
-                      description:
-                        'What renders on narrow screens. The Mobile tab configures the bar.',
-                    },
-                  )}
                   <details class="advanced">
                     <summary>Advanced</summary>
+                    ${selectField(
+                      'On Desktop',
+                      c.on_desktop ?? 'sidebar',
+                      [
+                        { label: 'Sidebar', value: 'sidebar' },
+                        { label: 'Nothing', value: 'hidden' },
+                      ],
+                      (v) => this._patchConfig({ on_desktop: v === 'sidebar' ? undefined : v }),
+                      { description: 'What renders on wide screens.' },
+                    )}
+                    ${selectField(
+                      'On Mobile',
+                      mobileMode(c),
+                      [
+                        { label: 'Sidebar', value: 'sidebar' },
+                        { label: 'Mobile Bar', value: 'bar' },
+                        { label: 'Nothing', value: 'hidden' },
+                      ],
+                      (v) => this._setOnMobile(v),
+                      {
+                        description:
+                          'What renders on narrow screens. The Mobile tab configures the bar.',
+                      },
+                    )}
                     ${colorField(
                       'Background CSS',
                       c.background,
