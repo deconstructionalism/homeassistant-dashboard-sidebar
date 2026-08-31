@@ -1667,7 +1667,7 @@ export class DashboardSidebarEditor extends LitElement {
     const scRect = scroller.getBoundingClientRect();
     const top = this._working.mobile?.position === 'top';
     const target = top
-      ? scroller.scrollTop + frameRect.top - scRect.top - 40
+      ? scroller.scrollTop + frameRect.top - scRect.top - 8
       : scroller.scrollTop + frameRect.bottom - scRect.bottom;
     scroller.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
   }

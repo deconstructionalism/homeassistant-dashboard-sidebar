@@ -21,7 +21,6 @@ export const barStyles = css`
     flex-direction: column;
     width: 100%;
     inset: auto;
-    scroll-margin-top: 40px;
   }
 
   :host([preview][data-position='top']) {

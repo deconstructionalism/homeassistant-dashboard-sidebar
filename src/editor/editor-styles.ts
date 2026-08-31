@@ -352,6 +352,13 @@ export const editorStyles = css`
     flex: 0 0 auto;
   }
 
+  /* The mobile tab's preview label scrolls with the content; the shared
+     sticky treatment only causes the frame to slide underneath it here. */
+  .mobile-stack .preview-head {
+    position: static;
+    background: none;
+  }
+
   .mobile-pv-wrap {
     display: flex;
     flex: 1 1 auto;
