@@ -11,17 +11,25 @@ export const barStyles = css`
     inset: 0 0 auto;
   }
 
-  /* Editor preview: in flow inside a frame, not fixed to the viewport. */
+  /* Editor preview: the frame is a mini viewport; the bar anchors to its
+     bottom (or top) edge and the sheet stays inside it. */
   :host([preview]) {
-    position: relative;
+    position: absolute;
     z-index: auto;
     display: block;
-    width: 100%;
-    inset: auto;
+    inset: auto 0 0;
+  }
+
+  :host([preview][data-position='top']) {
+    inset: 0 0 auto;
   }
 
   :host([preview]) .dashboard-sidebar-bar-sheet-scrim {
     position: absolute;
+  }
+
+  :host([preview]) .dashboard-sidebar-bar-sheet {
+    max-height: 320px;
   }
 
   :host {
