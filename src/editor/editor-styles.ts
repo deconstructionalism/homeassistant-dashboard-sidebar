@@ -388,10 +388,9 @@ export const editorStyles = css`
     padding: 6px 10px;
   }
 
-  .choice-desc {
-    margin: 4px 0 0;
-    color: var(--secondary-text-color, #888);
-    font-size: 0.85rem;
+  .mobile-choice .field-desc {
+    display: block;
+    margin-top: 4px;
   }
 
   .mobile-pv-wrap {

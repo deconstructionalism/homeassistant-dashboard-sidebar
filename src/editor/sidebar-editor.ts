@@ -1642,13 +1642,13 @@ export class DashboardSidebarEditor extends LitElement {
                         MOBILE_MODE_META,
                         (v) => this._setMobileMode(v),
                       )}
-                      <p class="choice-desc">
+                      <small class="field-desc">
                         ${
                           custom
                             ? 'A hand-picked list of elements defines the bar.'
                             : 'The bar derives from the desktop sidebar.'
                         }
-                      </p>
+                      </small>
                     </div>
                     <div class="mobile-choice">
                       ${iconChoiceField(
