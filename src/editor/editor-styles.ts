@@ -491,18 +491,26 @@ export const editorStyles = css`
   .mobile-pv-frame {
     /* Pin to the inline width: the base pv-frame flex-grow would otherwise
        stretch the frame to the wrap and defeat the drag handle. Height hugs
-       the content: just the bar when closed, plus the sheet when opened. A
-       real border (not the base outline) so the bar's opaque background
-       cannot paint over it. */
+       the content: just the bar when closed, plus the sheet when opened.
+       The edge draws as a zero-layout overlay (below) so the bar inside is
+       exactly the advertised width. */
     flex: 0 0 auto;
     position: relative;
     height: auto;
     max-width: 100%;
     box-sizing: border-box;
     padding: 0;
-    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
     outline: none;
     overflow: hidden;
+  }
+
+  .mobile-pv-frame::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    pointer-events: none;
   }
 
   .pv-frame::-webkit-scrollbar {
@@ -525,10 +533,21 @@ export const editorStyles = css`
   }
 
   /* The whole-sidebar Settings preview fills its frame with an opaque
-     surface that paints over the base outline; a real border stays visible. */
+     surface that paints over the base outline. A border would eat 2px of
+     layout width and skew the footer overflow count, so draw the edge as a
+     zero-layout overlay above the content instead. */
   .pv-frame.settings-pv-frame {
-    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    position: relative;
     outline: none;
+  }
+
+  .pv-frame.settings-pv-frame::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    pointer-events: none;
   }
 
   /* Skeleton placeholder rows standing in for the content beside a pinned
