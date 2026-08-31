@@ -1717,7 +1717,7 @@ export class DashboardSidebarEditor extends LitElement {
         <div class="mobile-pv-wrap">
           <div
             class="mobile-pv-handle"
-            style="right: ${width}px"
+            style="left: ${width}px"
             title="Drag to preview narrower screens (down to ${MIN_MOBILE_PREVIEW}px); double-click to reset"
             @pointerdown=${(ev: PointerEvent) => {
               this._mobileDrag = { startX: ev.clientX, startW: width };
@@ -1728,7 +1728,7 @@ export class DashboardSidebarEditor extends LitElement {
                 return;
               }
               const next = Math.round(
-                this._mobileDrag.startW - (ev.clientX - this._mobileDrag.startX),
+                this._mobileDrag.startW + (ev.clientX - this._mobileDrag.startX),
               );
               this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), maxW);
             }}
@@ -1748,12 +1748,12 @@ export class DashboardSidebarEditor extends LitElement {
               }"
             >
               ${
-                width <= MIN_MOBILE_PREVIEW || (width < maxW && width > MIN_MOBILE_PREVIEW)
+                width >= maxW || (width < maxW && width > MIN_MOBILE_PREVIEW)
                   ? html`<ha-icon icon="mdi:arrow-left-thick"></ha-icon>`
                   : nothing
               }
               ${
-                width >= maxW || (width < maxW && width > MIN_MOBILE_PREVIEW)
+                width <= MIN_MOBILE_PREVIEW || (width < maxW && width > MIN_MOBILE_PREVIEW)
                   ? html`<ha-icon icon="mdi:arrow-right-thick"></ha-icon>`
                   : nothing
               }

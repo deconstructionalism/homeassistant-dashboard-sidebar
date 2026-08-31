@@ -400,6 +400,7 @@ export const editorStyles = css`
     width: 2px;
     background: currentcolor;
     opacity: 0.6;
+    transform: translateX(-50%);
   }
 
   /* The direction arrows float above the bar, centered on the rail: both
