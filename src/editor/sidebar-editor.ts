@@ -156,7 +156,7 @@ const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer' | 'mobile'; la
   { id: 'header', label: 'Header' },
   { id: 'body', label: 'Body' },
   { id: 'footer', label: 'Footer' },
-  { id: 'mobile', label: 'Mobile' },
+  { id: 'mobile', label: 'Mobile Bar' },
 ];
 
 /**
@@ -1689,7 +1689,9 @@ export class DashboardSidebarEditor extends LitElement {
       )}
       <div class="mobile-stack">
         <div class="form-head">
-          <div class="form-title">Mobile Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}</div>
+          <div class="form-title">
+            Mobile Bar Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
+          </div>
         </div>
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
           ${

@@ -76,21 +76,21 @@ describe('<dashboard-sidebar-editor>', () => {
   it('renders the five tabs', async () => {
     const el = await mount(cfg());
     const labels = [...root(el).querySelectorAll('.tab')].map((b) => b.textContent?.trim());
-    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile']);
+    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
   });
 
   it('disables the Mobile tab until On Mobile is the bar, then previews it', async () => {
     const el = await mount(cfg());
     const mobileTab = [...root(el).querySelectorAll('.tab')].find(
-      (b) => b.textContent?.trim() === 'Mobile',
+      (b) => b.textContent?.trim() === 'Mobile Bar',
     ) as HTMLButtonElement;
     expect(mobileTab.disabled).to.equal(true);
     const withBar = await mount({ ...cfg(), mobile: {} });
     const enabledTab = [...root(withBar).querySelectorAll('.tab')].find(
-      (b) => b.textContent?.trim() === 'Mobile',
+      (b) => b.textContent?.trim() === 'Mobile Bar',
     ) as HTMLButtonElement;
     expect(enabledTab.disabled).to.equal(false);
-    await tab(withBar, 'Mobile');
+    await tab(withBar, 'Mobile Bar');
     const bar = root(withBar).querySelector('dashboard-sidebar-bar');
     expect(bar).to.exist;
     expect(bar?.hasAttribute('preview')).to.equal(true);
