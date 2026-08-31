@@ -1722,10 +1722,10 @@ export class DashboardSidebarEditor extends LitElement {
             <ha-icon
               icon=${
                 width >= maxW
-                  ? 'mdi:arrow-right'
+                  ? 'mdi:arrow-collapse-right'
                   : width <= MIN_MOBILE_PREVIEW
-                    ? 'mdi:arrow-left'
-                    : 'mdi:arrow-left-right'
+                    ? 'mdi:arrow-expand-left'
+                    : 'mdi:arrow-expand-horizontal'
               }
             ></ha-icon>
           </div>
