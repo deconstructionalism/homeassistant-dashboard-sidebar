@@ -496,16 +496,17 @@ export const editorStyles = css`
   .mobile-pv-frame {
     /* Pin to the inline width: the base pv-frame flex-grow would otherwise
        stretch the frame to the wrap and defeat the drag handle. The ghost
-       strip and the bar share overlapping grid cells: an opening sheet eats
-       the ghost space first and only grows the frame once it is taller than
-       that space. The edge draws as a zero-layout overlay (below) so the
-       bar inside is exactly the advertised width. */
+       strip is a backdrop layer and min-height reserves its space: an
+       opening sheet covers the ghosts first and only grows the frame once
+       it is taller than that reserve. The edge draws as a zero-layout
+       overlay (below) so the bar inside is exactly the advertised width. */
     flex: 0 0 auto;
     position: relative;
-    display: grid;
-    grid-template-columns: 100%;
-    grid-template-rows: 1fr auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     height: auto;
+    min-height: 230px;
     max-width: 100%;
     box-sizing: border-box;
     padding: 0;
@@ -514,13 +515,11 @@ export const editorStyles = css`
   }
 
   .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) {
-    grid-template-rows: auto 1fr;
+    justify-content: flex-start;
   }
 
   .mobile-pv-frame dashboard-sidebar-bar {
     z-index: 1;
-    grid-row: 1 / 3;
-    grid-column: 1;
   }
 
   /* A short strip of ghost dashboard cards on the page side of the bar. */
@@ -586,16 +585,18 @@ export const editorStyles = css`
   }
 
   .mobile-pv-frame .pv-ghost-cards {
-    grid-row: 1;
-    grid-column: 1;
-    align-self: end;
-    max-height: 160px;
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    align-content: end;
+    padding-bottom: 80px;
     opacity: 0.35;
   }
 
   .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) .pv-ghost-cards {
-    grid-row: 2;
-    align-self: start;
+    align-content: start;
+    padding-top: 80px;
+    padding-bottom: 10px;
   }
 
   .mobile-pv-frame::after {
