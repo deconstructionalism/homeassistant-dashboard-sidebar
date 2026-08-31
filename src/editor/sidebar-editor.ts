@@ -290,6 +290,9 @@ export class DashboardSidebarEditor extends LitElement {
   /** The dragged mobile preview width, or null to follow the breakpoint. */
   @state() private _mobilePreviewWidth: number | null = null;
 
+  /** The measured width available to the mobile preview inside the modal. */
+  @state() private _mobileAvail: number | null = null;
+
   /** Live drag bookkeeping for the mobile preview resize handle. */
   private _mobileDrag?: { startX: number; startW: number };
 
@@ -1659,9 +1662,31 @@ export class DashboardSidebarEditor extends LitElement {
   /**
    * Renders the phone-width live preview of the mobile bar.
    */
+  /**
+   * Measures how much width the preview actually has inside the modal, so
+   * the drag range tops out at what is really renderable.
+   */
+  private _measureMobileAvail(): void {
+    const wrap = this.shadowRoot?.querySelector('.mobile-pv-wrap') as HTMLElement | null;
+    const handle = this.shadowRoot?.querySelector('.mobile-pv-handle') as HTMLElement | null;
+    if (!wrap) {
+      return;
+    }
+    const avail = Math.floor(wrap.clientWidth - (handle?.offsetWidth ?? 0));
+    if (avail > 0 && avail !== this._mobileAvail) {
+      this._mobileAvail = avail;
+    }
+  }
+
+  /**
+   * Renders the mobile bar preview at the dragged width, capped at the
+   * lesser of the breakpoint and the width the modal can actually give it.
+   */
   private _renderMobilePreview(): TemplateResult {
     const bp = this._working.breakpoint ?? 768;
-    const width = Math.min(Math.max(this._mobilePreviewWidth ?? bp, MIN_MOBILE_PREVIEW), bp);
+    requestAnimationFrame(() => this._measureMobileAvail());
+    const maxW = Math.max(MIN_MOBILE_PREVIEW, Math.min(bp, this._mobileAvail ?? bp));
+    const width = Math.min(Math.max(this._mobilePreviewWidth ?? maxW, MIN_MOBILE_PREVIEW), maxW);
     return html`
       <div class="preview">
         <div class="preview-head">
@@ -1682,7 +1707,7 @@ export class DashboardSidebarEditor extends LitElement {
               const next = Math.round(
                 this._mobileDrag.startW - (ev.clientX - this._mobileDrag.startX),
               );
-              this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), bp);
+              this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), maxW);
             }}
             @pointerup=${() => {
               this._mobileDrag = undefined;
