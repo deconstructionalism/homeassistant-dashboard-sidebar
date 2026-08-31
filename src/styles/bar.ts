@@ -21,11 +21,19 @@ export const barStyles = css`
     flex-direction: column;
     width: 100%;
     inset: auto;
+    scroll-margin-top: 40px;
   }
 
   :host([preview][data-position='top']) {
     flex-direction: column-reverse;
     inset: auto;
+  }
+
+  /* No elevated stacking in preview (the sheet is in-flow, nothing slides
+     behind the bar), so the editor's sticky Preview label paints above; the
+     scroll margin keeps the bar from tucking under that label. */
+  :host([preview]) .dashboard-sidebar-bar {
+    z-index: auto;
   }
 
   :host([preview]) .dashboard-sidebar-bar-sheet-scrim {
