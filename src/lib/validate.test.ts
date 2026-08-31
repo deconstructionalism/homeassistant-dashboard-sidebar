@@ -287,7 +287,7 @@ describe('validateConfig — every block and option together', () => {
     const config: DashboardSidebarConfig = {
       width: 300,
       start_collapsed: false,
-      hide_on_mobile: true,
+      on_mobile: 'hidden' as const,
       overlay: true,
       background: '#111',
       header: [
@@ -479,12 +479,23 @@ describe('mobile config', () => {
     expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
   });
 
-  it('allows hide_on_desktop without a mobile config, but not with hide_on_mobile', () => {
+  it('validates the viewport modes and their combinations', () => {
     const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
-    const ok = vc({ body: [item], hide_on_desktop: true });
-    expect(ok.some((e) => e.includes('hide_on_desktop'))).toBe(false);
-    const errors = vc({ body: [item], hide_on_desktop: true, hide_on_mobile: true });
-    expect(errors.some((e) => e.includes('nothing would ever render'))).toBe(true);
+    const ok = vc({ body: [item], on_desktop: 'hidden' });
+    expect(ok).toEqual([]);
+    const both = vc({ body: [item], on_desktop: 'hidden', on_mobile: 'hidden' });
+    expect(both.some((e) => e.includes('nothing would ever render'))).toBe(true);
+    const legacy = vc({ body: [item], hide_on_mobile: true } as DashboardSidebarConfig);
+    expect(legacy.some((e) => e.includes('replaced by `on_mobile: hidden`'))).toBe(true);
+    expect(legacy.some((e) => e.includes('unknown option'))).toBe(false);
+    const orphanMobile = validateConfig(withMobile({}));
+    expect(orphanMobile).toEqual([]);
+    const mismatch = vc({
+      body: [item],
+      on_mobile: 'sidebar',
+      mobile: {},
+    } as DashboardSidebarConfig);
+    expect(mismatch.some((e) => e.includes('only used when on_mobile is "bar"'))).toBe(true);
   });
 
   it('rejects hiding and overriding the same id', () => {

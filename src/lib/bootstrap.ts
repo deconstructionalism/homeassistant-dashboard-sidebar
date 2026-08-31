@@ -6,6 +6,7 @@ import {
   TOGGLE_EVENT,
 } from './const';
 import { generateId } from './id';
+import { desktopMode, mobileMode } from './mobile';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -185,8 +186,8 @@ const structureKey = (config: DashboardSidebarConfig): string => {
   return [
     config.position ?? 'left',
     config.width ?? DEFAULT_WIDTH,
-    config.hide_on_mobile ? 1 : 0,
-    config.hide_on_desktop ? 1 : 0,
+    desktopMode(config),
+    mobileMode(config),
     config.overlay ? 1 : 0,
   ].join(':');
 };
@@ -253,25 +254,25 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
       min-width: 0;
     }
     ${
-      config.hide_on_mobile
-        ? `@media (max-width: 768px) {
+      desktopMode(config) === 'hidden'
+        ? `@media (min-width: ${(config.mobile?.breakpoint ?? 768) + 1}px) {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
            }`
         : ''
     }
     ${
-      config.hide_on_desktop
-        ? `#${HOST_ID} { display: none; }
-           #${WRAPPER_ID} > #view { flex-basis: 100%; }`
+      mobileMode(config) !== 'sidebar'
+        ? `@media (max-width: ${config.mobile?.breakpoint ?? 768}px) {
+             #${HOST_ID} { display: none; }
+             #${WRAPPER_ID} > #view { flex-basis: 100%; }
+           }`
         : ''
     }
     ${
-      config.mobile || config.hide_on_desktop
+      mobileMode(config) === 'bar'
         ? `dashboard-sidebar-bar { display: none; }
            @media (max-width: ${config.mobile?.breakpoint ?? 768}px) {
-             #${HOST_ID} { display: none; }
-             #${WRAPPER_ID} > #view { flex-basis: 100%; }
              dashboard-sidebar-bar { display: block; }
            }`
         : ''
@@ -334,7 +335,7 @@ const buildSidebar = (): void => {
     wrapper.appendChild(view);
   }
 
-  if (config.mobile || config.hide_on_desktop) {
+  if (mobileMode(config) === 'bar') {
     const bar = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
     bar.hass = getHass();
     bar.setConfig(config);

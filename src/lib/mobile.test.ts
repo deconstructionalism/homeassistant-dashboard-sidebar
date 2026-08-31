@@ -84,12 +84,17 @@ describe('resolveBar, derive mode', () => {
   });
 });
 
-describe('resolveBar, implicit derive', () => {
-  it('derives the bar from hide_on_desktop alone, as if mobile were empty', () => {
-    const config = { ...base(), hide_on_desktop: true };
+describe('resolveBar, viewport modes', () => {
+  it('derives the bar from on_mobile: bar alone, as if mobile were empty', () => {
+    const config = { ...base(), on_mobile: 'bar' as const };
     const { slots, menu } = resolveBar(config);
     expect(slots.map((e) => e.kind)).toEqual(['clock', 'item', 'item', 'category']);
     expect(menu).toHaveLength(1);
+  });
+
+  it('hiding the desktop alone keeps the mobile sidebar, not the bar', () => {
+    const config = { ...base(), on_desktop: 'hidden' as const };
+    expect(resolveBar(config).slots).toEqual([]);
   });
 });
 

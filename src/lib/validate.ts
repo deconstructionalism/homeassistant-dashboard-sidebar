@@ -419,11 +419,6 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     return;
   }
   unknownKeys(mobile, MOBILE_KEYS, 'mobile', errors);
-  if (config.hide_on_mobile) {
-    errors.push(
-      'mobile: cannot be combined with hide_on_mobile (a mobile config already hides the sidebar and shows the bar)',
-    );
-  }
 
   const explicit = mobile.items !== undefined;
   if (explicit && (mobile.hide !== undefined || mobile.override !== undefined)) {
@@ -580,7 +575,14 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     return ['dashboard_sidebar: config must be a mapping'];
   }
   const c = config as unknown as Record<string, unknown>;
-  unknownKeys(config, TOP_KEYS, 'dashboard_sidebar', errors);
+  // Legacy hide keys get a targeted migration message instead of the generic
+  // unknown-option error.
+  unknownKeys(
+    config,
+    new Set([...TOP_KEYS, 'hide_on_mobile', 'hide_on_desktop']),
+    'dashboard_sidebar',
+    errors,
+  );
   if (config.position !== undefined && config.position !== 'left' && config.position !== 'right') {
     errors.push('position: must be "left" or "right"');
   }
@@ -589,12 +591,32 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   }
   checkBool(c.start_collapsed, 'start_collapsed', errors);
   checkBool(c.overlay, 'overlay', errors);
-  checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
-  checkBool(c.hide_on_desktop, 'hide_on_desktop', errors);
-  if (config.hide_on_desktop && config.hide_on_mobile) {
-    errors.push(
-      'hide_on_desktop: cannot be combined with hide_on_mobile (nothing would ever render)',
-    );
+  if (
+    config.on_desktop !== undefined &&
+    config.on_desktop !== 'sidebar' &&
+    config.on_desktop !== 'hidden'
+  ) {
+    errors.push('on_desktop: must be "sidebar" or "hidden"');
+  }
+  if (
+    config.on_mobile !== undefined &&
+    config.on_mobile !== 'sidebar' &&
+    config.on_mobile !== 'bar' &&
+    config.on_mobile !== 'hidden'
+  ) {
+    errors.push('on_mobile: must be "sidebar", "bar", or "hidden"');
+  }
+  if (config.mobile !== undefined && config.on_mobile !== undefined && config.on_mobile !== 'bar') {
+    errors.push('on_mobile: a `mobile` bar config is only used when on_mobile is "bar"');
+  }
+  if (config.on_desktop === 'hidden' && config.on_mobile === 'hidden') {
+    errors.push('on_desktop: hidden on desktop and mobile means nothing would ever render');
+  }
+  if (c.hide_on_mobile !== undefined) {
+    errors.push('hide_on_mobile: replaced by `on_mobile: hidden`');
+  }
+  if (c.hide_on_desktop !== undefined) {
+    errors.push('hide_on_desktop: replaced by `on_desktop: hidden`');
   }
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);

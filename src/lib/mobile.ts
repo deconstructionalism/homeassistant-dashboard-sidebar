@@ -20,6 +20,19 @@ import type {
   SidebarBlock,
 } from './types';
 
+/** What renders on wide (desktop) viewports. */
+export const desktopMode = (config: DashboardSidebarConfig): 'sidebar' | 'hidden' => {
+  return config.on_desktop ?? 'sidebar';
+};
+
+/**
+ * What renders on narrow (mobile) viewports. Explicit `on_mobile` wins; a
+ * present `mobile` section implies the bar; the default is the sidebar.
+ */
+export const mobileMode = (config: DashboardSidebarConfig): 'sidebar' | 'bar' | 'hidden' => {
+  return config.on_mobile ?? (config.mobile ? 'bar' : 'sidebar');
+};
+
 /** What kind of desktop element a bar entry renders as. */
 export type BarEntryKind =
   'item' | 'category' | 'button' | 'divider' | 'clock' | 'date' | 'title' | 'markdown' | 'card';
@@ -155,9 +168,8 @@ const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): Ba
 };
 
 export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
-  // A hidden desktop implies a bar even without a mobile section: derive mode
-  // with all defaults, so the config still renders somewhere.
-  const mobile = config.mobile ?? (config.hide_on_desktop ? {} : undefined);
+  // `on_mobile: bar` without a mobile section derives with all defaults.
+  const mobile = mobileMode(config) === 'bar' ? (config.mobile ?? {}) : undefined;
   if (!mobile) {
     return { slots: [], menu: [], extras: [], footer: [] };
   }

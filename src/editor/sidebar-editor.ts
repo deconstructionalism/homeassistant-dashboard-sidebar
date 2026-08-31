@@ -17,7 +17,7 @@ import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import '../dashboard-sidebar-bar';
-import { resolveBar } from '../lib/mobile';
+import { mobileMode, resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
 import { renderEmptyState, renderGhost } from './editor-preview';
@@ -1402,17 +1402,29 @@ export class DashboardSidebarEditor extends LitElement {
                     (v) => this._patchConfig({ overlay: v || undefined }),
                     'Float the sidebar over the dashboard instead of pushing the content aside.',
                   )}
-                  ${checkboxField(
-                    'Hide Sidebar On Mobile',
-                    c.hide_on_mobile ?? false,
-                    (v) => this._patchConfig({ hide_on_mobile: v || undefined }),
-                    'Hide the sidebar entirely on narrow (phone-width) screens.',
+                  ${selectField(
+                    'On Desktop',
+                    c.on_desktop ?? 'sidebar',
+                    [
+                      { label: 'Sidebar', value: 'sidebar' },
+                      { label: 'Nothing', value: 'hidden' },
+                    ],
+                    (v) => this._patchConfig({ on_desktop: v === 'sidebar' ? undefined : v }),
+                    { description: 'What renders on wide screens.' },
                   )}
-                  ${checkboxField(
-                    'Mobile Only (Hide On Desktop)',
-                    c.hide_on_desktop ?? false,
-                    (v) => this._patchConfig({ hide_on_desktop: v || undefined }),
-                    'Never show the sidebar on desktop; only the mobile bar renders, on narrow screens.',
+                  ${selectField(
+                    'On Mobile',
+                    mobileMode(c),
+                    [
+                      { label: 'Sidebar', value: 'sidebar' },
+                      { label: 'Mobile Bar', value: 'bar' },
+                      { label: 'Nothing', value: 'hidden' },
+                    ],
+                    (v) => this._setOnMobile(v),
+                    {
+                      description:
+                        'What renders on narrow screens. The Mobile tab configures the bar.',
+                    },
                   )}
                   <details class="advanced">
                     <summary>Advanced</summary>
@@ -1441,6 +1453,20 @@ export class DashboardSidebarEditor extends LitElement {
         ${this._renderPreview(html`${this._previewEl('settings', previewConfig, false, true)}`, true)}
       </div>
     `;
+  }
+
+  /**
+   * Applies an On Mobile choice: the bar mode is carried by the `mobile`
+   * section's presence, `hidden` by the explicit key, and sidebar by neither.
+   */
+  private _setOnMobile(mode: string): void {
+    if (mode === 'bar') {
+      this._patchConfig({ on_mobile: undefined, mobile: this._working.mobile ?? {} });
+    } else if (mode === 'hidden') {
+      this._patchConfig({ on_mobile: 'hidden', mobile: undefined });
+    } else {
+      this._patchConfig({ on_mobile: undefined, mobile: undefined });
+    }
   }
 
   /**
@@ -1488,8 +1514,7 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderMobileTab(): TemplateResult {
     const mobile = this._working.mobile;
-    const implicit = !mobile && Boolean(this._working.hide_on_desktop);
-    if (!mobile && !implicit) {
+    if (mobileMode(this._working) !== 'bar') {
       return html`
         ${this._renderTabNotes(
           'The mobile bar replaces the sidebar on narrow screens with a bottom (or top) bar derived from it.',
@@ -1498,10 +1523,14 @@ export class DashboardSidebarEditor extends LitElement {
         <div class="split">
           <div class="editor settings">
             <p class="tab-note">
-              No mobile bar is configured; on phones the sidebar simply renders at full width.
+              ${
+                mobileMode(this._working) === 'hidden'
+                  ? 'Nothing renders on narrow screens (On Mobile is set to Nothing in Settings).'
+                  : 'No mobile bar is configured; on phones the sidebar simply renders at full width.'
+              }
             </p>
             <div class="form-actions">
-              <button class="add-btn" @click=${() => this._patchConfig({ mobile: {} })}>
+              <button class="add-btn" @click=${() => this._setOnMobile('bar')}>
                 Enable Mobile Bar
               </button>
             </div>
@@ -1518,14 +1547,6 @@ export class DashboardSidebarEditor extends LitElement {
       )}
       <div class="split">
         <div class="editor settings">
-          ${
-            implicit
-              ? html`<p class="tab-note">
-                  Enabled implicitly because the sidebar is hidden on desktop; changing any option
-                  below makes it explicit.
-                </p>`
-              : nothing
-          }
           ${iconChoiceField('Mode', custom ? 'custom' : 'mirror', MOBILE_MODE_META, (v) =>
             this._setMobileMode(v),
           )}
@@ -1564,18 +1585,11 @@ export class DashboardSidebarEditor extends LitElement {
             )}
             ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
           </details>
-          ${
-            mobile
-              ? html`<div class="form-actions">
-                  <button
-                    class="add-btn danger"
-                    @click=${() => this._patchConfig({ mobile: undefined })}
-                  >
-                    Remove Mobile Bar
-                  </button>
-                </div>`
-              : nothing
-          }
+          <div class="form-actions">
+            <button class="add-btn danger" @click=${() => this._setOnMobile('sidebar')}>
+              Remove Mobile Bar
+            </button>
+          </div>
         </div>
         ${this._renderMobilePreview()}
       </div>

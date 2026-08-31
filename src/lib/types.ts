@@ -384,14 +384,13 @@ export interface DashboardSidebarConfig {
    * aside. Default false (push): the view narrows by the sidebar's width.
    */
   overlay?: boolean;
-  /** Hide the sidebar on narrow (mobile) viewports. */
-  hide_on_mobile?: boolean;
+  /** What renders on wide (desktop) viewports. Default sidebar. */
+  on_desktop?: 'sidebar' | 'hidden';
   /**
-   * Mobile-only mode: the desktop sidebar never renders; only the mobile bar
-   * shows, at and below the breakpoint. Without a `mobile` section the bar
-   * derives implicitly from the desktop config, as if `mobile: {}` were set.
+   * What renders on narrow (mobile) viewports: the sidebar, the mobile bar,
+   * or nothing. Defaults to bar when a `mobile` section exists, else sidebar.
    */
-  hide_on_desktop?: boolean;
+  on_mobile?: 'sidebar' | 'bar' | 'hidden';
   /**
    * Sidebar background: any CSS `background` value (color, gradient, image, …),
    * applied as the `background` shorthand. Defaults to the theme card background.

@@ -4,7 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { runAction, type RunnableAction } from './lib/action';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
-import { resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
+import { mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
 import { barStyles } from './styles/bar';
 import type {
@@ -803,7 +803,8 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Renders the bar. */
   protected render(): TemplateResult | typeof nothing {
-    const mobile = this._config?.mobile ?? (this._config?.hide_on_desktop ? {} : undefined);
+    const mobile =
+      this._config && mobileMode(this._config) === 'bar' ? (this._config.mobile ?? {}) : undefined;
     if (!mobile || this._resolved.slots.length + this._resolved.menu.length === 0) {
       return nothing;
     }
