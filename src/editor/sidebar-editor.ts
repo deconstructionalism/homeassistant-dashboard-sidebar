@@ -1767,6 +1767,10 @@ export class DashboardSidebarEditor extends LitElement {
             ${this._barPreviewEl()}
           </div>
         </div>
+        <small class="field-desc mobile-pv-hint">
+          Drag the handle on the bar's right edge to preview narrower screens; double-click it to
+          reset.
+        </small>
       </div>
     `;
   }

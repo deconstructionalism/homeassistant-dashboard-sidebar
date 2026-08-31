@@ -393,6 +393,11 @@ export const editorStyles = css`
     margin-top: 4px;
   }
 
+  .mobile-pv-hint {
+    display: block;
+    margin-top: 6px;
+  }
+
   .mobile-pv-wrap {
     position: relative;
     display: flex;
