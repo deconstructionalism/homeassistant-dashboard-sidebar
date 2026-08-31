@@ -1540,7 +1540,7 @@ export class DashboardSidebarEditor extends LitElement {
         'The mobile bar replaces the sidebar on narrow screens. Mirror mode follows the desktop nav; the dots menu holds the footer and overflow.',
         'The mobile bar previews at phone width.',
       )}
-      <div class="mobile-stack">
+      <div class="split mobile-split">
         <div class="editor settings">
           ${iconChoiceField('Mode', custom ? 'custom' : 'mirror', MOBILE_MODE_META, (v) =>
             this._setMobileMode(v),
@@ -1588,12 +1588,15 @@ export class DashboardSidebarEditor extends LitElement {
    * Renders the phone-width live preview of the mobile bar.
    */
   private _renderMobilePreview(): TemplateResult {
+    const bp = this._working.breakpoint ?? 768;
     return html`
       <div class="preview">
         <div class="preview-head">
-          <span class="preview-title">Preview</span>
+          <span class="preview-title">Preview (${bp}px)</span>
         </div>
-        <div class="pv-frame pv-col mobile-pv-frame">${this._barPreviewEl()}</div>
+        <div class="pv-frame pv-col mobile-pv-frame" style="width: ${bp}px">
+          ${this._barPreviewEl()}
+        </div>
       </div>
     `;
   }

@@ -331,28 +331,21 @@ export const editorStyles = css`
     scrollbar-width: none;
   }
 
-  /* The mobile tab stacks the form above a full-width preview, since the
-     bar is a horizontal strip that needs the modal's whole width to read. */
-  .mobile-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-    overflow-y: auto;
+  /* The mobile tab keeps the side-by-side split, with the preview frame at
+     the configured breakpoint width so the bar shows as a phone would fit it;
+     the frame shrinks before the form when the modal is narrower. */
+  .mobile-split .editor {
+    min-width: 280px;
   }
 
-  .mobile-stack .editor {
-    flex: 0 0 auto;
-    overflow: visible;
+  .mobile-split .preview {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
-  .mobile-stack .preview {
-    flex: 0 0 auto;
-  }
-
-  /* The bar preview frame: full width, with headroom for the sheet to rise. */
   .mobile-pv-frame {
-    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding-top: 220px;
     overflow: visible;
   }
