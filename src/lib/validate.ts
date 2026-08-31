@@ -418,7 +418,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     errors.push('mobile: must be a mapping');
     return;
   }
-  unknownKeys(mobile, MOBILE_KEYS, 'mobile', errors);
+  unknownKeys(mobile, new Set([...MOBILE_KEYS, 'breakpoint']), 'mobile', errors);
 
   const explicit = mobile.items !== undefined;
   if (explicit && (mobile.hide !== undefined || mobile.override !== undefined)) {
@@ -427,11 +427,8 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     );
   }
 
-  if (
-    mobile.breakpoint !== undefined &&
-    (typeof mobile.breakpoint !== 'number' || mobile.breakpoint <= 0)
-  ) {
-    errors.push('mobile.breakpoint: must be a positive number of pixels');
+  if ((mobile as Record<string, unknown>).breakpoint !== undefined) {
+    errors.push('mobile.breakpoint: moved to the top-level `breakpoint` option');
   }
   if (
     mobile.labels !== undefined &&
@@ -611,6 +608,12 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   }
   if (config.on_desktop === 'hidden' && config.on_mobile === 'hidden') {
     errors.push('on_desktop: hidden on desktop and mobile means nothing would ever render');
+  }
+  if (
+    config.breakpoint !== undefined &&
+    (typeof config.breakpoint !== 'number' || config.breakpoint <= 0)
+  ) {
+    errors.push('breakpoint: must be a positive number of pixels');
   }
   if (c.hide_on_mobile !== undefined) {
     errors.push('hide_on_mobile: replaced by `on_mobile: hidden`');

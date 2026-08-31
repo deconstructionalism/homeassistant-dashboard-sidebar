@@ -1404,6 +1404,13 @@ export class DashboardSidebarEditor extends LitElement {
                   )}
                   <details class="advanced">
                     <summary>Advanced</summary>
+                    ${intField(
+                      'Mobile Breakpoint (px)',
+                      c.breakpoint,
+                      (v) => this._patchConfig({ breakpoint: v }),
+                      {},
+                      'Viewport width at and below which the mobile choices apply. Defaults to 768px.',
+                    )}
                     ${selectField(
                       'On Desktop',
                       c.on_desktop ?? 'sidebar',
@@ -1558,13 +1565,6 @@ export class DashboardSidebarEditor extends LitElement {
                 </p>`
               : nothing
           }
-          ${intField(
-            'Breakpoint (px)',
-            m.breakpoint,
-            (v) => this._patchMobile({ breakpoint: v }),
-            {},
-            'The bar shows at and below this viewport width. Defaults to 768px.',
-          )}
           ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
             this._patchMobile({ position: v === 'bottom' ? undefined : v }),
           )}

@@ -3,7 +3,7 @@
 // The schema-check CI step fails if this file is stale.
 
 /** Fields accepted on the top-level `dashboard_sidebar` config. */
-export const TOP_FIELDS = ['position', 'width', 'start_collapsed', 'overlay', 'on_desktop', 'on_mobile', 'background', 'header', 'body', 'footer', 'mobile', 'card_mod'] as const;
+export const TOP_FIELDS = ['position', 'width', 'start_collapsed', 'overlay', 'on_desktop', 'on_mobile', 'breakpoint', 'background', 'header', 'body', 'footer', 'mobile', 'card_mod'] as const;
 
 /** Fields shared by every block and footer button. */
 export const COMMON_FIELDS = ['class', 'id', 'card_mod'] as const;
@@ -27,7 +27,7 @@ export const FOOTER_FIELDS = ['divider', 'buttons', 'card', 'markdown', 'markdow
 export const FOOTER_BUTTON_FIELDS = ['icon', 'icon_color', 'title', 'entity', 'tap_action', 'hold_action', 'double_tap_action', 'active_highlight', 'class', 'id', 'card_mod'] as const;
 
 /** Fields accepted on the mobile bar config. */
-export const MOBILE_FIELDS = ['hide', 'override', 'items', 'menu', 'footer', 'breakpoint', 'position', 'labels', 'background', 'card_mod'] as const;
+export const MOBILE_FIELDS = ['hide', 'override', 'items', 'menu', 'footer', 'position', 'labels', 'background', 'card_mod'] as const;
 
 /** Properties a mobile override or use-entry patch may set. */
 export const MOBILE_OVERRIDE_FIELDS = ['title', 'icon', 'abbr', 'text_color', 'icon_color', 'entity', 'tap_action', 'hold_action', 'double_tap_action', 'active_highlight', 'class', 'card_mod'] as const;

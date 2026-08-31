@@ -479,6 +479,12 @@ describe('mobile config', () => {
     expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
   });
 
+  it('validates the top-level breakpoint', () => {
+    const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
+    const errors = vc({ body: [item], breakpoint: -5 });
+    expect(errors.some((e) => e.includes('breakpoint: must be a positive number'))).toBe(true);
+  });
+
   it('validates the viewport modes and their combinations', () => {
     const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
     const ok = vc({ body: [item], on_desktop: 'hidden' });
@@ -549,7 +555,7 @@ describe('mobile config', () => {
         extra: true,
       }),
     );
-    expect(errors.some((e) => e.includes('breakpoint'))).toBe(true);
+    expect(errors.some((e) => e.includes('moved to the top-level'))).toBe(true);
     expect(errors.some((e) => e.includes('position'))).toBe(true);
     expect(errors.some((e) => e.includes('labels'))).toBe(true);
     expect(errors.some((e) => e.includes('background'))).toBe(true);

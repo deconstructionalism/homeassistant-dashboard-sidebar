@@ -356,8 +356,6 @@ export interface MobileConfig {
    * footer).
    */
   footer?: MobileFooterEntry[];
-  /** Viewport width in pixels at and below which the bar shows. Default 768. */
-  breakpoint?: number;
   /** Screen edge the bar docks to. Default bottom. */
   position?: 'top' | 'bottom';
   /** Label rendering on the bar. Default never. */
@@ -391,6 +389,11 @@ export interface DashboardSidebarConfig {
    * or nothing. Defaults to bar when a `mobile` section exists, else sidebar.
    */
   on_mobile?: 'sidebar' | 'bar' | 'hidden';
+  /**
+   * Viewport width in pixels at and below which "mobile" applies (the bar,
+   * on_mobile, on_desktop). Default 768.
+   */
+  breakpoint?: number;
   /**
    * Sidebar background: any CSS `background` value (color, gradient, image, …),
    * applied as the `background` shorthand. Defaults to the theme card background.

@@ -188,6 +188,7 @@ const structureKey = (config: DashboardSidebarConfig): string => {
     config.width ?? DEFAULT_WIDTH,
     desktopMode(config),
     mobileMode(config),
+    config.breakpoint ?? 768,
     config.overlay ? 1 : 0,
   ].join(':');
 };
@@ -255,7 +256,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
     }
     ${
       desktopMode(config) === 'hidden'
-        ? `@media (min-width: ${(config.mobile?.breakpoint ?? 768) + 1}px) {
+        ? `@media (min-width: ${(config.breakpoint ?? 768) + 1}px) {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
            }`
@@ -263,7 +264,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
     }
     ${
       mobileMode(config) !== 'sidebar'
-        ? `@media (max-width: ${config.mobile?.breakpoint ?? 768}px) {
+        ? `@media (max-width: ${config.breakpoint ?? 768}px) {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
            }`
@@ -272,7 +273,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
     ${
       mobileMode(config) === 'bar'
         ? `dashboard-sidebar-bar { display: none; }
-           @media (max-width: ${config.mobile?.breakpoint ?? 768}px) {
+           @media (max-width: ${config.breakpoint ?? 768}px) {
              dashboard-sidebar-bar { display: block; }
            }`
         : ''

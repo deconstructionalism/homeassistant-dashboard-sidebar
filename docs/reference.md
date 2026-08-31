@@ -17,6 +17,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `overlay` | `boolean` | no | Whether the sidebar floats over the dashboard content instead of pushing it aside. Default false (push): the view narrows by the sidebar's width. |
 | `on_desktop` | `'sidebar' \| 'hidden'` | no | What renders on wide (desktop) viewports. Default sidebar. |
 | `on_mobile` | `'sidebar' \| 'bar' \| 'hidden'` | no | What renders on narrow (mobile) viewports: the sidebar, the mobile bar, or nothing. Defaults to bar when a `mobile` section exists, else sidebar. |
+| `breakpoint` | `number` | no | Viewport width in pixels at and below which "mobile" applies (the bar, on_mobile, on_desktop). Default 768. |
 | `background` | `string` | no | Sidebar background: any CSS `background` value (color, gradient, image, …), applied as the `background` shorthand. Defaults to the theme card background. |
 | `header` | `SidebarBlock[]` | no | Blocks pinned to the top, above the scrolling body. |
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
@@ -250,7 +251,6 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
 | `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
 | `footer` | `MobileFooterEntry[]` | no | The sheet's pinned footer strip: `use:` references to footer buttons or items, and inline footer buttons, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
-| `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
