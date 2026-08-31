@@ -1764,7 +1764,9 @@ export class DashboardSidebarEditor extends LitElement {
           </div>
           <span class="mobile-pv-caption preview-title">Preview (${width}px)</span>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
+            ${(this._working.mobile?.position ?? 'bottom') === 'top' ? nothing : renderGhost('up')}
             ${this._barPreviewEl()}
+            ${(this._working.mobile?.position ?? 'bottom') === 'top' ? renderGhost('down') : nothing}
           </div>
         </div>
         <small class="field-desc mobile-pv-hint">

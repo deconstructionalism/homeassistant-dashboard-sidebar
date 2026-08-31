@@ -505,14 +505,16 @@ export const editorStyles = css`
     max-width: 100%;
     box-sizing: border-box;
 
-    /* A sliver of page space on the content side of the bar. */
-    padding: 12px 0 0;
+    padding: 0;
     outline: none;
     overflow: hidden;
   }
 
-  .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) {
-    padding: 0 0 12px;
+  /* A short strip of ghost dashboard content on the page side of the bar. */
+  .mobile-pv-frame .pv-ghost {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: 88px;
   }
 
   .mobile-pv-frame::after {
