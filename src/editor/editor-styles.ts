@@ -391,7 +391,10 @@ export const editorStyles = css`
   .mobile-pv-handle::before {
     content: '';
     position: absolute;
-    top: 0;
+
+    /* Reach up through the caption row so the rail visually attaches to the
+       drag arrow. */
+    top: -24px;
     bottom: 0;
     left: 50%;
     width: 2px;
