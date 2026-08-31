@@ -1700,7 +1700,9 @@ export class DashboardSidebarEditor extends LitElement {
     if (!wrap) {
       return;
     }
-    const avail = Math.floor(wrap.clientWidth);
+    // Keep the drag handle clear of the tab's scrollbar, which overlays the
+    // content on macOS-style overlay scrollbars rather than reserving width.
+    const avail = Math.floor(wrap.clientWidth) - 14;
     if (avail > 0 && avail !== this._mobileAvail) {
       this._mobileAvail = avail;
     }
