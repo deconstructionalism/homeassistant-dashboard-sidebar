@@ -129,9 +129,10 @@ export class DashboardSidebarBar extends LitElement {
     this._close();
   };
 
-  /** Closes any open flyout when a tap lands outside the bar. */
+  /** Closes any open flyout when a tap lands outside the bar. Inert in the
+   * editor preview, where clicks on the form should not collapse the sheet. */
   private readonly _onOutsideClick = (ev: Event): void => {
-    if (this._open !== null && !ev.composedPath().includes(this)) {
+    if (!this.preview && this._open !== null && !ev.composedPath().includes(this)) {
       this._close();
     }
   };
