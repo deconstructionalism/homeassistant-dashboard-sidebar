@@ -1379,6 +1379,7 @@ export const editorStyles = css`
 
   .confirm-scrim {
     position: absolute;
+    z-index: 20;
     inset: 0;
     display: flex;
     align-items: center;
