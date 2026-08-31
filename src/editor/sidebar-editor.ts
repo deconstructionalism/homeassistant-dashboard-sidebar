@@ -1581,7 +1581,7 @@ export class DashboardSidebarEditor extends LitElement {
     const custom = m.items !== undefined;
     return html`
       ${this._renderTabNotes(
-        'The mobile bar replaces the sidebar on narrow screens. Mirror mode follows the desktop nav; the dots menu holds the footer and overflow.',
+        'The mobile bar replaces the sidebar on narrow screens.',
         'The mobile bar previews at phone width.',
       )}
       <div class="mobile-stack">
