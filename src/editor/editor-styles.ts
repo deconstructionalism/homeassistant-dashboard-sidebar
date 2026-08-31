@@ -531,17 +531,45 @@ export const editorStyles = css`
   }
 
   .ghost-card {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 12px;
     border-radius: 10px;
-    background: var(--divider-color, rgb(0 0 0 / 15%));
+    background: rgb(127 127 127 / 10%);
   }
 
   .ghost-card.wide {
     grid-column: span 2;
   }
 
+  .ghost-dot {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  .ghost-line {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  .ghost-row-line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ghost-row-line .ghost-line {
+    flex: 0 0 auto;
+  }
+
   .mobile-pv-frame .pv-ghost-cards {
     flex: 0 0 auto;
-    max-height: 96px;
+    max-height: 108px;
   }
 
   .mobile-pv-frame::after {

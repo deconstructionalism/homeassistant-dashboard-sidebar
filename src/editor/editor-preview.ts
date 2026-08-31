@@ -21,23 +21,29 @@ export const renderGhost = (fade: 'up' | 'down'): TemplateResult => {
 
 /**
  * Faded skeleton cards standing in for dashboard content beside the mobile
- * bar: a two-column card grid rather than list rows, fading away from the
- * bar's edge.
+ * bar: a two-column grid of cards with icon and text-line innards, fading
+ * away from the bar's edge.
  */
 export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
-  const cards = [
-    { h: 52, wide: false },
-    { h: 52, wide: false },
-    { h: 64, wide: true },
-    { h: 44, wide: false },
-    { h: 44, wide: false },
-  ];
   return html`
     <div class="pv-ghost-cards fade-${fade}">
-      ${cards.map(
-        (c) =>
-          html`<div class="ghost-card ${c.wide ? 'wide' : ''}" style="height: ${c.h}px"></div>`,
-      )}
+      <div class="ghost-card">
+        <span class="ghost-dot"></span>
+        <span class="ghost-line" style="width: 72%"></span>
+        <span class="ghost-line" style="width: 46%"></span>
+      </div>
+      <div class="ghost-card">
+        <span class="ghost-line" style="width: 82%"></span>
+        <span class="ghost-line" style="width: 58%"></span>
+        <span class="ghost-line" style="width: 70%"></span>
+      </div>
+      <div class="ghost-card wide">
+        <span class="ghost-row-line">
+          <span class="ghost-dot"></span>
+          <span class="ghost-line" style="width: 38%"></span>
+        </span>
+        <span class="ghost-line" style="width: 86%"></span>
+      </div>
     </div>
   `;
 };
