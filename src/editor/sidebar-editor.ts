@@ -1620,7 +1620,9 @@ export class DashboardSidebarEditor extends LitElement {
               if (!this._mobileDrag) {
                 return;
               }
-              const next = this._mobileDrag.startW - (ev.clientX - this._mobileDrag.startX);
+              const next = Math.round(
+                this._mobileDrag.startW - (ev.clientX - this._mobileDrag.startX),
+              );
               this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), bp);
             }}
             @pointerup=${() => {
@@ -1633,7 +1635,7 @@ export class DashboardSidebarEditor extends LitElement {
               this._mobilePreviewWidth = null;
             }}
           >
-            <ha-icon icon="mdi:drag-vertical"></ha-icon>
+            <ha-icon icon="mdi:arrow-split-vertical"></ha-icon>
           </div>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
             ${this._barPreviewEl()}
