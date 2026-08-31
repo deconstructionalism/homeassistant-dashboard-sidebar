@@ -1410,6 +1410,11 @@ export const editorStyles = css`
     gap: 8px;
   }
 
+  /* Row-layout confirm buttons share the full dialog width. */
+  .confirm-actions button {
+    flex: 1 1 0;
+  }
+
   /* Choice dialogs stack their options as full-width rows. */
   .confirm-actions-stack {
     flex-direction: column;
