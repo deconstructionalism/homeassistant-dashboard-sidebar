@@ -16,6 +16,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `start_collapsed` | `boolean` | no | Whether the sidebar starts collapsed, before any stored preference. |
 | `overlay` | `boolean` | no | Whether the sidebar floats over the dashboard content instead of pushing it aside. Default false (push): the view narrows by the sidebar's width. |
 | `hide_on_mobile` | `boolean` | no | Hide the sidebar on narrow (mobile) viewports. |
+| `hide_on_desktop` | `boolean` | no | Mobile-only mode: the desktop sidebar never renders; only the mobile bar shows, at and below the breakpoint. Requires a `mobile` config, which can still reference desktop-defined elements even though they stay hidden on desktop. |
 | `background` | `string` | no | Sidebar background: any CSS `background` value (color, gradient, image, …), applied as the `background` shorthand. Defaults to the theme card background. |
 | `header` | `SidebarBlock[]` | no | Blocks pinned to the top, above the scrolling body. |
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |

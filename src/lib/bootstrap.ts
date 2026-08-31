@@ -186,6 +186,7 @@ const structureKey = (config: DashboardSidebarConfig): string => {
     config.position ?? 'left',
     config.width ?? DEFAULT_WIDTH,
     config.hide_on_mobile ? 1 : 0,
+    config.hide_on_desktop ? 1 : 0,
     config.overlay ? 1 : 0,
   ].join(':');
 };
@@ -257,6 +258,12 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
            }`
+        : ''
+    }
+    ${
+      config.hide_on_desktop
+        ? `#${HOST_ID} { display: none; }
+           #${WRAPPER_ID} > #view { flex-basis: 100%; }`
         : ''
     }
     ${

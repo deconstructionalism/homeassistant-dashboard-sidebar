@@ -424,6 +424,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
       'mobile: cannot be combined with hide_on_mobile (a mobile config already hides the sidebar and shows the bar)',
     );
   }
+
   const explicit = mobile.items !== undefined;
   if (explicit && (mobile.hide !== undefined || mobile.override !== undefined)) {
     errors.push(
@@ -589,6 +590,10 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   checkBool(c.start_collapsed, 'start_collapsed', errors);
   checkBool(c.overlay, 'overlay', errors);
   checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
+  checkBool(c.hide_on_desktop, 'hide_on_desktop', errors);
+  if (config.hide_on_desktop && config.mobile === undefined) {
+    errors.push('hide_on_desktop: needs a `mobile` config; without one nothing would ever render');
+  }
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);
   validateRegion(config.body, 'body', errors);

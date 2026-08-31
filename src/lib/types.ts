@@ -380,6 +380,13 @@ export interface DashboardSidebarConfig {
   /** Hide the sidebar on narrow (mobile) viewports. */
   hide_on_mobile?: boolean;
   /**
+   * Mobile-only mode: the desktop sidebar never renders; only the mobile bar
+   * shows, at and below the breakpoint. Requires a `mobile` config, which
+   * can still reference desktop-defined elements even though they stay
+   * hidden on desktop.
+   */
+  hide_on_desktop?: boolean;
+  /**
    * Sidebar background: any CSS `background` value (color, gradient, image, …),
    * applied as the `background` shorthand. Defaults to the theme card background.
    */

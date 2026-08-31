@@ -479,6 +479,13 @@ describe('mobile config', () => {
     expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
   });
 
+  it('requires a mobile config for hide_on_desktop', () => {
+    const errors = vc({ body: [{ type: 'item', title: 'A' }], hide_on_desktop: true });
+    expect(errors.some((e) => e.includes('hide_on_desktop'))).toBe(true);
+    const ok = validateConfig({ ...withMobile({}), hide_on_desktop: true });
+    expect(ok.some((e) => e.includes('hide_on_desktop'))).toBe(false);
+  });
+
   it('rejects hiding and overriding the same id', () => {
     const errors = validateConfig(
       withMobile({ hide: ['rooms'], override: { rooms: { title: 'X' } } }),
