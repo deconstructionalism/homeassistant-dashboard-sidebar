@@ -375,12 +375,10 @@ export const editorStyles = css`
     margin-right: -12px;
   }
 
-  /* Position's two buttons share the width of the wider label. */
-  .mobile-position .icon-choice {
-    display: inline-grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 6px;
+  /* Position's two buttons share a fixed width sized to "Bottom". */
+  .mobile-position .icon-choice .choice {
+    width: 96px;
+    box-sizing: border-box;
   }
 
   .mobile-pv-wrap {
