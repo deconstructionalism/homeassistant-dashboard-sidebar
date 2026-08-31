@@ -1689,6 +1689,11 @@ export class DashboardSidebarEditor extends LitElement {
       )}
       <div class="mobile-stack">
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
+          <div class="form-head">
+            <div class="form-title">
+              Mobile Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
+            </div>
+          </div>
           ${
             this._mobileYaml
               ? this._yamlEditor(
@@ -1700,8 +1705,8 @@ export class DashboardSidebarEditor extends LitElement {
               : html`<small class="field-desc mobile-mode-line">
                     ${
                       custom
-                        ? 'Custom bar: a hand-picked list of elements defines the bar. Switch modes from the menu above.'
-                        : 'Mirror desktop: the bar strictly derives from the desktop sidebar. Switch modes from the menu above.'
+                        ? 'A hand-picked list of elements defines the bar. Switch modes from the menu in the top right.'
+                        : 'The bar strictly derives from the desktop sidebar. Switch modes from the menu in the top right.'
                     }
                   </small>
                   <div class="mobile-choice-row">
