@@ -1722,8 +1722,8 @@ export class DashboardSidebarEditor extends LitElement {
                   width >= maxW
                     ? 'mdi:arrow-collapse-right'
                     : width <= MIN_MOBILE_PREVIEW
-                      ? 'mdi:arrow-expand-left'
-                      : 'mdi:arrow-expand-horizontal'
+                      ? 'mdi:arrow-collapse-left'
+                      : 'mdi:arrow-collapse-horizontal'
                 }
               ></ha-icon>
               <span class="preview-title">Preview (${width}px)</span>
