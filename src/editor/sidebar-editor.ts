@@ -1250,16 +1250,19 @@ export class DashboardSidebarEditor extends LitElement {
           <button class="icon" title="Close" @click=${this._close}>✕</button>
         </header>
         <div class="tabs">
-          ${TABS.map(
-            (t) => html`
+          ${TABS.map((t) => {
+            const disabled = t.id === 'mobile' && mobileMode(this._working) !== 'bar';
+            return html`
               <button
                 class="tab ${this._tab === t.id ? 'active' : ''}"
+                ?disabled=${disabled}
+                title=${disabled ? 'Set On Mobile to Mobile Bar in Settings to configure the bar' : ''}
                 @click=${() => this._switchTab(t.id)}
               >
                 ${t.label}
               </button>
-            `,
-          )}
+            `;
+          })}
         </div>
         <div class="content">${this._renderTab()}</div>
         ${
@@ -1474,6 +1477,9 @@ export class DashboardSidebarEditor extends LitElement {
     } else {
       this._patchConfig({ on_mobile: undefined, mobile: undefined });
     }
+    if (mode !== 'bar' && this._tab === 'mobile') {
+      this._switchTab('settings');
+    }
   }
 
   /**
@@ -1522,28 +1528,10 @@ export class DashboardSidebarEditor extends LitElement {
   private _renderMobileTab(): TemplateResult {
     const mobile = this._working.mobile;
     if (mobileMode(this._working) !== 'bar') {
-      return html`
-        ${this._renderTabNotes(
-          'The mobile bar replaces the sidebar on narrow screens with a bottom (or top) bar derived from it.',
-          'The mobile bar previews at phone width.',
-        )}
-        <div class="split">
-          <div class="editor settings">
-            <p class="tab-note">
-              ${
-                mobileMode(this._working) === 'hidden'
-                  ? 'Nothing renders on narrow screens (On Mobile is set to Nothing in Settings).'
-                  : 'No mobile bar is configured; on phones the sidebar simply renders at full width.'
-              }
-            </p>
-            <div class="form-actions">
-              <button class="add-btn" @click=${() => this._setOnMobile('bar')}>
-                Enable Mobile Bar
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
+      // Unreachable through the UI (the tab is disabled), kept as a guard.
+      return html`<p class="tab-note">
+        Set On Mobile to Mobile Bar in Settings to configure the bar.
+      </p>`;
     }
     const m = mobile ?? {};
     const custom = m.items !== undefined;
