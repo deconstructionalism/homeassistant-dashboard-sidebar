@@ -504,6 +504,38 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     });
   }
 
+  if (mobile.footer !== undefined) {
+    if (!Array.isArray(mobile.footer)) {
+      errors.push('mobile.footer: must be a list');
+      return;
+    }
+    mobile.footer.forEach((entry, i) => {
+      const ctx = `mobile.footer[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${ctx}: must be a mapping`);
+        return;
+      }
+      if ('use' in entry) {
+        const use = (entry as MobileUseEntry).use;
+        if (typeof use !== 'string' || !use) {
+          errors.push(`${ctx}.use: must be an element id`);
+        } else {
+          const kind = kinds.get(use);
+          if (kind === undefined) {
+            errors.push(`${ctx}.use: unknown id "${use}" (known: ${[...kinds.keys()].join(', ') || 'none'})`);
+          } else if (kind !== 'item' && kind !== 'button') {
+            errors.push(
+              `${ctx}.use: "${use}" cannot be a footer-strip button; only items and footer buttons can`,
+            );
+          }
+        }
+        checkOverridePatch(entry, ctx, errors);
+      } else {
+        validateItem(entry as ItemBlock, ctx, errors);
+      }
+    });
+  }
+
   if (mobile.menu !== undefined) {
     if (!Array.isArray(mobile.menu)) {
       errors.push('mobile.menu: must be a list');
@@ -607,6 +639,11 @@ const checkUniqueIds = (config: DashboardSidebarConfig, errors: string[]): void 
   list(config.mobile?.menu).forEach((entry, i) => {
     if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
       claim(entry, `mobile.menu[${i}]`);
+    }
+  });
+  list(config.mobile?.footer).forEach((entry, i) => {
+    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
+      claim(entry, `mobile.footer[${i}]`);
     }
   });
 };

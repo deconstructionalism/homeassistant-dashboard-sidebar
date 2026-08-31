@@ -27,7 +27,7 @@ const base = (): DashboardSidebarConfig => ({
 
 describe('resolveBar, derive mode', () => {
   it('returns nothing without a mobile config', () => {
-    expect(resolveBar(base())).toEqual({ slots: [], menu: [], extras: [] });
+    expect(resolveBar(base())).toEqual({ slots: [], menu: [], extras: [], footer: [] });
   });
 
   it('mirrors the nav in order, footer buttons to the menu, non-bar blocks skipped', () => {
@@ -112,6 +112,29 @@ describe('resolveBar, sheet menu', () => {
     expect(slots).toHaveLength(1);
     expect(extras).toHaveLength(1);
     expect(extras[0].kind).toBe('markdown');
+  });
+});
+
+describe('resolveBar, sheet footer strip', () => {
+  it('replaces the derived button strip in derive mode', () => {
+    const config = {
+      ...base(),
+      mobile: { footer: [{ use: 'rooms' }, { use: 'lock', icon: 'mdi:lock-open' }] },
+    };
+    const { menu, footer } = resolveBar(config);
+    expect(menu).toEqual([]);
+    expect(footer.map((e) => e.kind)).toEqual(['item', 'button']);
+    expect((footer[1].element as { icon?: string }).icon).toBe('mdi:lock-open');
+  });
+
+  it('fills the strip in explicit mode and skips unknown ids', () => {
+    const config = {
+      ...base(),
+      mobile: { items: [{ use: 'rooms' }], footer: [{ use: 'nope' }, { use: 'lock' }] },
+    };
+    const { footer } = resolveBar(config);
+    expect(footer).toHaveLength(1);
+    expect(footer[0].kind).toBe('button');
   });
 });
 

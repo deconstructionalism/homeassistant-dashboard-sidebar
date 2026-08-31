@@ -35,6 +35,8 @@ export interface ResolvedBar {
   menu: BarEntry[];
   /** Curated sheet entries from `mobile.menu`, after the overflowed slots. */
   extras: BarEntry[];
+  /** The curated sheet footer strip from `mobile.footer`; empty when unset. */
+  footer: BarEntry[];
 }
 
 /** One resolved slot of the mobile bar. */
@@ -85,10 +87,10 @@ const mergedCategory = (
  * Resolves the curated `mobile.menu` sheet entries: `use:` references to any
  * element (titles, markdown, and cards included) and inline blocks.
  */
-const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): BarEntry[] => {
-  if (!Array.isArray(mobile.menu)) {
-    return [];
-  }
+/** An id index of every element in the config, for curated-list resolution. */
+const elementIndex = (
+  config: DashboardSidebarConfig,
+): Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }> => {
   const all = new Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }>();
   for (const block of [...(config.header ?? []), ...(config.body ?? [])]) {
     const type = (block.type ?? 'item') as BarEntryKind;
@@ -108,15 +110,27 @@ const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): Ba
       all.set(btn.id, { kind: 'button', element: btn });
     }
   }
-  const extras: BarEntry[] = [];
-  for (const entry of mobile.menu) {
+  return all;
+};
+
+/** Resolves one curated list (`mobile.menu` / `mobile.footer`) to entries. */
+const resolveCurated = (
+  config: DashboardSidebarConfig,
+  entries: unknown,
+): BarEntry[] => {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  const all = elementIndex(config);
+  const out: BarEntry[] = [];
+  for (const entry of entries as (MobileUseEntry | SidebarBlock)[]) {
     if ('use' in entry) {
       const target = all.get(entry.use);
       if (!target) {
         continue; // validation reports this; resolution just skips it
       }
       const patch = patchOf(entry);
-      extras.push({
+      out.push({
         source: 'use',
         kind: target.kind,
         element:
@@ -125,22 +139,27 @@ const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): Ba
             : merged(target.element, patch),
       });
     } else {
-      extras.push({
+      out.push({
         source: 'inline',
         kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
         element: { ...entry },
       });
     }
   }
-  return extras;
+  return out;
+};
+
+const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): BarEntry[] => {
+  return resolveCurated(config, mobile.menu);
 };
 
 export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   const mobile = config.mobile;
   if (!mobile) {
-    return { slots: [], menu: [], extras: [] };
+    return { slots: [], menu: [], extras: [], footer: [] };
   }
   const extras = resolveExtras(config, mobile);
+  const footer = mobile.footer !== undefined ? resolveCurated(config, mobile.footer) : null;
   const hidden = new Set(mobile.hide ?? []);
   const overrides = mobile.override ?? {};
   const blocks = [...(config.header ?? []), ...(config.body ?? [])];
@@ -171,14 +190,18 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
         });
       }
     }
-    const menu: BarEntry[] = (config.footer?.buttons ?? [])
-      .filter((btn) => !(btn.id && hidden.has(btn.id)))
-      .map((btn) => ({
-        source: 'derived' as const,
-        kind: 'button' as const,
-        element: merged(btn, btn.id ? overrides[btn.id] : undefined),
-      }));
-    return { slots, menu, extras };
+    // An explicit mobile.footer replaces the derived button strip outright.
+    const menu: BarEntry[] =
+      footer !== null
+        ? []
+        : (config.footer?.buttons ?? [])
+            .filter((btn) => !(btn.id && hidden.has(btn.id)))
+            .map((btn) => ({
+              source: 'derived' as const,
+              kind: 'button' as const,
+              element: merged(btn, btn.id ? overrides[btn.id] : undefined),
+            }));
+    return { slots, menu, extras, footer: footer ?? [] };
   }
 
   const byId = new Map<
@@ -230,5 +253,5 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
       slots.push({ source: 'inline', kind: 'item', element: { ...entry } });
     }
   }
-  return { slots, menu: [], extras };
+  return { slots, menu: [], extras, footer: footer ?? [] };
 };

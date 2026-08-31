@@ -471,6 +471,14 @@ describe('mobile config', () => {
     expect(errors.some((e) => e.includes('mobile.menu[0]'))).toBe(true);
   });
 
+  it('restricts the sheet footer strip to items and buttons', () => {
+    const ok = validateConfig(withMobile({ footer: [{ use: 'rooms' }] }));
+    expect(ok.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const errors = validateConfig(withMobile({ footer: [{ use: 'md' }, { use: 'nope' }] }));
+    expect(errors.some((e) => e.includes('cannot be a footer-strip button'))).toBe(true);
+    expect(errors.some((e) => e.includes('unknown id "nope"'))).toBe(true);
+  });
+
   it('rejects hiding and overriding the same id', () => {
     const errors = validateConfig(
       withMobile({ hide: ['rooms'], override: { rooms: { title: 'X' } } }),

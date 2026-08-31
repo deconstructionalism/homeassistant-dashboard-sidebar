@@ -155,6 +155,25 @@ describe('<dashboard-sidebar-bar>', () => {
     }
   });
 
+  it('renders a curated footer strip in explicit mode', async () => {
+    const el = await mount({
+      ...base(),
+      mobile: {
+        items: [{ use: 'rooms' }],
+        footer: [{ use: 'lock' }, { use: 'weather', icon: 'mdi:weather-rainy' }],
+      },
+    });
+    const dots = root(el).querySelector(
+      '.dashboard-sidebar-bar-slot-overflow',
+    ) as HTMLButtonElement;
+    expect(dots).to.exist;
+    dots.click();
+    await el.updateComplete;
+    const btns = root(el).querySelectorAll('.dashboard-sidebar-bar-sheet-footer-btn');
+    expect(btns.length).to.equal(2);
+    expect(btns[1].querySelector('ha-icon')?.getAttribute('icon')).to.equal('mdi:weather-rainy');
+  });
+
   it('folds overflow into the sheet with accordion categories', async () => {
     const config = base();
     config.body = [

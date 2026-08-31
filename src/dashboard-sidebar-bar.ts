@@ -159,6 +159,7 @@ export class DashboardSidebarBar extends LitElement {
       ...this._resolved.slots,
       ...this._resolved.menu,
       ...this._resolved.extras,
+      ...this._resolved.footer,
     ]) {
       if (entry.kind === 'button') {
         buttons.push(entry.element as FooterButtonConfig);
@@ -294,6 +295,7 @@ export class DashboardSidebarBar extends LitElement {
     if (
       menu.length === 0 &&
       this._resolved.extras.length === 0 &&
+      this._resolved.footer.length === 0 &&
       !this._footerHasContent() &&
       slots.length <= this._capacity
     ) {
@@ -706,13 +708,26 @@ export class DashboardSidebarBar extends LitElement {
     const content = this._renderSheetFooterContent();
     const extras = this._resolved.extras;
     const shown = this._open === 'menu' || this._sheetClosing;
-    if (!shown || (menu.length === 0 && extras.length === 0 && content === nothing)) {
+    if (
+      !shown ||
+      (menu.length === 0 &&
+        extras.length === 0 &&
+        this._resolved.footer.length === 0 &&
+        content === nothing)
+    ) {
       return nothing;
     }
     const closing =
       (this._sheetClosing ? ' closing' : '') +
       (this._sheetShown && this._open === 'menu' ? ' open' : '');
-    const buttons = content === nothing ? menu.filter((e) => e.kind === 'button') : [];
+    const curated = this._resolved.footer;
+    const shownContent = curated.length > 0 ? nothing : content;
+    const buttons =
+      curated.length > 0
+        ? curated
+        : shownContent === nothing
+          ? menu.filter((e) => e.kind === 'button')
+          : [];
     const rows = menu.filter((e) => e.kind !== 'button');
     return html`
       <div class="dashboard-sidebar-bar-sheet-scrim${closing}" @click=${() => this._close()}></div>
@@ -745,7 +760,11 @@ export class DashboardSidebarBar extends LitElement {
                     this._config?.footer?.divider === false ? 'no-divider' : ''
                   }"
                 >
-                  ${content !== nothing ? content : buttons.map((entry) => this._renderSheetButton(entry))}
+                  ${
+                    shownContent !== nothing
+                      ? shownContent
+                      : buttons.map((entry) => this._renderSheetButton(entry))
+                  }
                 </div>
               `
             : nothing
@@ -792,7 +811,10 @@ export class DashboardSidebarBar extends LitElement {
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
-            menu.length > 0 || this._resolved.extras.length > 0 || this._footerHasContent()
+            menu.length > 0 ||
+            this._resolved.extras.length > 0 ||
+            this._resolved.footer.length > 0 ||
+            this._footerHasContent()
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${

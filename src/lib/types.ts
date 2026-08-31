@@ -343,6 +343,12 @@ export interface MobileConfig {
    * titles, markdown, and cards. Applies in both derive and explicit mode.
    */
   menu?: MobileMenuEntry[];
+  /**
+   * The sheet's pinned footer strip: `use:` references to footer buttons or
+   * items, and inline items, rendered as icon buttons. When set it replaces
+   * the strip derived from the desktop footer (and a card/markdown footer).
+   */
+  footer?: MobileBarEntry[];
   /** Viewport width in pixels at and below which the bar shows. Default 768. */
   breakpoint?: number;
   /** Screen edge the bar docks to. Default bottom. */
