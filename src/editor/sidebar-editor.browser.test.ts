@@ -100,7 +100,7 @@ describe('<dashboard-sidebar-editor>', () => {
     await el.updateComplete;
     rows = [...root(el).querySelectorAll('.mobile-elem-row')];
     expect(rows[0].textContent).to.include('Xtra');
-    (rows[0].querySelector('[title="Remove from bar"]') as HTMLButtonElement).click();
+    (rows[0].querySelector('[title="Remove"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(root(el).querySelectorAll('.mobile-elem-row').length).to.equal(1);
   });
