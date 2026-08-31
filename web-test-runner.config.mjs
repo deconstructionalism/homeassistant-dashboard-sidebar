@@ -7,7 +7,12 @@ export default {
   concurrency: 1,
   // Compile TypeScript (including the Lit decorators, per tsconfig) on the fly.
   plugins: [esbuildPlugin({ ts: true, target: 'es2021', tsconfig: 'tsconfig.json' })],
-  browsers: [playwrightLauncher({ product: 'chromium' })],
+  // Chromium covers Android (same engine as Android WebView); WebKit is the
+  // iOS Safari / companion-app engine and catches its shadow-DOM quirks.
+  browsers: [
+    playwrightLauncher({ product: 'chromium' }),
+    playwrightLauncher({ product: 'webkit' }),
+  ],
   testFramework: {
     config: { timeout: '10000' },
   },
