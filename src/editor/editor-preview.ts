@@ -47,7 +47,7 @@ export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
           <span class="ghost-sub" style="height: 44px"></span>
           <span class="ghost-sub" style="height: 44px"></span>
         </div>
-        <span class="ghost-sub" style="height: 26px"></span>
+        <span class="ghost-sub ghost-sub-fill"></span>
       </div>
     </div>
   `;

@@ -566,6 +566,12 @@ export const editorStyles = css`
     flex: 1 1 0;
   }
 
+  /* Fills whatever card height remains below its siblings. */
+  .ghost-sub-fill {
+    flex: 1 1 auto;
+    min-height: 26px;
+  }
+
   .mobile-pv-frame .pv-ghost-cards {
     flex: 0 0 auto;
     max-height: 160px;
