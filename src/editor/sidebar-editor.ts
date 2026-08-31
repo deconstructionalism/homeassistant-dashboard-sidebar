@@ -245,6 +245,9 @@ export class DashboardSidebarEditor extends LitElement {
   /** Whether the Settings tab is editing the whole sidebar config as YAML. */
   @state() private _settingsYaml = false;
 
+  /** Whether the Mobile tab is editing the mobile section as YAML. */
+  @state() private _mobileYaml = false;
+
   /** The current YAML parse error for the selected element, or null. */
   @state() private _yamlError: string | null = null;
 
@@ -1585,43 +1588,68 @@ export class DashboardSidebarEditor extends LitElement {
         'The mobile bar previews at phone width.',
       )}
       <div class="mobile-stack">
-        <div class="editor settings">
-          ${iconChoiceField('Mode', custom ? 'custom' : 'mirror', MOBILE_MODE_META, (v) =>
-            this._setMobileMode(v),
-          )}
-          ${
-            custom
-              ? html`<p class="tab-note">
-                  Custom bar editing lands in the next update; for now the list mirrors what was
-                  derived when you switched, and YAML mode can edit it fully.
-                </p>`
-              : nothing
-          }
-          ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
-            this._patchMobile({ position: v === 'bottom' ? undefined : v }),
-          )}
-          ${checkboxField(
-            'Show Labels',
-            m.labels ?? false,
-            (v) => this._patchMobile({ labels: v || undefined }),
-            'Show element titles under the bar icons.',
-          )}
-          <details class="advanced">
-            <summary>Advanced</summary>
-            ${colorField(
-              'Bar Background CSS',
-              m.background,
-              (v) => this._patchMobile({ background: v || undefined }),
-              'Any valid CSS background. Defaults to the sidebar background.',
-            )}
-            ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
-            ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
-          </details>
-          <div class="form-actions">
-            <button class="add-btn danger" @click=${() => this._setOnMobile('sidebar')}>
-              Remove Mobile Bar
-            </button>
+        <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
+          <div class="form-head">
+            <div class="form-title">Mobile Bar</div>
+            <div class="form-tools">
+              <button
+                class="tool"
+                title="More"
+                aria-label="More"
+                @click=${(e: Event) => this._openElementMenu(e)}
+              >
+                <ha-icon icon="mdi:dots-vertical"></ha-icon>
+              </button>
+            </div>
           </div>
+          ${
+            this._mobileYaml
+              ? this._yamlEditor(
+                  this._working.mobile ?? {},
+                  (v) => this._patchConfig({ mobile: v }),
+                  (parsed) =>
+                    validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
+                )
+              : html`${iconChoiceField(
+                    'Mode',
+                    custom ? 'custom' : 'mirror',
+                    MOBILE_MODE_META,
+                    (v) => this._setMobileMode(v),
+                  )}
+                  ${
+                    custom
+                      ? html`<p class="tab-note">
+                          Custom bar editing lands in the next update; for now the list mirrors what
+                          was derived when you switched, and YAML mode can edit it fully.
+                        </p>`
+                      : nothing
+                  }
+                  ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
+                    this._patchMobile({ position: v === 'bottom' ? undefined : v }),
+                  )}
+                  ${checkboxField(
+                    'Show Labels',
+                    m.labels ?? false,
+                    (v) => this._patchMobile({ labels: v || undefined }),
+                    'Show element titles under the bar icons.',
+                  )}
+                  <details class="advanced">
+                    <summary>Advanced</summary>
+                    ${colorField(
+                      'Bar Background CSS',
+                      m.background,
+                      (v) => this._patchMobile({ background: v || undefined }),
+                      'Any valid CSS background. Defaults to the sidebar background.',
+                    )}
+                    ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
+                    ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
+                  </details>
+                  <div class="form-actions">
+                    <button class="add-btn danger" @click=${() => this._setOnMobile('sidebar')}>
+                      Remove Mobile Bar
+                    </button>
+                  </div>`
+          }
         </div>
         ${this._renderMobilePreview()}
       </div>
@@ -2249,6 +2277,12 @@ export class DashboardSidebarEditor extends LitElement {
     let items: TemplateResult;
     if (this._tab === 'settings') {
       items = this._renderSettingsMenuItems();
+    } else if (this._tab === 'mobile') {
+      items = html`
+        <button class="add-menu-item" @click=${() => this._toggleMobileYaml()}>
+          ${this._mobileYaml ? 'Edit With UI' : 'Edit As YAML'}
+        </button>
+      `;
     } else {
       const sel = this._locate(this._selected);
       const category = sel?.kind === 'block' && sel.block.type === 'category' ? sel : null;
@@ -2345,6 +2379,19 @@ export class DashboardSidebarEditor extends LitElement {
   /**
    * Toggles the Settings tab between the UI form and the whole-config YAML
    * editor, surfacing any schema errors on entering.
+   */
+  /**
+   * Toggles the Mobile tab between the UI form and YAML for the mobile
+   * section alone.
+   */
+  private _toggleMobileYaml(): void {
+    this._mobileYaml = !this._mobileYaml;
+    this._yamlError = this._mobileYaml ? validateConfig(this._working).join(' • ') || null : null;
+    this._menus.elementOpen = false;
+  }
+
+  /**
+   * Toggles the Settings tab between the UI form and whole-config YAML.
    */
   private _toggleSettingsYaml(): void {
     this._settingsYaml = !this._settingsYaml;
