@@ -20,6 +20,29 @@ export const renderGhost = (fade: 'up' | 'down'): TemplateResult => {
 };
 
 /**
+ * Faded skeleton cards standing in for dashboard content beside the mobile
+ * bar: a two-column card grid rather than list rows, fading away from the
+ * bar's edge.
+ */
+export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
+  const cards = [
+    { h: 52, wide: false },
+    { h: 52, wide: false },
+    { h: 64, wide: true },
+    { h: 44, wide: false },
+    { h: 44, wide: false },
+  ];
+  return html`
+    <div class="pv-ghost-cards fade-${fade}">
+      ${cards.map(
+        (c) =>
+          html`<div class="ghost-card ${c.wide ? 'wide' : ''}" style="height: ${c.h}px"></div>`,
+      )}
+    </div>
+  `;
+};
+
+/**
  * The borderless empty state for a region with no elements: a short prompt and
  * the given add control.
  */

@@ -20,7 +20,7 @@ import '../dashboard-sidebar-bar';
 import { mobileMode, resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
-import { renderEmptyState, renderGhost } from './editor-preview';
+import { renderEmptyState, renderGhost, renderGhostCards } from './editor-preview';
 import { editorStyles } from './editor-styles';
 import {
   DEFAULT_WIDTH,
@@ -1764,9 +1764,17 @@ export class DashboardSidebarEditor extends LitElement {
           </div>
           <span class="mobile-pv-caption preview-title">Preview (${width}px)</span>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
-            ${(this._working.mobile?.position ?? 'bottom') === 'top' ? nothing : renderGhost('up')}
+            ${
+              (this._working.mobile?.position ?? 'bottom') === 'top'
+                ? nothing
+                : renderGhostCards('up')
+            }
             ${this._barPreviewEl()}
-            ${(this._working.mobile?.position ?? 'bottom') === 'top' ? renderGhost('down') : nothing}
+            ${
+              (this._working.mobile?.position ?? 'bottom') === 'top'
+                ? renderGhostCards('down')
+                : nothing
+            }
           </div>
         </div>
         <small class="field-desc mobile-pv-hint">

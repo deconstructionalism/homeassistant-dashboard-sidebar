@@ -510,11 +510,38 @@ export const editorStyles = css`
     overflow: hidden;
   }
 
-  /* A short strip of ghost dashboard content on the page side of the bar. */
-  .mobile-pv-frame .pv-ghost {
+  /* A short strip of ghost dashboard cards on the page side of the bar. */
+  .pv-ghost-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-content: start;
+    padding: 10px 14px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .pv-ghost-cards.fade-up {
+    align-content: end;
+    mask-image: linear-gradient(to top, #000 15%, transparent 95%);
+  }
+
+  .pv-ghost-cards.fade-down {
+    mask-image: linear-gradient(to bottom, #000 15%, transparent 95%);
+  }
+
+  .ghost-card {
+    border-radius: 10px;
+    background: var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  .ghost-card.wide {
+    grid-column: span 2;
+  }
+
+  .mobile-pv-frame .pv-ghost-cards {
     flex: 0 0 auto;
-    min-height: 0;
-    max-height: 88px;
+    max-height: 96px;
   }
 
   .mobile-pv-frame::after {
