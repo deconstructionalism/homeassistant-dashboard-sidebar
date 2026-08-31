@@ -398,6 +398,11 @@ export const editorStyles = css`
     margin-top: 6px;
   }
 
+  .mobile-mode-line {
+    display: block;
+    margin-bottom: 4px;
+  }
+
   .mobile-pv-wrap {
     position: relative;
     display: flex;

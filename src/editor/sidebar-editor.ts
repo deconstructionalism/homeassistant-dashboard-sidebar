@@ -159,12 +159,6 @@ const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer' | 'mobile'; la
   { id: 'mobile', label: 'Mobile' },
 ];
 
-/** Icon and label for the two mobile bar modes. */
-const MOBILE_MODE_META: Array<{ value: string; icon: string; title: string }> = [
-  { value: 'mirror', icon: 'mdi:mirror-rectangle', title: 'Mirror desktop' },
-  { value: 'custom', icon: 'mdi:pencil-ruler', title: 'Custom bar' },
-];
-
 /**
  * The narrowest real phone viewport the mobile preview can be dragged to:
  * 320 CSS px, the iPhone SE / classic small-Android width (only foldable
@@ -247,6 +241,12 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Whether the Mobile tab is editing the mobile section as YAML. */
   @state() private _mobileYaml = false;
+
+  /** Whether the switch-to-custom choice dialog is showing. */
+  @state() private _confirmingCustomSwitch = false;
+
+  /** Whether the switch-to-mirror confirmation is showing. */
+  @state() private _confirmingMirrorSwitch = false;
 
   /** The current YAML parse error for the selected element, or null. */
   @state() private _yamlError: string | null = null;
@@ -1354,8 +1354,52 @@ export class DashboardSidebarEditor extends LitElement {
         </footer>
         ${this._confirmingClose ? this._renderConfirmClose() : nothing}
         ${this._confirmingDelete ? this._renderConfirmDelete() : nothing}
+        ${this._confirmingCustomSwitch ? this._renderConfirmCustomSwitch() : nothing}
+        ${
+          this._confirmingMirrorSwitch
+            ? confirmDialog({
+                label: 'Switch to mirror desktop',
+                message:
+                  'Switch to mirror desktop? The custom bar, menu, and footer configuration will be removed.',
+                keepLabel: 'Cancel',
+                confirmLabel: 'Switch',
+                onKeep: () => {
+                  this._confirmingMirrorSwitch = false;
+                },
+                onConfirm: () => this._switchToMirror(),
+              })
+            : nothing
+        }
       </div>
       ${this._renderAddMenuPopup()} ${this._renderElementMenu()} ${this._renderTabMenu()}
+    `;
+  }
+
+  /**
+   * The mirror-to-custom switch choice: copy the derived bar into an
+   * explicit list, start empty, or cancel.
+   */
+  private _renderConfirmCustomSwitch(): TemplateResult {
+    return html`
+      <div class="confirm-scrim">
+        <div class="confirm" role="alertdialog" aria-label="Switch to custom bar">
+          <p>
+            Switch to a custom bar? You can start from the current bar's elements or from an empty
+            list.
+          </p>
+          <div class="confirm-actions">
+            <button
+              @click=${() => {
+                this._confirmingCustomSwitch = false;
+              }}
+            >
+              Cancel
+            </button>
+            <button @click=${() => this._switchToCustom(false)}>Start Empty</button>
+            <button @click=${() => this._switchToCustom(true)}>Copy Current Bar</button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -1579,26 +1623,40 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Switches between mirror (derive) and custom (explicit items) mode. Going
-   * custom seeds the list from the currently derived bar so the switch is
-   * lossless in appearance; going back to mirror drops the custom list.
+   * Switches to the custom (explicit items) mode: either seeding the list
+   * from the currently derived bar so the switch is lossless in appearance,
+   * or starting from an empty list.
    */
-  private _setMobileMode(mode: string): void {
+  private _switchToCustom(copy: boolean): void {
     const mobile = this._working.mobile ?? {};
-    const custom = mobile.items !== undefined;
-    if (mode === 'custom' && !custom) {
+    let items: Array<{ use: string }> = [];
+    if (copy) {
       const derived = resolveBar({
         ...this._working,
         mobile: { ...mobile, items: undefined },
       }).slots;
-      const items = derived
+      items = derived
         .map((entry) => (entry.element as { id?: string }).id)
         .filter((id): id is string => Boolean(id))
         .map((id) => ({ use: id }));
-      this._patchMobile({ items, hide: undefined, override: undefined });
-    } else if (mode === 'mirror' && custom) {
-      this._patchMobile({ items: undefined });
     }
+    this._patchMobile({ items, hide: undefined, override: undefined });
+    this._confirmingCustomSwitch = false;
+  }
+
+  /**
+   * Switches back to strict mirror mode, dropping the whole custom
+   * configuration (items, curated menu and footer, hide, override).
+   */
+  private _switchToMirror(): void {
+    this._patchMobile({
+      items: undefined,
+      menu: undefined,
+      footer: undefined,
+      hide: undefined,
+      override: undefined,
+    });
+    this._confirmingMirrorSwitch = false;
   }
 
   /**
@@ -1639,22 +1697,14 @@ export class DashboardSidebarEditor extends LitElement {
                   (parsed) =>
                     validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
                 )
-              : html`<div class="mobile-choice-row">
-                    <div class="mobile-choice">
-                      ${iconChoiceField(
-                        'Mode',
-                        custom ? 'custom' : 'mirror',
-                        MOBILE_MODE_META,
-                        (v) => this._setMobileMode(v),
-                      )}
-                      <small class="field-desc">
-                        ${
-                          custom
-                            ? 'A hand-picked list of elements defines the bar.'
-                            : 'The bar derives from the desktop sidebar.'
-                        }
-                      </small>
-                    </div>
+              : html`<small class="field-desc mobile-mode-line">
+                    ${
+                      custom
+                        ? 'Custom bar: a hand-picked list of elements defines the bar. Switch modes from the menu above.'
+                        : 'Mirror desktop: the bar strictly derives from the desktop sidebar. Switch modes from the menu above.'
+                    }
+                  </small>
+                  <div class="mobile-choice-row">
                     <div class="mobile-choice">
                       ${iconChoiceField(
                         'Position',
@@ -2377,7 +2427,21 @@ export class DashboardSidebarEditor extends LitElement {
     if (this._tab === 'settings') {
       items = this._renderSettingsMenuItems();
     } else if (this._tab === 'mobile') {
+      const custom = this._working.mobile?.items !== undefined;
       items = html`
+        <button
+          class="add-menu-item"
+          @click=${() => {
+            this._menus.elementOpen = false;
+            if (custom) {
+              this._confirmingMirrorSwitch = true;
+            } else {
+              this._confirmingCustomSwitch = true;
+            }
+          }}
+        >
+          ${custom ? 'Switch To Mirror Desktop' : 'Switch To Custom Bar'}
+        </button>
         <button class="add-menu-item" @click=${() => this._toggleMobileYaml()}>
           ${this._mobileYaml ? 'Edit With UI' : 'Edit As YAML'}
         </button>
