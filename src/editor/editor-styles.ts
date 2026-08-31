@@ -101,6 +101,12 @@ export const editorStyles = css`
     opacity: 0.7;
   }
 
+  .tab:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: auto;
+  }
+
   .tab.active {
     background-color: var(--primary-background-color, #fff);
     background-image: linear-gradient(
