@@ -376,12 +376,12 @@ export const editorStyles = css`
     min-width: 0;
   }
 
+  /* Equal-width buttons within each pair, sized to the wider label rather
+     than stretched across the column. */
   .mobile-choice .icon-choice {
-    display: flex;
-  }
-
-  .mobile-choice .icon-choice button {
-    flex: 1 1 0;
+    display: inline-grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
   }
 
   .choice-desc {
