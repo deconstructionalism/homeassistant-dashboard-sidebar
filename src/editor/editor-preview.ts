@@ -31,11 +31,15 @@ export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
         <span class="ghost-dot"></span>
         <span class="ghost-line" style="width: 72%"></span>
         <span class="ghost-line" style="width: 46%"></span>
+        <span class="ghost-line" style="width: 64%"></span>
+        <span class="ghost-line" style="width: 38%"></span>
       </div>
       <div class="ghost-card">
         <span class="ghost-line" style="width: 82%"></span>
         <span class="ghost-line" style="width: 58%"></span>
         <span class="ghost-line" style="width: 70%"></span>
+        <span class="ghost-line" style="width: 44%"></span>
+        <span class="ghost-line" style="width: 62%"></span>
       </div>
       <div class="ghost-card wide">
         <span class="ghost-row-line">

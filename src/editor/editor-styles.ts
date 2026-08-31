@@ -533,8 +533,9 @@ export const editorStyles = css`
   .ghost-card {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    padding: 10px 12px;
+    gap: 9px;
+    padding: 14px;
+    min-height: 96px;
     border-radius: 10px;
     background: rgb(127 127 127 / 10%);
   }
@@ -569,7 +570,7 @@ export const editorStyles = css`
 
   .mobile-pv-frame .pv-ghost-cards {
     flex: 0 0 auto;
-    max-height: 108px;
+    max-height: 160px;
   }
 
   .mobile-pv-frame::after {
