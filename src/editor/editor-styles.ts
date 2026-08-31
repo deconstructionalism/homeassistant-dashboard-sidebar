@@ -363,15 +363,15 @@ export const editorStyles = css`
     position: relative;
     display: flex;
     flex: 1 1 auto;
-    justify-content: flex-end;
+    justify-content: flex-start;
     min-width: 0;
     min-height: 0;
     /* Room for the drag arrow + caption floating above the bar. */
     margin-top: 24px;
   }
 
-  /* The resize handle rides the frame's left edge as a thin rail with the
-     direction arrow at its top; being absolute it takes no layout width. */
+  /* The resize handle rides the frame's right edge as a thin rail with the
+     direction arrows at its top; being absolute it takes no layout width. */
   .mobile-pv-handle {
     position: absolute;
     top: 0;
@@ -381,7 +381,7 @@ export const editorStyles = css`
     width: 16px;
     align-items: flex-start;
     justify-content: center;
-    transform: translateX(50%);
+    transform: translateX(-50%);
     color: var(--secondary-text-color, #888);
     cursor: ew-resize;
     touch-action: none;
@@ -430,11 +430,13 @@ export const editorStyles = css`
     gap: 0;
   }
 
-  .mobile-pv-arrows.min {
+  /* At full width only shrinking (leftward) remains; at minimum only
+     expanding (rightward). The lone arrow sits on the side it points to. */
+  .mobile-pv-arrows.max {
     transform: translateX(-100%);
   }
 
-  .mobile-pv-arrows.max {
+  .mobile-pv-arrows.min {
     margin-left: 0;
   }
 
