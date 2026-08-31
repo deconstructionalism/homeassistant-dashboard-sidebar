@@ -80,17 +80,11 @@ export const barStyles = css`
     border-radius: 0 0 var(--dashboard-sidebar-bar-sheet-radius, 16px)
       var(--dashboard-sidebar-bar-sheet-radius, 16px);
     box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
-    animation-name: dashboard-sidebar-bar-drop;
+    transform: translateY(-100%);
   }
 
-  @keyframes dashboard-sidebar-bar-drop {
-    from {
-      transform: translateY(-100%);
-    }
-
-    to {
-      transform: translateY(0);
-    }
+  :host([data-position='top']) .dashboard-sidebar-bar-sheet.open {
+    transform: translateY(0);
   }
 
   .dashboard-sidebar-bar-slots {
@@ -259,7 +253,12 @@ export const barStyles = css`
     inset: 0;
     z-index: 0;
     background: var(--dashboard-sidebar-bar-scrim-color, rgb(0 0 0 / 32%));
-    animation: dashboard-sidebar-bar-fade 0.15s ease-out;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .dashboard-sidebar-bar-sheet-scrim.open {
+    opacity: 1;
   }
 
   .dashboard-sidebar-bar-sheet {
@@ -279,62 +278,20 @@ export const barStyles = css`
     box-shadow: 0 -4px 16px rgb(0 0 0 / 25%);
 
     /* The same slide the sidebar uses when collapsing/expanding (0.25s ease):
-       the sheet slides out from behind the bar, which stacks above it. */
-    animation: dashboard-sidebar-bar-rise 0.25s ease;
+       the sheet slides out from behind the bar, which stacks above it. A
+       transition rather than keyframes, because WebKit does not reliably
+       resolve @keyframes from shadow-DOM constructed stylesheets. */
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
   }
 
-  @keyframes dashboard-sidebar-bar-rise {
-    from {
-      transform: translateY(100%);
-    }
-
-    to {
-      transform: translateY(0);
-    }
+  .dashboard-sidebar-bar-sheet.open {
+    transform: translateY(0);
   }
 
-  .dashboard-sidebar-bar-sheet.closing {
-    animation: dashboard-sidebar-bar-rise-out 0.25s ease forwards;
-    pointer-events: none;
-  }
-
-  @keyframes dashboard-sidebar-bar-rise-out {
-    from {
-      transform: translateY(0);
-    }
-
-    to {
-      transform: translateY(100%);
-    }
-  }
-
-  :host([data-position='top']) .dashboard-sidebar-bar-sheet.closing {
-    animation-name: dashboard-sidebar-bar-drop-out;
-  }
-
-  @keyframes dashboard-sidebar-bar-drop-out {
-    from {
-      transform: translateY(0);
-    }
-
-    to {
-      transform: translateY(-100%);
-    }
-  }
-
+  .dashboard-sidebar-bar-sheet.closing,
   .dashboard-sidebar-bar-sheet-scrim.closing {
-    animation: dashboard-sidebar-bar-fade-out 0.25s ease forwards;
     pointer-events: none;
-  }
-
-  @keyframes dashboard-sidebar-bar-fade-out {
-    from {
-      opacity: 1;
-    }
-
-    to {
-      opacity: 0;
-    }
   }
 
   @keyframes dashboard-sidebar-bar-fade {
@@ -349,10 +306,8 @@ export const barStyles = css`
 
   @media (prefers-reduced-motion: reduce) {
     .dashboard-sidebar-bar-sheet,
-    .dashboard-sidebar-bar-sheet-scrim,
-    .dashboard-sidebar-bar-sheet.closing,
-    .dashboard-sidebar-bar-sheet-scrim.closing {
-      animation: none;
+    .dashboard-sidebar-bar-sheet-scrim {
+      transition: none;
     }
 
     .dashboard-sidebar-bar-sheet.closing,

@@ -100,6 +100,9 @@ export class DashboardSidebarBar extends LitElement {
   /** Whether the sheet is playing its slide-out before unmounting. */
   @state() private _sheetClosing = false;
 
+  /** Whether the mounted sheet is in its slid-in position (transition end). */
+  @state() private _sheetShown = false;
+
   /** The current time, ticked while a clock or date slot is on the bar. */
   @state() private _now = new Date();
 
@@ -129,8 +132,9 @@ export class DashboardSidebarBar extends LitElement {
   private _close(): void {
     if (this._open === 'menu') {
       // Keep the sheet mounted while it slides back behind the bar; the
-      // timeout backstops reduced-motion, where animationend never fires.
+      // timeout backstops reduced-motion, where transitionend never fires.
       this._sheetClosing = true;
+      this._sheetShown = false;
       window.setTimeout(() => {
         this._sheetClosing = false;
       }, 400);
@@ -346,6 +350,19 @@ export class DashboardSidebarBar extends LitElement {
     this._anchorX = rect.left + rect.width / 2;
     this._open = key;
     this._sheetClosing = false;
+    if (key === 'menu') {
+      // The sheet mounts in its tucked-away position; flipping the class a
+      // frame later runs the slide as a transition, which (unlike shadow-DOM
+      // keyframes) animates reliably on WebKit.
+      this._sheetShown = false;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (this._open === 'menu') {
+            this._sheetShown = true;
+          }
+        });
+      });
+    }
   }
 
   /** The label text an entry shows, per the labels mode. */
@@ -692,7 +709,9 @@ export class DashboardSidebarBar extends LitElement {
     if (!shown || (menu.length === 0 && extras.length === 0 && content === nothing)) {
       return nothing;
     }
-    const closing = this._sheetClosing ? ' closing' : '';
+    const closing =
+      (this._sheetClosing ? ' closing' : '') +
+      (this._sheetShown && this._open === 'menu' ? ' open' : '');
     const buttons = content === nothing ? menu.filter((e) => e.kind === 'button') : [];
     const rows = menu.filter((e) => e.kind !== 'button');
     return html`
@@ -702,7 +721,7 @@ export class DashboardSidebarBar extends LitElement {
         role="menu"
         aria-label="More"
         style=${this._config?.background ? `background:${this._config.background}` : ''}
-        @animationend=${() => {
+        @transitionend=${() => {
           if (this._sheetClosing) {
             this._sheetClosing = false;
           }
