@@ -442,7 +442,7 @@ export const editorStyles = css`
     top: -23px;
     left: 50%;
     z-index: 1;
-    margin-left: 24px;
+    margin-left: 16px;
     line-height: 14px;
     white-space: nowrap;
   }
