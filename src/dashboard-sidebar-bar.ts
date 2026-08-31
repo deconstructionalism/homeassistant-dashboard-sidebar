@@ -49,6 +49,14 @@ export class DashboardSidebarBar extends LitElement {
   /** Shared styles. */
   static styles = barStyles;
 
+  /**
+   * Editor preview mode: the bar renders in flow inside a frame instead of
+   * fixed to the viewport, and tap actions do not fire (the sheet and
+   * flyouts still open, so the editor can demonstrate them).
+   */
+  @property({ type: Boolean, reflect: true })
+  public preview = false;
+
   /** The current Home Assistant object; updates re-render live templates. */
   @property({ attribute: false })
   public set hass(value: HomeAssistant | undefined) {
@@ -74,7 +82,7 @@ export class DashboardSidebarBar extends LitElement {
   @state() private _config?: DashboardSidebarConfig;
 
   /** The resolved bar, recomputed on config change. */
-  @state() private _resolved: ResolvedBar = { slots: [], menu: [] };
+  @state() private _resolved: ResolvedBar = { slots: [], menu: [], extras: [], footer: [] };
 
   /** The current location path, tracked for the active highlight. */
   @state() private _path = window.location.pathname;
@@ -323,8 +331,11 @@ export class DashboardSidebarBar extends LitElement {
     return target !== '' && (current === target || current.startsWith(`${target}/`));
   }
 
-  /** Runs an element's tap action. */
+  /** Runs an element's tap action. Inert in editor preview. */
   private _run(el: ItemBlock | FooterButtonConfig): void {
+    if (this.preview) {
+      return;
+    }
     if (this._hass) {
       runAction(this, this._hass, el.tap_action as RunnableAction | undefined, el.entity);
     }

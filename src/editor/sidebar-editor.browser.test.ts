@@ -73,10 +73,24 @@ const regionCount = (el: DashboardSidebarEditor, region: string): number => {
 };
 
 describe('<dashboard-sidebar-editor>', () => {
-  it('renders the four tabs', async () => {
+  it('renders the five tabs', async () => {
     const el = await mount(cfg());
     const labels = [...root(el).querySelectorAll('.tab')].map((b) => b.textContent?.trim());
-    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer']);
+    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile']);
+  });
+
+  it('enables the mobile bar from the Mobile tab and previews it', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Mobile');
+    const enable = [...root(el).querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Enable Mobile Bar'),
+    ) as HTMLButtonElement;
+    expect(enable).to.exist;
+    enable.click();
+    await el.updateComplete;
+    const bar = root(el).querySelector('dashboard-sidebar-bar');
+    expect(bar).to.exist;
+    expect(bar?.hasAttribute('preview')).to.equal(true);
   });
 
   it('renders the region as a live sidebar preview', async () => {

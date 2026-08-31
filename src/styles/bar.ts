@@ -11,6 +11,19 @@ export const barStyles = css`
     inset: 0 0 auto;
   }
 
+  /* Editor preview: in flow inside a frame, not fixed to the viewport. */
+  :host([preview]) {
+    position: relative;
+    z-index: auto;
+    display: block;
+    width: 100%;
+    inset: auto;
+  }
+
+  :host([preview]) .dashboard-sidebar-bar-sheet-scrim {
+    position: absolute;
+  }
+
   :host {
     position: fixed;
     inset: auto 0 0;

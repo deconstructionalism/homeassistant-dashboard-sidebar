@@ -325,6 +325,17 @@ export const editorStyles = css`
     scrollbar-width: none;
   }
 
+  /* The mobile tab's preview: a phone-width frame the fixed-position bar
+     renders into via its preview mode; room above for the sheet to rise. */
+  .mobile-pv-frame {
+    width: 390px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding-top: 240px;
+    overflow: visible;
+    align-self: flex-start;
+  }
+
   .pv-frame::-webkit-scrollbar {
     width: 0;
     height: 0;

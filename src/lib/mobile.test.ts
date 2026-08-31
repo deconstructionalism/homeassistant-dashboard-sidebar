@@ -105,7 +105,7 @@ describe('resolveBar, sheet menu', () => {
           { type: 'title', id: 't1', text: 'Hello' },
         ],
       },
-    };
+    } as DashboardSidebarConfig;
     const { extras } = resolveBar(config);
     expect(extras.map((e) => e.kind)).toEqual(['markdown', 'category', 'button', 'title']);
     expect((extras[1].element as { title?: string }).title).toBe('Yard');

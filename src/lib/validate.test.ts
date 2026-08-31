@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { DashboardSidebarConfig } from './types';
+import type { DashboardSidebarConfig, SidebarBlock } from './types';
 import { validateConfig } from './validate';
 
 /**
@@ -480,13 +480,10 @@ describe('mobile config', () => {
   });
 
   it('allows hide_on_desktop without a mobile config, but not with hide_on_mobile', () => {
-    const ok = vc({ body: [{ type: 'item', title: 'A' }], hide_on_desktop: true });
+    const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
+    const ok = vc({ body: [item], hide_on_desktop: true });
     expect(ok.some((e) => e.includes('hide_on_desktop'))).toBe(false);
-    const errors = vc({
-      body: [{ type: 'item', title: 'A' }],
-      hide_on_desktop: true,
-      hide_on_mobile: true,
-    });
+    const errors = vc({ body: [item], hide_on_desktop: true, hide_on_mobile: true });
     expect(errors.some((e) => e.includes('nothing would ever render'))).toBe(true);
   });
 

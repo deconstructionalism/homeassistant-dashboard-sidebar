@@ -15,6 +15,9 @@ import type {
 } from '../lib/types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
+import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
+import '../dashboard-sidebar-bar';
+import { resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
 import { renderEmptyState, renderGhost } from './editor-preview';
@@ -51,6 +54,7 @@ import {
   iconChoiceField,
   intField,
   MARKDOWN_HINT,
+  selectField,
   type Patch,
   serviceDatalist,
   type ValidationCtx,
@@ -116,11 +120,24 @@ const ALL_TYPES: BlockType[] = [
 ];
 
 /** The modal tabs, in order. The `body` region is labelled "Body". */
-const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer'; label: string }> = [
+const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer' | 'mobile'; label: string }> = [
   { id: 'settings', label: 'Settings' },
   { id: 'header', label: 'Header' },
   { id: 'body', label: 'Body' },
   { id: 'footer', label: 'Footer' },
+  { id: 'mobile', label: 'Mobile' },
+];
+
+/** Icon and label for the two mobile bar modes. */
+const MOBILE_MODE_META: Array<{ value: string; icon: string; title: string }> = [
+  { value: 'mirror', icon: 'mdi:mirror-rectangle', title: 'Mirror desktop' },
+  { value: 'custom', icon: 'mdi:pencil-ruler', title: 'Custom bar' },
+];
+
+/** Icon and label for the bar dock positions. */
+const MOBILE_POSITION_META: Array<{ value: string; icon: string; title: string }> = [
+  { value: 'bottom', icon: 'mdi:dock-bottom', title: 'Bottom' },
+  { value: 'top', icon: 'mdi:dock-top', title: 'Top' },
 ];
 
 /** Icon and label for each schema `position` value, keyed for the chooser. */
@@ -158,7 +175,7 @@ export class DashboardSidebarEditor extends LitElement {
   @property({ attribute: false }) public onDelete?: () => void;
 
   /** The active tab. */
-  @state() private _tab: 'settings' | 'header' | 'body' | 'footer' = 'settings';
+  @state() private _tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile' = 'settings';
 
   /** Stable id of the element selected for editing in the preview, or null. */
   @state() private _selected: string | null = null;
@@ -225,6 +242,12 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Cached preview sidebar elements, one per region key (header/body/footer). */
   private readonly _previews = new Map<string, DashboardSidebar>();
+
+  /** The cached mobile-bar preview element. */
+  private _barPreview?: DashboardSidebarBar;
+
+  /** Last config serialized into the bar preview, to skip redundant rebuilds. */
+  private _barPreviewCfg = '';
 
   /** Last config serialized into each preview, to skip redundant rebuilds. */
   private readonly _previewCfg = new WeakMap<DashboardSidebar, string>();
@@ -1180,7 +1203,7 @@ export class DashboardSidebarEditor extends LitElement {
    * Switches tabs, remembering the current tab's selection and restoring the
    * target tab's, and closing any open menus.
    */
-  private _switchTab(tab: 'settings' | 'header' | 'body' | 'footer'): void {
+  private _switchTab(tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile'): void {
     if (this._tab === 'header' || this._tab === 'body' || this._tab === 'footer') {
       this._tabSelection[this._tab] = this._selected;
     }
@@ -1309,6 +1332,8 @@ export class DashboardSidebarEditor extends LitElement {
         return this._renderSplit('body');
       case 'footer':
         return this._renderFooterTab();
+      case 'mobile':
+        return this._renderMobileTab();
       default:
         return html``;
     }
@@ -1383,6 +1408,12 @@ export class DashboardSidebarEditor extends LitElement {
                     (v) => this._patchConfig({ hide_on_mobile: v || undefined }),
                     'Hide the sidebar entirely on narrow (phone-width) screens.',
                   )}
+                  ${checkboxField(
+                    'Mobile Only (Hide On Desktop)',
+                    c.hide_on_desktop ?? false,
+                    (v) => this._patchConfig({ hide_on_desktop: v || undefined }),
+                    'Never show the sidebar on desktop; only the mobile bar renders, on narrow screens.',
+                  )}
                   <details class="advanced">
                     <summary>Advanced</summary>
                     ${colorField(
@@ -1410,6 +1441,181 @@ export class DashboardSidebarEditor extends LitElement {
         ${this._renderPreview(html`${this._previewEl('settings', previewConfig, false, true)}`, true)}
       </div>
     `;
+  }
+
+  /**
+   * Merges a partial update into the mobile section, creating it on first
+   * touch and dropping keys patched to undefined.
+   */
+  private _patchMobile(partial: Record<string, unknown>): void {
+    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
+    for (const [key, value] of Object.entries(partial)) {
+      if (value === undefined) {
+        delete mobile[key];
+      } else {
+        mobile[key] = value;
+      }
+    }
+    this._patchConfig({ mobile });
+  }
+
+  /**
+   * Switches between mirror (derive) and custom (explicit items) mode. Going
+   * custom seeds the list from the currently derived bar so the switch is
+   * lossless in appearance; going back to mirror drops the custom list.
+   */
+  private _setMobileMode(mode: string): void {
+    const mobile = this._working.mobile ?? {};
+    const custom = mobile.items !== undefined;
+    if (mode === 'custom' && !custom) {
+      const derived = resolveBar({
+        ...this._working,
+        mobile: { ...mobile, items: undefined },
+      }).slots;
+      const items = derived
+        .map((entry) => (entry.element as { id?: string }).id)
+        .filter((id): id is string => Boolean(id))
+        .map((id) => ({ use: id }));
+      this._patchMobile({ items, hide: undefined, override: undefined });
+    } else if (mode === 'mirror' && custom) {
+      this._patchMobile({ items: undefined });
+    }
+  }
+
+  /**
+   * Renders the Mobile tab: enablement, the bar options, the mode switch,
+   * and a live phone-width preview of the real bar element.
+   */
+  private _renderMobileTab(): TemplateResult {
+    const mobile = this._working.mobile;
+    const implicit = !mobile && Boolean(this._working.hide_on_desktop);
+    if (!mobile && !implicit) {
+      return html`
+        ${this._renderTabNotes(
+          'The mobile bar replaces the sidebar on narrow screens with a bottom (or top) bar derived from it.',
+          'The mobile bar previews at phone width.',
+        )}
+        <div class="split">
+          <div class="editor settings">
+            <p class="tab-note">
+              No mobile bar is configured; on phones the sidebar simply renders at full width.
+            </p>
+            <div class="form-actions">
+              <button class="add-btn" @click=${() => this._patchConfig({ mobile: {} })}>
+                Enable Mobile Bar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    const m = mobile ?? {};
+    const custom = m.items !== undefined;
+    return html`
+      ${this._renderTabNotes(
+        'The mobile bar replaces the sidebar on narrow screens. Mirror mode follows the desktop nav; the dots menu holds the footer and overflow.',
+        'The mobile bar previews at phone width.',
+      )}
+      <div class="split">
+        <div class="editor settings">
+          ${
+            implicit
+              ? html`<p class="tab-note">
+                  Enabled implicitly because the sidebar is hidden on desktop; changing any option
+                  below makes it explicit.
+                </p>`
+              : nothing
+          }
+          ${iconChoiceField('Mode', custom ? 'custom' : 'mirror', MOBILE_MODE_META, (v) =>
+            this._setMobileMode(v),
+          )}
+          ${
+            custom
+              ? html`<p class="tab-note">
+                  Custom bar editing lands in the next update; for now the list mirrors what was
+                  derived when you switched, and YAML mode can edit it fully.
+                </p>`
+              : nothing
+          }
+          ${intField(
+            'Breakpoint (px)',
+            m.breakpoint,
+            (v) => this._patchMobile({ breakpoint: v }),
+            {},
+            'The bar shows at and below this viewport width. Defaults to 768px.',
+          )}
+          ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
+            this._patchMobile({ position: v === 'bottom' ? undefined : v }),
+          )}
+          ${selectField(
+            'Labels',
+            m.labels ?? 'never',
+            ['never', 'always', 'active'],
+            (v) => this._patchMobile({ labels: v === 'never' ? undefined : v }),
+            { description: 'Show element titles under the bar icons.' },
+          )}
+          <details class="advanced">
+            <summary>Advanced</summary>
+            ${colorField(
+              'Bar Background CSS',
+              m.background,
+              (v) => this._patchMobile({ background: v || undefined }),
+              'Any valid CSS background. Defaults to the sidebar background.',
+            )}
+            ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
+          </details>
+          ${
+            mobile
+              ? html`<div class="form-actions">
+                  <button
+                    class="add-btn danger"
+                    @click=${() => this._patchConfig({ mobile: undefined })}
+                  >
+                    Remove Mobile Bar
+                  </button>
+                </div>`
+              : nothing
+          }
+        </div>
+        ${this._renderMobilePreview()}
+      </div>
+    `;
+  }
+
+  /**
+   * Renders the phone-width live preview of the mobile bar.
+   */
+  private _renderMobilePreview(): TemplateResult {
+    return html`
+      <div class="preview">
+        <div class="preview-head">
+          <span class="preview-title">Preview</span>
+        </div>
+        <div class="pv-frame pv-col mobile-pv-frame">${this._barPreviewEl()}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * The cached mobile-bar preview element, reconfigured only when the working
+   * config changes so live templates and cards are not re-instantiated on
+   * every keystroke.
+   */
+  private _barPreviewEl(): DashboardSidebarBar {
+    let el = this._barPreview;
+    if (!el) {
+      el = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
+      el.preview = true;
+      el.setAttribute('preview', '');
+      this._barPreview = el;
+    }
+    el.hass = this.hass;
+    const json = JSON.stringify(this._working);
+    if (this._barPreviewCfg !== json) {
+      el.setConfig(JSON.parse(json) as DashboardSidebarConfig);
+      this._barPreviewCfg = json;
+    }
+    return el;
   }
 
   /**
