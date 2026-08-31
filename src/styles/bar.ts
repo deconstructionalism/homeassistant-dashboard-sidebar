@@ -118,6 +118,38 @@ export const barStyles = css`
     transform: translateY(0);
   }
 
+  /* The edit-mode pencil, floating just off the bar on its page side,
+     matching the desktop sidebar's circular edit button. */
+  .dashboard-sidebar-bar-edit {
+    position: absolute;
+    top: -36px;
+    right: 10px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--dashboard-sidebar-divider-color);
+    border-radius: 50%;
+    background: var(
+      --dashboard-sidebar-bar-background,
+      var(--ha-card-background, var(--card-background-color, #fff))
+    );
+    color: var(--primary-text-color);
+    cursor: pointer;
+  }
+
+  .dashboard-sidebar-bar-edit ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  :host([data-position='top']) .dashboard-sidebar-bar-edit {
+    top: auto;
+    bottom: -36px;
+  }
+
   .dashboard-sidebar-bar-slots {
     display: flex;
     flex: 1 1 auto;

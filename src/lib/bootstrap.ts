@@ -338,6 +338,7 @@ const buildSidebar = (): void => {
 
   if (mobileMode(config) === 'bar') {
     const bar = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
+    bar.editMode = isEditMode(huiRoot);
     bar.hass = getHass();
     bar.setConfig(config);
     wrapper.appendChild(bar);
@@ -466,6 +467,7 @@ const ensureSidebar = (): void => {
       applyHeaderOffset(shadow, host);
     }
     if (bar) {
+      bar.editMode = editMode;
       bar.hass = getHass();
     }
     if (element) {

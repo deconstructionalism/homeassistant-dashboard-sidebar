@@ -2,6 +2,7 @@ import { html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 import { runAction, type RunnableAction } from './lib/action';
+import { EDIT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
@@ -56,6 +57,10 @@ export class DashboardSidebarBar extends LitElement {
    */
   @property({ type: Boolean, reflect: true })
   public preview = false;
+
+  /** Whether the dashboard is in edit mode, showing the edit pencil. */
+  @property({ attribute: false })
+  public editMode = false;
 
   /** The current Home Assistant object; updates re-render live templates. */
   @property({ attribute: false })
@@ -829,6 +834,21 @@ export class DashboardSidebarBar extends LitElement {
         aria-label="Dashboard bar"
       >
         ${this._renderFlyout(menu)}
+        ${
+          this.editMode && !this.preview
+            ? html`<button
+                class="dashboard-sidebar-bar-edit"
+                title="Edit sidebar"
+                @click=${() => {
+                  this.dispatchEvent(
+                    new CustomEvent(EDIT_EVENT, { bubbles: true, composed: true }),
+                  );
+                }}
+              >
+                <ha-icon icon="mdi:pencil"></ha-icon>
+              </button>`
+            : nothing
+        }
         <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
