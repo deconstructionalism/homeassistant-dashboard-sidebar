@@ -272,10 +272,11 @@ export const barStyles = css`
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--divider-color, rgb(127 127 127 / 40%)) transparent;
-    background: var(
-      --dashboard-sidebar-bar-background,
-      var(--ha-card-background, var(--card-background-color, #fff))
-    );
+
+    /* The sheet's opaque background chain, not the bar's: the bar background
+       is often a gradient with transparency that would let the page bleed
+       through the popup. */
+    background: var(--dashboard-sidebar-bar-sheet-background, var(--dashboard-sidebar-background));
     border: 1px solid var(--divider-color, rgb(127 127 127 / 20%));
     border-radius: 12px;
     box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
