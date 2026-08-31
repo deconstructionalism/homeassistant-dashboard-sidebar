@@ -324,6 +324,12 @@ export type MobileBarEntry = MobileUseEntry | ItemBlock;
 export type MobileMenuEntry = MobileUseEntry | SidebarBlock;
 
 /**
+ * One curated sheet-footer entry: a reuse of an item or footer button by id,
+ * or an inline footer button.
+ */
+export type MobileFooterEntry = MobileUseEntry | FooterButtonConfig;
+
+/**
  * The mobile bar. Its presence hides the sidebar on narrow viewports and
  * renders a bottom bar instead. Without `items` the bar derives from the
  * desktop nav (items and categories in document order) amended by `hide` and
@@ -345,10 +351,11 @@ export interface MobileConfig {
   menu?: MobileMenuEntry[];
   /**
    * The sheet's pinned footer strip: `use:` references to footer buttons or
-   * items, and inline items, rendered as icon buttons. When set it replaces
-   * the strip derived from the desktop footer (and a card/markdown footer).
+   * items, and inline footer buttons, rendered as icon buttons. When set it
+   * replaces the strip derived from the desktop footer (and a card/markdown
+   * footer).
    */
-  footer?: MobileBarEntry[];
+  footer?: MobileFooterEntry[];
   /** Viewport width in pixels at and below which the bar shows. Default 768. */
   breakpoint?: number;
   /** Screen edge the bar docks to. Default bottom. */

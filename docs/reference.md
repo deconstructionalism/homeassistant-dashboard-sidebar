@@ -249,7 +249,7 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `override` | `Record<string, MobileOverride>` | no | Per-id property patches applied to derived elements. Derive mode only. |
 | `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
 | `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
-| `footer` | `MobileBarEntry[]` | no | The sheet's pinned footer strip: `use:` references to footer buttons or items, and inline items, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
+| `footer` | `MobileFooterEntry[]` | no | The sheet's pinned footer strip: `use:` references to footer buttons or items, and inline footer buttons, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
 | `breakpoint` | `number` | no | Viewport width in pixels at and below which the bar shows. Default 768. |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
@@ -313,6 +313,12 @@ An explicit bar entry: a reuse of a desktop element, or an inline item.
 `MobileUseEntry | SidebarBlock`
 
 One curated sheet-menu entry: a reuse of any desktop element by id (no bar-eligibility limit), or an inline block of any kind.
+
+### `MobileFooterEntry`
+
+`MobileUseEntry | FooterButtonConfig`
+
+One curated sheet-footer entry: a reuse of an item or footer button by id, or an inline footer button.
 
 ### `ActionConfig`
 

@@ -534,7 +534,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         }
         checkOverridePatch(entry, ctx, errors);
       } else {
-        validateItem(entry as ItemBlock, ctx, errors);
+        validateFooterButton(entry, ctx, errors);
       }
     });
   }

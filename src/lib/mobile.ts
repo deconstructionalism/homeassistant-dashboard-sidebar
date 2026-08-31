@@ -114,7 +114,11 @@ const elementIndex = (
 };
 
 /** Resolves one curated list (`mobile.menu` / `mobile.footer`) to entries. */
-const resolveCurated = (config: DashboardSidebarConfig, entries: unknown): BarEntry[] => {
+const resolveCurated = (
+  config: DashboardSidebarConfig,
+  entries: unknown,
+  inlineKind?: BarEntryKind,
+): BarEntry[] => {
   if (!Array.isArray(entries)) {
     return [];
   }
@@ -138,7 +142,7 @@ const resolveCurated = (config: DashboardSidebarConfig, entries: unknown): BarEn
     } else {
       out.push({
         source: 'inline',
-        kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
+        kind: inlineKind ?? (((entry as SidebarBlock).type ?? 'item') as BarEntryKind),
         element: { ...entry },
       });
     }
@@ -158,7 +162,8 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
     return { slots: [], menu: [], extras: [], footer: [] };
   }
   const extras = resolveExtras(config, mobile);
-  const footer = mobile.footer !== undefined ? resolveCurated(config, mobile.footer) : null;
+  const footer =
+    mobile.footer !== undefined ? resolveCurated(config, mobile.footer, 'button') : null;
   const hidden = new Set(mobile.hide ?? []);
   const overrides = mobile.override ?? {};
   const blocks = [...(config.header ?? []), ...(config.body ?? [])];
