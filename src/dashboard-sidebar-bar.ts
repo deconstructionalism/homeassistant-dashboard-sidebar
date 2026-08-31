@@ -390,13 +390,9 @@ export class DashboardSidebarBar extends LitElement {
     }
   }
 
-  /** The label text an entry shows, per the labels mode. */
-  private _label(entry: BarEntry, active: boolean): string | undefined {
-    const mode = this._config?.mobile?.labels ?? 'never';
-    if (mode === 'never' || (mode === 'active' && !active)) {
-      return undefined;
-    }
-    return this._title(entry);
+  /** The label text an entry shows, when labels are enabled. */
+  private _label(entry: BarEntry): string | undefined {
+    return this._config?.mobile?.labels ? this._title(entry) : undefined;
   }
 
   /** The resolved display title of an entry. */
@@ -459,7 +455,7 @@ export class DashboardSidebarBar extends LitElement {
     const el = entry.element as ItemBlock;
     const time = entry.kind === 'clock' || entry.kind === 'date';
     const active = this._navActive(entry);
-    const label = time ? undefined : this._label(entry, active);
+    const label = time ? undefined : this._label(entry);
     const title = this._title(entry);
     const textColor = time
       ? this._templates.resolve((entry.element as TimeElement).text_color)
@@ -826,7 +822,7 @@ export class DashboardSidebarBar extends LitElement {
       ${this._renderSheet(menu)}
       <nav
         class="dashboard-sidebar-bar"
-        data-labels=${mobile.labels ?? 'never'}
+        data-labels=${mobile.labels ? 'true' : 'false'}
         data-overflowing=${menu.length > 0 ? 'true' : 'false'}
         style=${background ? `background:${background}` : ''}
         aria-label="Dashboard bar"

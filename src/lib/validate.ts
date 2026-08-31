@@ -5,7 +5,6 @@ import {
   FOOTER_FIELDS,
   TOP_FIELDS,
   MOBILE_FIELDS,
-  MOBILE_LABELS,
   MOBILE_OVERRIDE_FIELDS,
 } from './schema.generated';
 import type {
@@ -430,12 +429,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   if ((mobile as Record<string, unknown>).breakpoint !== undefined) {
     errors.push('mobile.breakpoint: moved to the top-level `breakpoint` option');
   }
-  if (
-    mobile.labels !== undefined &&
-    !(MOBILE_LABELS as readonly string[]).includes(mobile.labels)
-  ) {
-    errors.push(`mobile.labels: must be one of ${MOBILE_LABELS.join(', ')}`);
-  }
+  checkBool(mobile.labels, 'mobile.labels', errors);
   if (mobile.position !== undefined && mobile.position !== 'top' && mobile.position !== 'bottom') {
     errors.push('mobile.position: must be "top" or "bottom"');
   }

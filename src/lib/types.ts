@@ -271,9 +271,6 @@ export interface FooterConfig {
   double_tap_action?: ActionConfig;
 }
 
-/** How bar elements label themselves: always, never, or only when active. */
-export type MobileLabels = 'always' | 'never' | 'active';
-
 /**
  * The properties of a reused element that mobile may replace. A patch never
  * carries `id` (the reference itself) or `type` (identity is not patchable).
@@ -358,8 +355,8 @@ export interface MobileConfig {
   footer?: MobileFooterEntry[];
   /** Screen edge the bar docks to. Default bottom. */
   position?: 'top' | 'bottom';
-  /** Label rendering on the bar. Default never. */
-  labels?: MobileLabels;
+  /** Show element titles under the bar icons. Default false. */
+  labels?: boolean;
   /**
    * Bar background: any CSS `background` value. Defaults to the sidebar's
    * `background`, and through it to the theme card background.

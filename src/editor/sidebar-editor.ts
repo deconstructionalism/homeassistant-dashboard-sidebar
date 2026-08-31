@@ -1597,12 +1597,11 @@ export class DashboardSidebarEditor extends LitElement {
           ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
             this._patchMobile({ position: v === 'bottom' ? undefined : v }),
           )}
-          ${selectField(
-            'Labels',
-            m.labels ?? 'never',
-            ['never', 'always', 'active'],
-            (v) => this._patchMobile({ labels: v === 'never' ? undefined : v }),
-            { description: 'Show element titles under the bar icons.' },
+          ${checkboxField(
+            'Show Labels',
+            m.labels ?? false,
+            (v) => this._patchMobile({ labels: v || undefined }),
+            'Show element titles under the bar icons.',
           )}
           <details class="advanced">
             <summary>Advanced</summary>

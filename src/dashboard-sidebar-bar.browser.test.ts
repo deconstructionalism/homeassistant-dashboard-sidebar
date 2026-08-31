@@ -265,8 +265,8 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(slots[1].getAttribute('aria-label')).to.equal('Casa');
   });
 
-  it('labels always shows titles; never hides them', async () => {
-    const labeled = await mount({ ...base(), mobile: { labels: 'always', hide: ['lock'] } });
+  it('labels: true shows titles; off hides them', async () => {
+    const labeled = await mount({ ...base(), mobile: { labels: true, hide: ['lock'] } });
     expect(root(labeled).querySelectorAll('.dashboard-sidebar-bar-label').length).to.equal(3);
     const bare = await mount({ ...base(), mobile: {} });
     expect(root(bare).querySelectorAll('.dashboard-sidebar-bar-label').length).to.equal(0);
@@ -288,10 +288,10 @@ describe('<dashboard-sidebar-bar>', () => {
     expect(top.getAttribute('data-position')).to.equal('top');
   });
 
-  it('applies the labels mode as a data attribute for styling hooks', async () => {
-    const el = await mount({ ...base(), mobile: { labels: 'active' } });
+  it('applies the labels flag as a data attribute for styling hooks', async () => {
+    const el = await mount({ ...base(), mobile: { labels: true } });
     expect(root(el).querySelector('.dashboard-sidebar-bar')?.getAttribute('data-labels')).to.equal(
-      'active',
+      'true',
     );
   });
 });

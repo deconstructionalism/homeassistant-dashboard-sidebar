@@ -252,7 +252,7 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
 | `footer` | `MobileFooterEntry[]` | no | The sheet's pinned footer strip: `use:` references to footer buttons or items, and inline footer buttons, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
-| `labels` | `MobileLabels` | no | Label rendering on the bar. Default never. |
+| `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
 | `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
 
@@ -295,12 +295,6 @@ Date format: an alias (`iso` = %Y-%m-%d, `locale`) or a strftime pattern using o
 `TitleBlock | ClockBlock | DateBlock | DividerBlock | ItemBlock | CategoryBlock | MarkdownBlock | CardBlock`
 
 Any block that can appear in the header or body region.
-
-### `MobileLabels`
-
-`'always' | 'never' | 'active'`
-
-How bar elements label themselves: always, never, or only when active.
 
 ### `MobileBarEntry`
 

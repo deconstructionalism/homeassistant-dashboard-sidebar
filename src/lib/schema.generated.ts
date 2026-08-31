@@ -33,7 +33,7 @@ export const MOBILE_FIELDS = ['hide', 'override', 'items', 'menu', 'footer', 'po
 export const MOBILE_OVERRIDE_FIELDS = ['title', 'icon', 'abbr', 'text_color', 'icon_color', 'entity', 'tap_action', 'hold_action', 'double_tap_action', 'active_highlight', 'class', 'card_mod'] as const;
 
 /** Allowed mobile `labels` values. */
-export const MOBILE_LABELS = ['always', 'never', 'active'] as const;
+export const MOBILE_LABELS = [] as const;
 
 /** Allowed `align` values. */
 export const ALIGNS = ['left', 'center', 'right'] as const;
