@@ -1742,18 +1742,23 @@ export class DashboardSidebarEditor extends LitElement {
               this._mobilePreviewWidth = null;
             }}
           >
-            <div class="mobile-pv-float">
-              <ha-icon
-                icon=${
-                  width >= maxW
-                    ? 'mdi:arrow-right-thin'
-                    : width <= MIN_MOBILE_PREVIEW
-                      ? 'mdi:arrow-left-thin'
-                      : 'mdi:arrow-split-vertical'
-                }
-              ></ha-icon>
-              <span class="preview-title">Preview (${width}px)</span>
+            <div
+              class="mobile-pv-arrows ${
+                width >= maxW ? 'max' : width <= MIN_MOBILE_PREVIEW ? 'min' : 'mid'
+              }"
+            >
+              ${
+                width <= MIN_MOBILE_PREVIEW || (width < maxW && width > MIN_MOBILE_PREVIEW)
+                  ? html`<ha-icon icon="mdi:arrow-left-thin"></ha-icon>`
+                  : nothing
+              }
+              ${
+                width >= maxW || (width < maxW && width > MIN_MOBILE_PREVIEW)
+                  ? html`<ha-icon icon="mdi:arrow-right-thin"></ha-icon>`
+                  : nothing
+              }
             </div>
+            <span class="mobile-pv-caption preview-title">Preview (${width}px)</span>
           </div>
           <div class="pv-frame pv-col mobile-pv-frame" style="width: ${width}px">
             ${this._barPreviewEl()}

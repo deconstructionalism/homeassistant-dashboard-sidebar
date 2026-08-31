@@ -402,21 +402,42 @@ export const editorStyles = css`
     opacity: 0.6;
   }
 
-  /* The arrow + width caption float above the bar, inline, starting at the
-     frame edge; they share the handle's drag behavior. */
-  .mobile-pv-float {
+  /* The direction arrows float above the bar, centered on the rail: both
+     sides mid-drag, only the available side at the extremes. The caption
+     hangs to their right. All share the handle's drag behavior. */
+  .mobile-pv-arrows {
     position: absolute;
     top: -22px;
     left: 50%;
     z-index: 1;
     display: flex;
-    gap: 6px;
     align-items: center;
-    white-space: nowrap;
   }
 
-  .mobile-pv-float ha-icon {
+  .mobile-pv-arrows ha-icon {
     --mdc-icon-size: 14px;
+  }
+
+  .mobile-pv-arrows.mid {
+    transform: translateX(-50%);
+    gap: 3px;
+  }
+
+  .mobile-pv-arrows.min {
+    transform: translateX(-100%);
+  }
+
+  .mobile-pv-arrows.max {
+    margin-left: 2px;
+  }
+
+  .mobile-pv-caption {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    z-index: 1;
+    margin-left: 26px;
+    white-space: nowrap;
   }
 
   .mobile-pv-handle:hover {
