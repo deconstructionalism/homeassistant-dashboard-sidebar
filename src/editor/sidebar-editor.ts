@@ -293,6 +293,12 @@ export class DashboardSidebarEditor extends LitElement {
   /** The measured width available to the mobile preview inside the modal. */
   @state() private _mobileAvail: number | null = null;
 
+  /** Re-measures the preview's available width as the modal resizes. */
+  private readonly _availObserver = new ResizeObserver(() => this._measureMobileAvail());
+
+  /** The wrap element the resize observer currently watches. */
+  private _observedWrap?: Element;
+
   /** Live drag bookkeeping for the mobile preview resize handle. */
   private _mobileDrag?: { startX: number; startW: number };
 
@@ -455,6 +461,26 @@ export class DashboardSidebarEditor extends LitElement {
   protected updated(): void {
     this._compactEditors();
     this._maybeValidateCard();
+    this._observeMobileWrap();
+  }
+
+  /**
+   * Points the resize observer at the current mobile preview wrap (it is
+   * recreated on tab switches), so the available width tracks modal resizes
+   * and not just renders.
+   */
+  private _observeMobileWrap(): void {
+    const wrap = this.shadowRoot?.querySelector('.mobile-pv-wrap') ?? undefined;
+    if (wrap === this._observedWrap) {
+      return;
+    }
+    if (this._observedWrap) {
+      this._availObserver.unobserve(this._observedWrap);
+    }
+    this._observedWrap = wrap;
+    if (wrap) {
+      this._availObserver.observe(wrap);
+    }
   }
 
   /**
