@@ -363,6 +363,17 @@ export class DashboardSidebarBar extends LitElement {
     this._anchorX = rect.left + rect.width / 2;
     this._open = key;
     this._sheetClosing = false;
+    if (key === 'menu' && this.preview) {
+      // The in-flow preview sheet grows the frame; keep the bar itself in
+      // view by nudging the editor's scroll container after the render.
+      void this.updateComplete.then(() => {
+        requestAnimationFrame(() => {
+          this.shadowRoot
+            ?.querySelector('.dashboard-sidebar-bar')
+            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+      });
+    }
     if (key === 'menu') {
       // The sheet mounts in its tucked-away position; flipping the class a
       // frame later runs the slide as a transition, which (unlike shadow-DOM
