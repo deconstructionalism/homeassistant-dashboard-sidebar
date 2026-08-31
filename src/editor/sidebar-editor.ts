@@ -1615,22 +1615,17 @@ export class DashboardSidebarEditor extends LitElement {
       ${this._renderTabNotes(
         'The mobile bar replaces the sidebar on narrow screens.',
         'The mobile bar previews at phone width.',
+        html`<button
+          class="tool tab-notes-tool"
+          title="More"
+          aria-label="More"
+          @click=${(e: Event) => this._openElementMenu(e)}
+        >
+          <ha-icon icon="mdi:dots-vertical"></ha-icon>
+        </button>`,
       )}
       <div class="mobile-stack">
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
-          <div class="form-head">
-            <div class="form-title">Mobile Bar</div>
-            <div class="form-tools">
-              <button
-                class="tool"
-                title="More"
-                aria-label="More"
-                @click=${(e: Event) => this._openElementMenu(e)}
-              >
-                <ha-icon icon="mdi:dots-vertical"></ha-icon>
-              </button>
-            </div>
-          </div>
           ${
             this._mobileYaml
               ? this._yamlEditor(
@@ -1639,23 +1634,38 @@ export class DashboardSidebarEditor extends LitElement {
                   (parsed) =>
                     validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
                 )
-              : html`${iconChoiceField(
-                    'Mode',
-                    custom ? 'custom' : 'mirror',
-                    MOBILE_MODE_META,
-                    (v) => this._setMobileMode(v),
-                  )}
-                  ${
-                    custom
-                      ? html`<p class="tab-note">
-                          Custom bar editing lands in the next update; for now the list mirrors what
-                          was derived when you switched, and YAML mode can edit it fully.
-                        </p>`
-                      : nothing
-                  }
-                  ${iconChoiceField('Position', m.position ?? 'bottom', MOBILE_POSITION_META, (v) =>
-                    this._patchMobile({ position: v === 'bottom' ? undefined : v }),
-                  )}
+              : html`<div class="mobile-choice-row">
+                    <div class="mobile-choice">
+                      ${iconChoiceField(
+                        'Mode',
+                        custom ? 'custom' : 'mirror',
+                        MOBILE_MODE_META,
+                        (v) => this._setMobileMode(v),
+                      )}
+                      <p class="choice-desc">
+                        ${
+                          custom
+                            ? 'A hand-picked list of elements defines the bar.'
+                            : 'The bar derives from the desktop sidebar.'
+                        }
+                      </p>
+                    </div>
+                    <div class="mobile-choice">
+                      ${iconChoiceField(
+                        'Position',
+                        m.position ?? 'bottom',
+                        MOBILE_POSITION_META,
+                        (v) => this._patchMobile({ position: v === 'bottom' ? undefined : v }),
+                      )}
+                      <p class="choice-desc">
+                        ${
+                          (m.position ?? 'bottom') === 'top'
+                            ? 'The bar docks to the top edge.'
+                            : 'The bar docks to the bottom edge.'
+                        }
+                      </p>
+                    </div>
+                  </div>
                   ${checkboxField(
                     'Show Labels',
                     m.labels ?? false,
@@ -1672,12 +1682,7 @@ export class DashboardSidebarEditor extends LitElement {
                     )}
                     ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
                     ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
-                  </details>
-                  <div class="form-actions">
-                    <button class="add-btn danger" @click=${() => this._setOnMobile('sidebar')}>
-                      Remove Mobile Bar
-                    </button>
-                  </div>`
+                  </details>`
           }
         </div>
         ${this._renderMobilePreview()}

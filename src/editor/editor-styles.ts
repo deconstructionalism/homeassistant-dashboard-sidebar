@@ -359,6 +359,37 @@ export const editorStyles = css`
     background: none;
   }
 
+  /* The tab-note row's overflow trigger hugs the right edge. */
+  .tab-notes .tab-notes-tool {
+    margin-left: auto;
+  }
+
+  /* Mode and Position side by side, each with equal-width choice buttons
+     and a one-line description of the selected option. */
+  .mobile-choice-row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .mobile-choice {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .mobile-choice .icon-choice {
+    display: flex;
+  }
+
+  .mobile-choice .icon-choice button {
+    flex: 1 1 0;
+  }
+
+  .choice-desc {
+    margin: 4px 0 0;
+    color: var(--secondary-text-color, #888);
+    font-size: 0.85rem;
+  }
+
   .mobile-pv-wrap {
     position: relative;
     display: flex;
