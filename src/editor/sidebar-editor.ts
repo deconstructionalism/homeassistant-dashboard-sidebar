@@ -1387,7 +1387,7 @@ export class DashboardSidebarEditor extends LitElement {
             Switch to a custom bar? You can start from the current bar's elements or from an empty
             list.
           </p>
-          <div class="confirm-actions confirm-actions-stack">
+          <div class="confirm-actions">
             <button @click=${() => this._switchToCustom(true)}>Copy Current Bar</button>
             <button @click=${() => this._switchToCustom(false)}>Start Empty</button>
             <button

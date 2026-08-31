@@ -1404,24 +1404,15 @@ export const editorStyles = css`
     margin: 0 0 14px;
   }
 
+  /* Every confirm stacks its options as full-width rows, dismiss last. */
   .confirm-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
     gap: 8px;
   }
 
-  /* Choice dialogs stack their options as full-width rows. */
-  .confirm-actions-stack {
-    flex-direction: column;
-  }
-
-  .confirm-actions-stack button {
-    width: 100%;
-  }
-
   .confirm-actions button {
-    /* Row-layout buttons share the full dialog width. */
-    flex: 1 1 0;
+    width: 100%;
     font: inherit;
     padding: 8px 14px;
     border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));

@@ -25,8 +25,8 @@ export const confirmDialog = (opts: ConfirmDialogOptions): TemplateResult => htm
     <div class="confirm" role="alertdialog" aria-label=${opts.label}>
       <p>${opts.message}</p>
       <div class="confirm-actions">
-        <button @click=${opts.onKeep}>${opts.keepLabel}</button>
         <button class="danger-btn" @click=${opts.onConfirm}>${opts.confirmLabel}</button>
+        <button @click=${opts.onKeep}>${opts.keepLabel}</button>
       </div>
     </div>
   </div>
