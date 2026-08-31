@@ -381,9 +381,8 @@ export interface DashboardSidebarConfig {
   hide_on_mobile?: boolean;
   /**
    * Mobile-only mode: the desktop sidebar never renders; only the mobile bar
-   * shows, at and below the breakpoint. Requires a `mobile` config, which
-   * can still reference desktop-defined elements even though they stay
-   * hidden on desktop.
+   * shows, at and below the breakpoint. Without a `mobile` section the bar
+   * derives implicitly from the desktop config, as if `mobile: {}` were set.
    */
   hide_on_desktop?: boolean;
   /**

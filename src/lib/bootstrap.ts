@@ -267,9 +267,9 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
         : ''
     }
     ${
-      config.mobile
+      config.mobile || config.hide_on_desktop
         ? `dashboard-sidebar-bar { display: none; }
-           @media (max-width: ${config.mobile.breakpoint ?? 768}px) {
+           @media (max-width: ${config.mobile?.breakpoint ?? 768}px) {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
              dashboard-sidebar-bar { display: block; }
@@ -334,7 +334,7 @@ const buildSidebar = (): void => {
     wrapper.appendChild(view);
   }
 
-  if (config.mobile) {
+  if (config.mobile || config.hide_on_desktop) {
     const bar = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
     bar.hass = getHass();
     bar.setConfig(config);

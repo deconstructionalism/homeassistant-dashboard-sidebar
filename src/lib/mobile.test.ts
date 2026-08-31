@@ -84,6 +84,15 @@ describe('resolveBar, derive mode', () => {
   });
 });
 
+describe('resolveBar, implicit derive', () => {
+  it('derives the bar from hide_on_desktop alone, as if mobile were empty', () => {
+    const config = { ...base(), hide_on_desktop: true };
+    const { slots, menu } = resolveBar(config);
+    expect(slots.map((e) => e.kind)).toEqual(['clock', 'item', 'item', 'category']);
+    expect(menu).toHaveLength(1);
+  });
+});
+
 describe('resolveBar, sheet menu', () => {
   it('resolves use references to any kind, plus inline blocks', () => {
     const config = {

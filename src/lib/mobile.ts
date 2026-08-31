@@ -151,7 +151,9 @@ const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): Ba
 };
 
 export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
-  const mobile = config.mobile;
+  // A hidden desktop implies a bar even without a mobile section: derive mode
+  // with all defaults, so the config still renders somewhere.
+  const mobile = config.mobile ?? (config.hide_on_desktop ? {} : undefined);
   if (!mobile) {
     return { slots: [], menu: [], extras: [], footer: [] };
   }

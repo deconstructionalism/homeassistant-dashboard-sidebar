@@ -792,7 +792,7 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Renders the bar. */
   protected render(): TemplateResult | typeof nothing {
-    const mobile = this._config?.mobile;
+    const mobile = this._config?.mobile ?? (this._config?.hide_on_desktop ? {} : undefined);
     if (!mobile || this._resolved.slots.length + this._resolved.menu.length === 0) {
       return nothing;
     }

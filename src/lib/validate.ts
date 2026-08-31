@@ -591,8 +591,10 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   checkBool(c.overlay, 'overlay', errors);
   checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
   checkBool(c.hide_on_desktop, 'hide_on_desktop', errors);
-  if (config.hide_on_desktop && config.mobile === undefined) {
-    errors.push('hide_on_desktop: needs a `mobile` config; without one nothing would ever render');
+  if (config.hide_on_desktop && config.hide_on_mobile) {
+    errors.push(
+      'hide_on_desktop: cannot be combined with hide_on_mobile (nothing would ever render)',
+    );
   }
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);
