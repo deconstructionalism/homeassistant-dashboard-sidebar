@@ -390,6 +390,21 @@ export const editorStyles = css`
 
   /* Custom-mode element sections: a small-caps section title and rows with
      icon, title, source chip, and move/remove tools. */
+  /* The custom-mode sub-tab strip sticks where the heading otherwise sits. */
+  .mobile-subtabs {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    flex: 0 0 auto;
+    padding: 0;
+    background-color: var(--primary-background-color, #fff);
+    background-image: linear-gradient(
+      var(--card-background-color, #fff),
+      var(--card-background-color, #fff)
+    );
+    border-bottom: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+  }
+
   .mobile-section-title {
     margin-top: 6px;
     font-size: 0.75rem;

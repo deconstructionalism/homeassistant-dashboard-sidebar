@@ -242,6 +242,9 @@ export class DashboardSidebarEditor extends LitElement {
   /** Whether the Mobile tab is editing the mobile section as YAML. */
   @state() private _mobileYaml = false;
 
+  /** The active sub-tab of the Mobile Bar tab's custom mode. */
+  @state() private _mobileSubTab: 'settings' | 'bar' | 'menu' = 'settings';
+
   /** Whether the switch-to-custom choice dialog is showing. */
   @state() private _confirmingCustomSwitch = false;
 
@@ -1688,11 +1691,28 @@ export class DashboardSidebarEditor extends LitElement {
         this._mobileCapNote(),
       )}
       <div class="mobile-stack">
-        <div class="form-head">
-          <div class="form-title">
-            Mobile Bar Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
-          </div>
-        </div>
+        ${
+          custom && !this._mobileYaml
+            ? html`<div class="tabs mobile-subtabs">
+                ${(['settings', 'bar', 'menu'] as const).map(
+                  (t) => html`
+                    <button
+                      class="tab ${this._mobileSubTab === t ? 'active' : ''}"
+                      @click=${() => {
+                        this._mobileSubTab = t;
+                      }}
+                    >
+                      ${t === 'settings' ? 'Settings' : t === 'bar' ? 'Bar' : 'Menu'}
+                    </button>
+                  `,
+                )}
+              </div>`
+            : html`<div class="form-head">
+                <div class="form-title">
+                  Mobile Bar Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
+                </div>
+              </div>`
+        }
         <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
           ${
             this._mobileYaml
@@ -1703,11 +1723,12 @@ export class DashboardSidebarEditor extends LitElement {
                     validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
                 )
               : custom
-                ? html`<details class="advanced">
-                      <summary>Bar Settings</summary>
-                      ${this._renderMobileSettingsFields(m)}
-                    </details>
-                    ${this._renderBarElements()}`
+                ? this._mobileSubTab === 'settings'
+                  ? this._renderMobileSettingsFields(m)
+                  : this._mobileSubTab === 'bar'
+                    ? this._renderMobileElemSection('items')
+                    : html`${this._renderMobileElemSection('menu', 'Menu Cards')}
+                      ${this._renderMobileElemSection('footer', 'Menu Footer')}`
                 : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -1752,53 +1773,72 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Applies a mutation to a copy of the custom bar's items list.
+   * Applies a mutation to a copy of one of the mobile config's element lists.
    */
-  private _patchBarItems(mutate: (list: unknown[]) => void): void {
-    const items = [...((this._working.mobile?.items as unknown[]) ?? [])];
-    mutate(items);
-    this._patchMobile({ items });
+  private _patchMobileList(
+    key: 'items' | 'menu' | 'footer',
+    mutate: (list: unknown[]) => void,
+  ): void {
+    const list = [...((this._working.mobile?.[key] as unknown[]) ?? [])];
+    mutate(list);
+    this._patchMobile({ [key]: list });
   }
 
   /**
-   * Renders the Bar Elements section of custom mode: the ordered list with
-   * move/remove tools and the add menu (reuse a desktop element or a new
-   * inline item).
+   * Renders one element-list section (the bar, the menu cards, or the menu
+   * footer): the ordered rows with move/remove tools and an add menu offering
+   * a new inline element or an eligible desktop element by name.
    */
-  private _renderBarElements(): TemplateResult {
-    const entries = (this._working.mobile?.items ?? []) as Array<Record<string, unknown>>;
+  private _renderMobileElemSection(
+    key: 'items' | 'menu' | 'footer',
+    title?: string,
+  ): TemplateResult {
+    const entries = ((this._working.mobile?.[key] as unknown[]) ?? []) as Array<
+      Record<string, unknown>
+    >;
     const index = elementIndex(this._working);
-    const eligible: Array<{ label: string; run: () => void }> = [];
+    const kinds: Record<typeof key, string[]> = {
+      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
+      menu: ['item', 'category', 'divider', 'clock', 'date', 'button', 'title', 'markdown', 'card'],
+      footer: ['item', 'button'],
+    };
+    const addChoices: Array<{ label: string; run: () => void }> = [
+      key === 'footer'
+        ? {
+            label: 'New Button',
+            run: () =>
+              this._patchMobileList(key, (list) =>
+                list.push(defaultFooterButton(collectIds(this._working))),
+              ),
+          }
+        : {
+            label: 'New Item',
+            run: () =>
+              this._patchMobileList(key, (list) =>
+                list.push(defaultBlock('item', collectIds(this._working))),
+              ),
+          },
+    ];
     for (const [id, info] of index) {
-      if (!['item', 'category', 'divider', 'clock', 'date', 'button'].includes(info.kind)) {
+      if (!kinds[key].includes(info.kind)) {
         continue;
       }
-      const el = info.element as { title?: string; icon?: string };
+      const el = info.element as { title?: string };
       const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
-      eligible.push({
+      addChoices.push({
         label: `Reuse: ${name}`,
-        run: () => this._patchBarItems((list) => list.push({ use: id })),
+        run: () => this._patchMobileList(key, (list) => list.push({ use: id })),
       });
     }
-    const addChoices = [
-      {
-        label: 'New Item',
-        run: () =>
-          this._patchBarItems((list) =>
-            list.push(
-              defaultBlock('item', collectIds(this._working)) as unknown as Record<string, unknown>,
-            ),
-          ),
-      },
-      ...eligible,
-    ];
     return html`
-      <div class="mobile-section-title">Bar Elements</div>
+      ${title ? html`<div class="mobile-section-title">${title}</div>` : nothing}
       <div class="mobile-elem-list">
         ${
           entries.length === 0
-            ? html`<p class="tab-note">No elements on the bar yet; add some below.</p>`
-            : entries.map((entry, i) => this._renderBarEntryRow(entry, i, entries.length, index))
+            ? html`<p class="tab-note">Nothing here yet; add elements below.</p>`
+            : entries.map((entry, i) =>
+                this._renderMobileEntryRow(key, entry, i, entries.length, index),
+              )
         }
       </div>
       ${this._renderAddMenu(addChoices)}
@@ -1806,10 +1846,11 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Renders one row of the Bar Elements list: icon, title, source chip, and
-   * the move/remove tools.
+   * Renders one row of an element-list section: icon, title, source chip,
+   * and the move/remove tools.
    */
-  private _renderBarEntryRow(
+  private _renderMobileEntryRow(
+    key: 'items' | 'menu' | 'footer',
     entry: Record<string, unknown>,
     i: number,
     count: number,
@@ -1843,7 +1884,8 @@ export class DashboardSidebarEditor extends LitElement {
           class="tool"
           title="Move up"
           ?disabled=${i === 0}
-          @click=${() => this._patchBarItems((list) => list.splice(i - 1, 0, ...list.splice(i, 1)))}
+          @click=${() =>
+            this._patchMobileList(key, (list) => list.splice(i - 1, 0, ...list.splice(i, 1)))}
         >
           <ha-icon icon="mdi:arrow-up"></ha-icon>
         </button>
@@ -1851,14 +1893,15 @@ export class DashboardSidebarEditor extends LitElement {
           class="tool"
           title="Move down"
           ?disabled=${i === count - 1}
-          @click=${() => this._patchBarItems((list) => list.splice(i + 1, 0, ...list.splice(i, 1)))}
+          @click=${() =>
+            this._patchMobileList(key, (list) => list.splice(i + 1, 0, ...list.splice(i, 1)))}
         >
           <ha-icon icon="mdi:arrow-down"></ha-icon>
         </button>
         <button
           class="tool"
-          title="Remove from bar"
-          @click=${() => this._patchBarItems((list) => list.splice(i, 1))}
+          title="Remove"
+          @click=${() => this._patchMobileList(key, (list) => list.splice(i, 1))}
         >
           <ha-icon icon="mdi:close"></ha-icon>
         </button>

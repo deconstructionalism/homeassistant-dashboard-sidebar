@@ -87,6 +87,11 @@ describe('<dashboard-sidebar-editor>', () => {
       },
     });
     await tab(el, 'Mobile Bar');
+    const barSub = [...root(el).querySelectorAll('.mobile-subtabs .tab')].find(
+      (b) => b.textContent?.trim() === 'Bar',
+    ) as HTMLButtonElement;
+    barSub.click();
+    await el.updateComplete;
     let rows = [...root(el).querySelectorAll('.mobile-elem-row')];
     expect(rows.length).to.equal(2);
     expect(rows[0].querySelector('.mobile-elem-chip')?.textContent).to.equal('reused');
