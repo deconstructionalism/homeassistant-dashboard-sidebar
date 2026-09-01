@@ -244,7 +244,7 @@ export class DashboardSidebarEditor extends LitElement {
   @state() private _mobileYaml = false;
 
   /** The active sub-tab of the Mobile Bar tab's custom mode. */
-  @state() private _mobileSubTab: 'settings' | 'bar' | 'menu' = 'settings';
+  @state() private _mobileSubTab: 'settings' | 'bar' = 'settings';
 
   /** The selected mobile element's loc (e.g. `items:2`), or null. */
   @state() private _mobileSelected: string | null = null;
@@ -1698,7 +1698,7 @@ export class DashboardSidebarEditor extends LitElement {
         ${
           custom && !this._mobileYaml
             ? html`<div class="tabs mobile-subtabs">
-                ${(['settings', 'bar', 'menu'] as const).map(
+                ${(['settings', 'bar'] as const).map(
                   (t) => html`
                     <button
                       class="tab ${this._mobileSubTab === t ? 'active' : ''}"
@@ -1706,7 +1706,7 @@ export class DashboardSidebarEditor extends LitElement {
                         this._mobileSubTab = t;
                       }}
                     >
-                      ${t === 'settings' ? 'Settings' : t === 'bar' ? 'Bar' : 'Menu'}
+                      ${t === 'settings' ? 'Settings' : 'Bar'}
                     </button>
                   `,
                 )}
@@ -1729,12 +1729,10 @@ export class DashboardSidebarEditor extends LitElement {
               : custom
                 ? this._mobileSubTab === 'settings'
                   ? this._renderMobileSettingsFields(m)
-                  : this._mobileSubTab === 'bar'
-                    ? html`${this._renderMobileAddControls('items')}
-                      ${this._renderMobileSelectedForm()}`
-                    : html`${this._renderMobileAddControls('menu', 'Menu Cards')}
-                      ${this._renderMobileAddControls('footer', 'Menu Footer')}
-                      ${this._renderMobileSelectedForm()}`
+                  : html`${this._renderMobileAddControls('items', 'Bar')}
+                    ${this._renderMobileAddControls('menu', 'Menu Cards')}
+                    ${this._renderMobileAddControls('footer', 'Menu Footer')}
+                    ${this._renderMobileSelectedForm()}`
                 : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -2095,14 +2093,9 @@ export class DashboardSidebarEditor extends LitElement {
       el.setAttribute('preview', '');
       el.addEventListener('bar-preview-sheet-open', () => this._scrollMobilePreview());
       el.addEventListener(PREVIEW_SELECT_EVENT, (ev: Event) => {
-        const loc = (ev as CustomEvent<{ loc: string }>).detail.loc;
         ev.stopPropagation();
-        this._mobileSelected = loc;
-        if (loc.startsWith('items:')) {
-          this._mobileSubTab = 'bar';
-        } else {
-          this._mobileSubTab = 'menu';
-        }
+        this._mobileSelected = (ev as CustomEvent<{ loc: string }>).detail.loc;
+        this._mobileSubTab = 'bar';
       });
       el.addEventListener(PREVIEW_REORDER_EVENT, (ev: Event) => {
         ev.stopPropagation();
@@ -2116,7 +2109,7 @@ export class DashboardSidebarEditor extends LitElement {
     el.hass = this.hass;
     const custom = this._working.mobile?.items !== undefined;
     el.previewInteractive = custom && !this._mobileYaml;
-    el.previewSheetOpen = custom && !this._mobileYaml && this._mobileSubTab === 'menu';
+    el.previewSheetOpen = custom && !this._mobileYaml && this._mobileSubTab === 'bar';
     el.previewSelected = this._mobileSelected ?? undefined;
     const json = JSON.stringify(this._working);
     if (this._barPreviewCfg !== json) {
