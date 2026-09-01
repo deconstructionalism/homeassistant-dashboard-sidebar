@@ -1735,16 +1735,13 @@ export class DashboardSidebarEditor extends LitElement {
               : custom
                 ? this._mobileSubTab === 'settings'
                   ? this._renderMobileSettingsFields(m)
-                  : this._mobileSelection()
-                    ? html`${this._renderMobileSelectedForm()}
-                      ${this._renderAddMenu(this._mobileAddItems(), 'Add Element', true)}`
-                    : html`<div class="empty-state">
-                        <ha-icon class="empty-icon" icon="mdi:gesture-tap-button"></ha-icon>
-                        <p class="empty-msg">
-                          Select an element in the preview to edit it, or add a new one below.
-                        </p>
-                        ${this._renderAddMenu(this._mobileAddItems(), 'Add Element', true)}
-                      </div>`
+                  : this._renderMobileListTab(
+                      this._mobileSubTab === 'bar'
+                        ? 'items'
+                        : this._mobileSubTab === 'menu'
+                          ? 'menu'
+                          : 'footer',
+                    )
                 : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -1801,91 +1798,105 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * The consolidated Add Element menu: one section per destination (Bar,
-   * Menu, Footer), each offering its inline element types followed by
-   * reusable desktop elements.
+   * The Add Element menu for one destination: its inline element types, then
+   * a Reuse section listing eligible desktop elements.
    */
-  private _mobileAddItems(): Array<{ label: string; run: () => void; header?: boolean }> {
+  private _mobileAddItems(
+    key: 'items' | 'menu' | 'footer',
+  ): Array<{ label: string; run: () => void; header?: boolean }> {
     const index = elementIndex(this._working);
-    const select = (key: string, i: number): void => {
+    const select = (i: number): void => {
       this._mobileSelected = `${key}:${i}`;
     };
-    const addBlock = (key: 'items' | 'menu', type: BlockType): void =>
-      this._patchMobileList(key, (list) => {
-        list.push(defaultBlock(type, collectIds(this._working)));
-        select(key, list.length - 1);
-      });
-    const groups: Array<{
-      header: string;
-      key: 'items' | 'menu' | 'footer';
-      types: Array<[string, BlockType]>;
-      reuse: string[] | null;
-    }> = [
-      {
-        header: 'Bar',
-        key: 'items',
-        types: [
-          ['Item', 'item'],
-          ['Category', 'category'],
-          ['Clock', 'clock'],
-          ['Date', 'date'],
-          ['Divider', 'divider'],
-        ],
-        reuse: ['item', 'category', 'divider', 'clock', 'date', 'button'],
-      },
-      {
-        header: 'Menu',
-        key: 'menu',
-        types: [
-          ['Item', 'item'],
-          ['Category', 'category'],
-          ['Clock', 'clock'],
-          ['Date', 'date'],
-          ['Divider', 'divider'],
-          ['Title', 'title'],
-          ['Markdown', 'markdown'],
-          ['Card', 'card'],
-        ],
-        reuse: ['item', 'category', 'divider', 'clock', 'date', 'title', 'markdown', 'card'],
-      },
-      { header: 'Footer', key: 'footer', types: [], reuse: ['item', 'button'] },
-    ];
+    const types: Record<typeof key, Array<[string, BlockType]>> = {
+      items: [
+        ['Item', 'item'],
+        ['Category', 'category'],
+        ['Clock', 'clock'],
+        ['Date', 'date'],
+        ['Divider', 'divider'],
+      ],
+      menu: [
+        ['Item', 'item'],
+        ['Category', 'category'],
+        ['Clock', 'clock'],
+        ['Date', 'date'],
+        ['Divider', 'divider'],
+        ['Title', 'title'],
+        ['Markdown', 'markdown'],
+        ['Card', 'card'],
+      ],
+      footer: [],
+    };
+    const reuse: Record<typeof key, string[]> = {
+      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
+      menu: ['item', 'category', 'divider', 'clock', 'date', 'title', 'markdown', 'card'],
+      footer: ['item', 'button'],
+    };
     const out: Array<{ label: string; run: () => void; header?: boolean }> = [];
-    for (const group of groups) {
-      out.push({ label: group.header, run: () => undefined, header: true });
-      for (const [label, type] of group.types) {
-        out.push({
-          label: `New ${label}`,
-          run: () => addBlock(group.key as 'items' | 'menu', type),
-        });
+    for (const [label, type] of types[key]) {
+      out.push({
+        label: `New ${label}`,
+        run: () =>
+          this._patchMobileList(key, (list) => {
+            list.push(defaultBlock(type, collectIds(this._working)));
+            select(list.length - 1);
+          }),
+      });
+    }
+    if (key === 'footer') {
+      out.push({
+        label: 'New Button',
+        run: () =>
+          this._patchMobileList('footer', (list) => {
+            list.push(defaultFooterButton(collectIds(this._working)));
+            select(list.length - 1);
+          }),
+      });
+    }
+    let reuseHeader = false;
+    for (const [id, info] of index) {
+      if (!reuse[key].includes(info.kind)) {
+        continue;
       }
-      if (group.key === 'footer') {
-        out.push({
-          label: 'New Button',
-          run: () =>
-            this._patchMobileList('footer', (list) => {
-              list.push(defaultFooterButton(collectIds(this._working)));
-              select('footer', list.length - 1);
-            }),
-        });
+      if (!reuseHeader) {
+        reuseHeader = true;
+        out.push({ label: 'Reuse', run: () => undefined, header: true });
       }
-      for (const [id, info] of index) {
-        if (!group.reuse?.includes(info.kind)) {
-          continue;
-        }
-        const el = info.element as { title?: string };
-        const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
-        out.push({
-          label: `Reuse: ${name}`,
-          run: () =>
-            this._patchMobileList(group.key, (list) => {
-              list.push({ use: id });
-              select(group.key, list.length - 1);
-            }),
-        });
-      }
+      const el = info.element as { title?: string };
+      const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
+      out.push({
+        label: name,
+        run: () =>
+          this._patchMobileList(key, (list) => {
+            list.push({ use: id });
+            select(list.length - 1);
+          }),
+      });
     }
     return out;
+  }
+
+  /**
+   * Renders one destination sub-tab: the selected element's form when the
+   * selection belongs here, else the empty state, either way with the
+   * destination's own Add Element menu.
+   */
+  private _renderMobileListTab(key: 'items' | 'menu' | 'footer'): TemplateResult {
+    const sel = this._mobileSelection();
+    const add = this._renderAddMenu(this._mobileAddItems(key), 'Add Element', true);
+    if (sel && sel.key === key) {
+      return html`${this._renderMobileSelectedForm()} ${add}`;
+    }
+    return html`
+      <div class="empty-state">
+        <ha-icon class="empty-icon" icon="mdi:gesture-tap-button"></ha-icon>
+        <p class="empty-msg">
+          Select an element in the preview to edit it, or add a new one below.
+        </p>
+        ${add}
+      </div>
+    `;
   }
 
   /**
