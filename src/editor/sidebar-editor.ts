@@ -2163,6 +2163,10 @@ export class DashboardSidebarEditor extends LitElement {
       this._applyChildDrag(detail.srcLoc, to, detail.beforeLoc ?? null);
       return;
     }
+    if (to.startsWith('cat:') && detail.srcLoc) {
+      this._moveEntryIntoCategory(detail.srcLoc, to.slice(4), detail.beforeLoc ?? null);
+      return;
+    }
     if (from.startsWith('cat:') || to.startsWith('cat:')) {
       if (from === to && oldIndex !== undefined && newIndex !== undefined) {
         this._reorderCategoryChildren(from.slice(4), oldIndex, newIndex);
@@ -2219,6 +2223,150 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
+   * Removes a desktop element by id from wherever it lives (top-level header
+   * or body, or inside a category) and returns it, or null when not found.
+   * Region lists are cloned; the caller commits via _patchConfig.
+   */
+  private _extractDesktopElement(
+    id: string,
+    patches: Record<string, unknown>,
+  ): Record<string, unknown> | null {
+    for (const region of ['header', 'body'] as const) {
+      const regionList = [
+        ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
+      ];
+      const bi = regionList.findIndex((b) => b.id === id);
+      if (bi >= 0) {
+        const [block] = regionList.splice(bi, 1);
+        patches[region] = regionList;
+        return block as unknown as Record<string, unknown>;
+      }
+      for (let i = 0; i < regionList.length; i++) {
+        const block = regionList[i] as unknown as Record<string, unknown>;
+        const items = block.items as Array<{ id?: string }> | undefined;
+        if (!Array.isArray(items)) {
+          continue;
+        }
+        const ci = items.findIndex((c) => c.id === id);
+        if (ci >= 0) {
+          const nextBlock = { ...block, items: [...items] };
+          const [child] = (nextBlock.items as unknown[]).splice(ci, 1);
+          regionList[i] = nextBlock as unknown as (typeof regionList)[number];
+          patches[region] = regionList;
+          return child as Record<string, unknown>;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Inserts an item block into the category behind a mobile entry: the
+   * referenced desktop category for a reused one, or the inline category's
+   * own items. Returns false when the host cannot take it.
+   */
+  private _insertIntoCategory(
+    hostLoc: string,
+    child: Record<string, unknown>,
+    insertIdx: number,
+    patches: Record<string, unknown>,
+    mobile: Record<string, unknown>,
+  ): boolean {
+    const [hostKey, rawIdx] = hostLoc.split(':');
+    const hostIdx = Number(rawIdx);
+    if (!['items', 'menu'].includes(hostKey) || Number.isNaN(hostIdx)) {
+      return false;
+    }
+    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
+    const host = hostList[hostIdx] as Record<string, unknown> | undefined;
+    if (!host) {
+      return false;
+    }
+    if (typeof host.use === 'string') {
+      for (const region of ['header', 'body'] as const) {
+        const regionList = [
+          ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
+        ];
+        const bi = regionList.findIndex((b) => b.id === host.use);
+        if (bi < 0) {
+          continue;
+        }
+        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
+        const items = [...((block.items as unknown[]) ?? [])];
+        items.splice(Math.min(insertIdx, items.length), 0, child);
+        block.items = items;
+        regionList[bi] = block as unknown as (typeof regionList)[number];
+        patches[region] = regionList;
+        return true;
+      }
+      return false;
+    }
+    if (host.type === 'category') {
+      const next = { ...host };
+      const items = [...((next.items as unknown[]) ?? [])];
+      items.splice(Math.min(insertIdx, items.length), 0, child);
+      next.items = items;
+      hostList[hostIdx] = next;
+      mobile[hostKey] = hostList;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Moves a mobile list entry into a category: a reused element relocates in
+   * the desktop config; an inline item becomes a child. The list entry is
+   * consumed either way.
+   */
+  private _moveEntryIntoCategory(srcLoc: string, hostLoc: string, beforeLoc: string | null): void {
+    const [srcKey, rawSrc] = srcLoc.split(':');
+    const srcIdx = Number(rawSrc);
+    if (!['items', 'menu', 'footer'].includes(srcKey) || Number.isNaN(srcIdx)) {
+      return;
+    }
+    let insertIdx = Number.MAX_SAFE_INTEGER;
+    if (beforeLoc) {
+      const bp = beforeLoc.split(':');
+      const bi = Number(bp[3]);
+      if (bp[0] === 'cat' && !Number.isNaN(bi)) {
+        insertIdx = bi;
+      }
+    }
+    const patches: Record<string, unknown> = {};
+    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
+    const srcList = [...((mobile[srcKey] as unknown[]) ?? [])];
+    const entry = srcList[srcIdx] as Record<string, unknown> | undefined;
+    if (!entry) {
+      return;
+    }
+    let child: Record<string, unknown> | null;
+    if (typeof entry.use === 'string') {
+      child = this._extractDesktopElement(entry.use, patches);
+    } else {
+      child = { ...entry };
+      delete child.type;
+    }
+    if (!child) {
+      return;
+    }
+    srcList.splice(srcIdx, 1);
+    mobile[srcKey] = srcList;
+    // The host loc may shift if it sits after the removed entry in the same
+    // list.
+    let adjHostLoc = hostLoc;
+    const [hostKey, rawHost] = hostLoc.split(':');
+    const hostIdx = Number(rawHost);
+    if (hostKey === srcKey && hostIdx > srcIdx) {
+      adjHostLoc = `${hostKey}:${hostIdx - 1}`;
+    }
+    if (!this._insertIntoCategory(adjHostLoc, child, insertIdx, patches, mobile)) {
+      return;
+    }
+    this._patchConfig({ ...patches, mobile });
+    this._mobileSelected = null;
+  }
+
+  /**
    * Applies a drag that started on a category child: a reorder within its
    * category, or a move out to sibling position in a mobile list (which,
    * for a reused category, also moves the element out of the desktop
@@ -2236,8 +2384,27 @@ export class DashboardSidebarEditor extends LitElement {
       return;
     }
     if (to.startsWith('cat:')) {
-      // Reorder within the same category.
       if (to !== `cat:${hostKey}:${hostIdx}`) {
+        // A move between two categories: pull the child from its category,
+        // then insert into the destination category.
+        let insertIdx = Number.MAX_SAFE_INTEGER;
+        if (beforeLoc) {
+          const bp = beforeLoc.split(':');
+          const bi = Number(bp[3]);
+          if (bp[0] === 'cat' && !Number.isNaN(bi)) {
+            insertIdx = bi;
+          }
+        }
+        const patches: Record<string, unknown> = {};
+        const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
+        const child = this._extractCategoryChild(hostKey, hostIdx, childIdx, patches, mobile);
+        if (!child) {
+          return;
+        }
+        if (!this._insertIntoCategory(to.slice(4), child, insertIdx, patches, mobile)) {
+          return;
+        }
+        this._patchConfig({ ...patches, mobile });
         return;
       }
       let insert = Number.MAX_SAFE_INTEGER;
@@ -2327,6 +2494,59 @@ export class DashboardSidebarEditor extends LitElement {
     mobile[toKey] = toList;
     this._patchConfig({ mobile });
     this._mobileSelected = `${toKey}:${insert}`;
+  }
+
+  /**
+   * Removes and returns one child of the category behind a mobile entry,
+   * cloning whatever lists it touches into the patch sets.
+   */
+  private _extractCategoryChild(
+    hostKey: 'items' | 'menu',
+    hostIdx: number,
+    childIdx: number,
+    patches: Record<string, unknown>,
+    mobile: Record<string, unknown>,
+  ): Record<string, unknown> | null {
+    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
+    const host = hostList[hostIdx] as Record<string, unknown> | undefined;
+    if (!host) {
+      return null;
+    }
+    if (typeof host.use === 'string') {
+      for (const region of ['header', 'body'] as const) {
+        const regionList = [
+          ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
+        ];
+        const bi = regionList.findIndex((b) => b.id === host.use);
+        if (bi < 0) {
+          continue;
+        }
+        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
+        const items = [...((block.items as unknown[]) ?? [])];
+        const [child] = items.splice(childIdx, 1);
+        if (!child) {
+          return null;
+        }
+        block.items = items;
+        regionList[bi] = block as unknown as (typeof regionList)[number];
+        patches[region] = regionList;
+        return child as Record<string, unknown>;
+      }
+      return null;
+    }
+    if (Array.isArray(host.items)) {
+      const next = { ...host };
+      const items = [...(next.items as unknown[])];
+      const [child] = items.splice(childIdx, 1);
+      if (!child) {
+        return null;
+      }
+      next.items = items;
+      hostList[hostIdx] = next;
+      mobile[hostKey] = hostList;
+      return child as Record<string, unknown>;
+    }
+    return null;
   }
 
   /**

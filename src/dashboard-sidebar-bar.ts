@@ -362,7 +362,8 @@ export class DashboardSidebarBar extends LitElement {
           put: (to, _from, dragEl) => {
             const target = (to.el as HTMLElement).dataset.container ?? '';
             if (target.startsWith('cat:')) {
-              return false; // children reorder internally; nothing drops in
+              // Categories accept plain items, like the desktop preview.
+              return dragEl.getAttribute('data-kind') === 'item';
             }
             const allowed = accepts[target];
             if (allowed === undefined) {
