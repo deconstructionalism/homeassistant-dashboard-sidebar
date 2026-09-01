@@ -2156,6 +2156,10 @@ export class DashboardSidebarEditor extends LitElement {
     if (!from || !to) {
       return;
     }
+    if (detail.srcLoc?.startsWith('cat:')) {
+      this._applyChildDrag(detail.srcLoc, to, detail.beforeLoc ?? null);
+      return;
+    }
     if (from.startsWith('cat:') || to.startsWith('cat:')) {
       if (from === to && oldIndex !== undefined && newIndex !== undefined) {
         this._reorderCategoryChildren(from.slice(4), oldIndex, newIndex);
@@ -2209,6 +2213,117 @@ export class DashboardSidebarEditor extends LitElement {
     if (this._mobileSelected === `${fromKey}:${srcIndex}`) {
       this._mobileSelected = `${toKey}:${insert}`;
     }
+  }
+
+  /**
+   * Applies a drag that started on a category child: a reorder within its
+   * category, or a move out to sibling position in a mobile list (which,
+   * for a reused category, also moves the element out of the desktop
+   * category to sit beside it, mirroring the desktop editor's semantics).
+   */
+  private _applyChildDrag(srcLoc: string, to: string, beforeLoc: string | null): void {
+    const parts = srcLoc.split(':');
+    if (parts.length !== 4) {
+      return;
+    }
+    const hostKey = parts[1] as 'items' | 'menu';
+    const hostIdx = Number(parts[2]);
+    const childIdx = Number(parts[3]);
+    if (!['items', 'menu'].includes(hostKey) || Number.isNaN(hostIdx) || Number.isNaN(childIdx)) {
+      return;
+    }
+    if (to.startsWith('cat:')) {
+      // Reorder within the same category.
+      if (to !== `cat:${hostKey}:${hostIdx}`) {
+        return;
+      }
+      let insert = Number.MAX_SAFE_INTEGER;
+      if (beforeLoc) {
+        const bp = beforeLoc.split(':');
+        let bi = Number(bp[3]);
+        if (!Number.isNaN(bi)) {
+          if (bi > childIdx) {
+            bi -= 1;
+          }
+          insert = bi;
+        }
+      }
+      this._reorderCategoryChildren(`${hostKey}:${hostIdx}`, childIdx, insert);
+      return;
+    }
+    const lists = ['items', 'menu', 'footer'];
+    if (!lists.includes(to)) {
+      return;
+    }
+    const toKey = to as 'items' | 'menu' | 'footer';
+    const hostEntry = (this._working.mobile?.[hostKey] as unknown[])?.[hostIdx] as
+      Record<string, unknown> | undefined;
+    if (!hostEntry) {
+      return;
+    }
+    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
+    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
+    const toList = toKey === hostKey ? hostList : [...((mobile[toKey] as unknown[]) ?? [])];
+    let insert = toList.length;
+    if (beforeLoc) {
+      const bp = beforeLoc.split(':');
+      const bi = Number(bp[1]);
+      if (bp[0] === toKey && !Number.isNaN(bi)) {
+        insert = bi;
+      }
+    }
+    if (typeof hostEntry.use === 'string') {
+      // A reused desktop category: move the child out beside it on desktop,
+      // then reference it at the drop position.
+      const id = hostEntry.use;
+      for (const region of ['header', 'body'] as const) {
+        const regionList = [...(this._working[region] ?? [])];
+        const bi = regionList.findIndex((b) => b.id === id);
+        if (bi < 0) {
+          continue;
+        }
+        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
+        const items = [...((block.items as unknown[]) ?? [])];
+        const [child] = items.splice(childIdx, 1);
+        if (!child) {
+          return;
+        }
+        block.items = items;
+        regionList[bi] = block as unknown as (typeof regionList)[number];
+        regionList.splice(bi + 1, 0, {
+          type: 'item',
+          ...(child as Record<string, unknown>),
+        } as unknown as (typeof regionList)[number]);
+        const childId = (child as { id?: string }).id;
+        if (!childId) {
+          return;
+        }
+        toList.splice(insert, 0, { use: childId });
+        mobile[toKey] = toList;
+        if (toKey === hostKey) {
+          mobile[hostKey] = toList;
+        }
+        this._patchConfig({ [region]: regionList, mobile });
+        this._mobileSelected = `${toKey}:${insert}`;
+        return;
+      }
+      return;
+    }
+    // An inline category: the child moves out as an inline element.
+    const hi = hostList.indexOf(hostEntry) >= 0 ? hostList.indexOf(hostEntry) : hostIdx;
+    const host = { ...(hostList[hi] as Record<string, unknown>) };
+    const items = [...((host.items as unknown[]) ?? [])];
+    const [child] = items.splice(childIdx, 1);
+    if (!child) {
+      return;
+    }
+    host.items = items;
+    hostList[hi] = host;
+    toList.splice(insert, 0, { type: 'item', ...(child as Record<string, unknown>) });
+    mobile[hostKey] = hostList;
+    mobile[toKey] = toList;
+    this._patchConfig({ mobile });
+    this._mobileSelected = `${toKey}:${insert}`;
   }
 
   /**

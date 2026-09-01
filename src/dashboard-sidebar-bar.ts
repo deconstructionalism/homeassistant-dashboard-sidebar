@@ -390,18 +390,6 @@ export class DashboardSidebarBar extends LitElement {
           };
           const fromC = evt.from.getAttribute('data-container') ?? '';
           const toC = evt.to.getAttribute('data-container') ?? '';
-          if (fromC.startsWith('cat:')) {
-            // Category children reorder by plain indices within their list.
-            restore();
-            this.dispatchEvent(
-              new CustomEvent(PREVIEW_REORDER_EVENT, {
-                detail: { from: fromC, to: toC, oldIndex: evt.oldIndex, newIndex: evt.newIndex },
-                bubbles: true,
-                composed: true,
-              }),
-            );
-            return;
-          }
           // The bar's items list renders split across the bar and the sheet's
           // overflow, so moves are described by element locs, not container
           // indices: the dragged entry's loc plus the loc it now precedes.
