@@ -55,6 +55,7 @@ import {
   intField,
   MARKDOWN_HINT,
   selectField,
+  textField,
   type Patch,
   serviceDatalist,
   type ValidationCtx,
@@ -244,6 +245,9 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** The active sub-tab of the Mobile Bar tab's custom mode. */
   @state() private _mobileSubTab: 'settings' | 'bar' | 'menu' = 'settings';
+
+  /** The selected mobile element's loc (e.g. `items:2`), or null. */
+  @state() private _mobileSelected: string | null = null;
 
   /** Whether the switch-to-custom choice dialog is showing. */
   @state() private _confirmingCustomSwitch = false;
@@ -1726,9 +1730,11 @@ export class DashboardSidebarEditor extends LitElement {
                 ? this._mobileSubTab === 'settings'
                   ? this._renderMobileSettingsFields(m)
                   : this._mobileSubTab === 'bar'
-                    ? this._renderMobileElemSection('items')
-                    : html`${this._renderMobileElemSection('menu', 'Menu Cards')}
-                      ${this._renderMobileElemSection('footer', 'Menu Footer')}`
+                    ? html`${this._renderMobileAddControls('items')}
+                      ${this._renderMobileSelectedForm()}`
+                    : html`${this._renderMobileAddControls('menu', 'Menu Cards')}
+                      ${this._renderMobileAddControls('footer', 'Menu Footer')}
+                      ${this._renderMobileSelectedForm()}`
                 : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -1785,38 +1791,41 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Renders one element-list section (the bar, the menu cards, or the menu
-   * footer): the ordered rows with move/remove tools and an add menu offering
-   * a new inline element or an eligible desktop element by name.
+   * Renders one list's add control (the bar, the menu cards, or the menu
+   * footer): a dashed add trigger offering a new inline element or an
+   * eligible desktop element by name. The list itself is edited on the
+   * preview: click to select, drag to reorder.
    */
-  private _renderMobileElemSection(
+  private _renderMobileAddControls(
     key: 'items' | 'menu' | 'footer',
     title?: string,
   ): TemplateResult {
-    const entries = ((this._working.mobile?.[key] as unknown[]) ?? []) as Array<
-      Record<string, unknown>
-    >;
     const index = elementIndex(this._working);
     const kinds: Record<typeof key, string[]> = {
       items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
       menu: ['item', 'category', 'divider', 'clock', 'date', 'button', 'title', 'markdown', 'card'],
       footer: ['item', 'button'],
     };
+    const select = (i: number): void => {
+      this._mobileSelected = `${key}:${i}`;
+    };
     const addChoices: Array<{ label: string; run: () => void }> = [
       key === 'footer'
         ? {
             label: 'New Button',
             run: () =>
-              this._patchMobileList(key, (list) =>
-                list.push(defaultFooterButton(collectIds(this._working))),
-              ),
+              this._patchMobileList(key, (list) => {
+                list.push(defaultFooterButton(collectIds(this._working)));
+                select(list.length - 1);
+              }),
           }
         : {
             label: 'New Item',
             run: () =>
-              this._patchMobileList(key, (list) =>
-                list.push(defaultBlock('item', collectIds(this._working))),
-              ),
+              this._patchMobileList(key, (list) => {
+                list.push(defaultBlock('item', collectIds(this._working)));
+                select(list.length - 1);
+              }),
           },
     ];
     for (const [id, info] of index) {
@@ -1827,84 +1836,125 @@ export class DashboardSidebarEditor extends LitElement {
       const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
       addChoices.push({
         label: `Reuse: ${name}`,
-        run: () => this._patchMobileList(key, (list) => list.push({ use: id })),
+        run: () =>
+          this._patchMobileList(key, (list) => {
+            list.push({ use: id });
+            select(list.length - 1);
+          }),
       });
     }
     return html`
       ${title ? html`<div class="mobile-section-title">${title}</div>` : nothing}
-      <div class="mobile-elem-list">
-        ${
-          entries.length === 0
-            ? html`<p class="tab-note">Nothing here yet; add elements below.</p>`
-            : entries.map((entry, i) =>
-                this._renderMobileEntryRow(key, entry, i, entries.length, index),
-              )
-        }
-      </div>
       ${this._renderAddMenu(addChoices)}
     `;
   }
 
   /**
-   * Renders one row of an element-list section: icon, title, source chip,
-   * and the move/remove tools.
+   * The selected mobile element parsed from its loc, or null when stale.
    */
-  private _renderMobileEntryRow(
-    key: 'items' | 'menu' | 'footer',
-    entry: Record<string, unknown>,
-    i: number,
-    count: number,
-    index: ReturnType<typeof elementIndex>,
-  ): TemplateResult {
-    const use = typeof entry.use === 'string' ? entry.use : null;
-    const target = use ? index.get(use) : undefined;
-    const el = {
-      ...(target?.element as Record<string, unknown> | undefined),
-      ...entry,
-    } as { title?: string; icon?: string; type?: string };
-    const kind = use ? (target?.kind ?? 'missing') : ((entry.type as string) ?? 'item');
-    const title =
-      typeof el.title === 'string' && el.title
-        ? el.title
-        : kind === 'missing'
-          ? 'Missing element'
-          : `(${kind})`;
-    return html`
-      <div class="mobile-elem-row ${kind === 'missing' ? 'missing' : ''}">
-        <span class="mobile-elem-icon">
-          ${
-            typeof el.icon === 'string' && el.icon
-              ? html`<ha-icon icon=${el.icon}></ha-icon>`
-              : html`<span class="mobile-elem-abbr">${title.slice(0, 2)}</span>`
+  private _mobileSelection(): {
+    key: 'items' | 'menu' | 'footer';
+    index: number;
+    entry: Record<string, unknown>;
+  } | null {
+    if (!this._mobileSelected) {
+      return null;
+    }
+    const [key, raw] = this._mobileSelected.split(':');
+    const index = Number(raw);
+    if (!['items', 'menu', 'footer'].includes(key) || Number.isNaN(index)) {
+      return null;
+    }
+    const list = (this._working.mobile?.[key as 'items' | 'menu' | 'footer'] as unknown[]) ?? [];
+    const entry = list[index];
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+    return {
+      key: key as 'items' | 'menu' | 'footer',
+      index,
+      entry: entry as Record<string, unknown>,
+    };
+  }
+
+  /**
+   * Renders the form for the selected mobile element: the override patch
+   * fields for a reused element, or the full block/button form for an inline
+   * one, plus a remove action.
+   */
+  private _renderMobileSelectedForm(): TemplateResult | typeof nothing {
+    const sel = this._mobileSelection();
+    if (!sel) {
+      return html`<p class="tab-note">
+        Select an element on the preview to edit it; drag to reorder.
+      </p>`;
+    }
+    const { key, index, entry } = sel;
+    const patch: Patch = (partial) => {
+      this._patchMobileList(key, (list) => {
+        const next = { ...(list[index] as Record<string, unknown>) };
+        for (const [k, v] of Object.entries(partial)) {
+          if (v === undefined) {
+            delete next[k];
+          } else {
+            next[k] = v;
           }
-        </span>
-        <span class="mobile-elem-title">${title}</span>
-        <span class="mobile-elem-chip">${use ? 'reused' : 'new'}</span>
-        <button
-          class="tool"
-          title="Move up"
-          ?disabled=${i === 0}
-          @click=${() =>
-            this._patchMobileList(key, (list) => list.splice(i - 1, 0, ...list.splice(i, 1)))}
-        >
-          <ha-icon icon="mdi:arrow-up"></ha-icon>
-        </button>
-        <button
-          class="tool"
-          title="Move down"
-          ?disabled=${i === count - 1}
-          @click=${() =>
-            this._patchMobileList(key, (list) => list.splice(i + 1, 0, ...list.splice(i, 1)))}
-        >
-          <ha-icon icon="mdi:arrow-down"></ha-icon>
-        </button>
-        <button
-          class="tool"
-          title="Remove"
-          @click=${() => this._patchMobileList(key, (list) => list.splice(i, 1))}
-        >
-          <ha-icon icon="mdi:close"></ha-icon>
-        </button>
+        }
+        list[index] = next;
+      });
+    };
+    const isUse = typeof entry.use === 'string';
+    let fields: TemplateResult;
+    if (isUse) {
+      const p = entry as {
+        title?: string;
+        icon?: string;
+        abbr?: string;
+        icon_color?: string;
+        text_color?: string;
+        class?: string;
+        active_highlight?: boolean;
+      };
+      fields = html`
+        <p class="tab-note">
+          A reused desktop element; the fields below override its appearance on the bar only.
+        </p>
+        ${textField('Title Override', p.title, (v) => patch({ title: v || undefined }))}
+        ${textField('Icon Override', p.icon, (v) => patch({ icon: v || undefined }))}
+        ${textField('Abbreviation', p.abbr, (v) => patch({ abbr: v || undefined }))}
+        ${colorTemplateField('Icon Color', p.icon_color, (v) =>
+          patch({ icon_color: v || undefined }),
+        )}
+        ${colorTemplateField('Text Color', p.text_color, (v) =>
+          patch({ text_color: v || undefined }),
+        )}
+        ${textField('CSS Class', p.class, (v) => patch({ class: v || undefined }))}
+        ${checkboxField('Active Highlight', p.active_highlight ?? true, (v) =>
+          patch({ active_highlight: v ? undefined : false }),
+        )}
+      `;
+    } else if (key === 'footer' || (entry as { type?: string }).type === undefined) {
+      const isBtn = key === 'footer';
+      fields = isBtn
+        ? footerButtonFields(entry, patch, undefined, this.hass)
+        : blockFields({ type: 'item', ...entry } as SidebarBlock, patch, undefined, this.hass);
+    } else {
+      fields = blockFields(entry as unknown as SidebarBlock, patch, undefined, this.hass);
+    }
+    return html`
+      <div class="mobile-selected-form">
+        ${fields}
+        <div class="form-actions">
+          <button
+            class="add-btn danger"
+            @click=${() => {
+              this._patchMobileList(key, (list) => list.splice(index, 1));
+              this._mobileSelected = null;
+            }}
+          >
+            Remove Element
+          </button>
+        </div>
       </div>
     `;
   }
@@ -2044,15 +2094,62 @@ export class DashboardSidebarEditor extends LitElement {
       el.preview = true;
       el.setAttribute('preview', '');
       el.addEventListener('bar-preview-sheet-open', () => this._scrollMobilePreview());
+      el.addEventListener(PREVIEW_SELECT_EVENT, (ev: Event) => {
+        const loc = (ev as CustomEvent<{ loc: string }>).detail.loc;
+        ev.stopPropagation();
+        this._mobileSelected = loc;
+        if (loc.startsWith('items:')) {
+          this._mobileSubTab = 'bar';
+        } else {
+          this._mobileSubTab = 'menu';
+        }
+      });
+      el.addEventListener(PREVIEW_REORDER_EVENT, (ev: Event) => {
+        ev.stopPropagation();
+        this._applyMobileReorder(
+          (ev as CustomEvent<{ from: string; to: string; oldIndex?: number; newIndex?: number }>)
+            .detail,
+        );
+      });
       this._barPreview = el;
     }
     el.hass = this.hass;
+    const custom = this._working.mobile?.items !== undefined;
+    el.previewInteractive = custom && !this._mobileYaml;
+    el.previewSheetOpen = custom && !this._mobileYaml && this._mobileSubTab === 'menu';
+    el.previewSelected = this._mobileSelected ?? undefined;
     const json = JSON.stringify(this._working);
     if (this._barPreviewCfg !== json) {
       el.setConfig(JSON.parse(json) as DashboardSidebarConfig);
       this._barPreviewCfg = json;
     }
     return el;
+  }
+
+  /**
+   * Applies a drag-reorder from the bar preview to the matching mobile list.
+   */
+  private _applyMobileReorder(detail: {
+    from: string | null;
+    to: string | null;
+    oldIndex?: number;
+    newIndex?: number;
+  }): void {
+    const key = detail.from as 'items' | 'menu' | 'footer' | null;
+    if (
+      !key ||
+      detail.from !== detail.to ||
+      detail.oldIndex === undefined ||
+      detail.newIndex === undefined ||
+      !['items', 'menu', 'footer'].includes(key)
+    ) {
+      return;
+    }
+    const { oldIndex, newIndex } = detail;
+    this._patchMobileList(key, (list) => list.splice(newIndex, 0, ...list.splice(oldIndex, 1)));
+    if (this._mobileSelected === `${key}:${oldIndex}`) {
+      this._mobileSelected = `${key}:${newIndex}`;
+    }
   }
 
   /**

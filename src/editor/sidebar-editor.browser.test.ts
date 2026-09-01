@@ -79,7 +79,7 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
   });
 
-  it('edits the custom bar list: rows, reorder, and remove', async () => {
+  it('edits the custom bar on the preview: select, form, reorder, remove', async () => {
     const el = await mount({
       ...cfg(),
       mobile: {
@@ -87,22 +87,33 @@ describe('<dashboard-sidebar-editor>', () => {
       },
     });
     await tab(el, 'Mobile Bar');
-    const barSub = [...root(el).querySelectorAll('.mobile-subtabs .tab')].find(
-      (b) => b.textContent?.trim() === 'Bar',
-    ) as HTMLButtonElement;
-    barSub.click();
+    const bar = root(el).querySelector('dashboard-sidebar-bar') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await bar.updateComplete;
+    const slots = [...(bar.shadowRoot?.querySelectorAll('[data-loc]') ?? [])];
+    expect(slots.map((s2) => s2.getAttribute('data-loc'))).to.deep.equal(['items:0', 'items:1']);
+    (slots[1] as HTMLElement).click();
     await el.updateComplete;
-    let rows = [...root(el).querySelectorAll('.mobile-elem-row')];
-    expect(rows.length).to.equal(2);
-    expect(rows[0].querySelector('.mobile-elem-chip')?.textContent).to.equal('reused');
-    expect(rows[1].textContent).to.include('Xtra');
-    (rows[0].querySelector('[title="Move down"]') as HTMLButtonElement).click();
+    const removeBtn = [...root(el).querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Remove Element'),
+    );
+    expect(removeBtn).to.exist;
+    bar.dispatchEvent(
+      new CustomEvent('dashboard-sidebar-preview-reorder', {
+        detail: { from: 'items', to: 'items', oldIndex: 0, newIndex: 1 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
     await el.updateComplete;
-    rows = [...root(el).querySelectorAll('.mobile-elem-row')];
-    expect(rows[0].textContent).to.include('Xtra');
-    (rows[0].querySelector('[title="Remove"]') as HTMLButtonElement).click();
+    await bar.updateComplete;
+    const after = [...(bar.shadowRoot?.querySelectorAll('[data-loc]') ?? [])];
+    expect(after[0]?.getAttribute('aria-label')).to.equal('Xtra');
+    (removeBtn as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(root(el).querySelectorAll('.mobile-elem-row').length).to.equal(1);
+    await bar.updateComplete;
+    expect(bar.shadowRoot?.querySelectorAll('[data-loc="items:1"]').length).to.equal(0);
   });
 
   it('disables the Mobile tab until On Mobile is the bar, then previews it', async () => {

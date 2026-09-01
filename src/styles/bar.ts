@@ -11,6 +11,19 @@ export const barStyles = css`
     inset: 0 0 auto;
   }
 
+  /* Editor selection highlight, matching the desktop preview's. */
+  :host([preview]) .sb-selected {
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+
+  .dashboard-sidebar-bar-sheet-editwrap {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+  }
+
   /* Editor preview: everything joins normal flow so the frame hugs the
      content: the sheet sits above the bar (below it when top-docked) and
      there is no scrim to dim. */

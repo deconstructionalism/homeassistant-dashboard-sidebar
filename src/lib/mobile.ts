@@ -35,7 +35,16 @@ export const mobileMode = (config: DashboardSidebarConfig): 'sidebar' | 'bar' | 
 
 /** What kind of desktop element a bar entry renders as. */
 export type BarEntryKind =
-  'item' | 'category' | 'button' | 'divider' | 'clock' | 'date' | 'title' | 'markdown' | 'card';
+  | 'item'
+  | 'category'
+  | 'button'
+  | 'divider'
+  | 'clock'
+  | 'date'
+  | 'title'
+  | 'markdown'
+  | 'card'
+  | 'missing';
 
 /** Where a bar entry came from. */
 export type BarEntrySource = 'derived' | 'use' | 'inline';
@@ -60,6 +69,11 @@ export interface BarEntry {
   kind: BarEntryKind;
   /** The element with any mobile patches applied. Categories keep their items. */
   element: ItemBlock | CategoryBlock | FooterButtonConfig | SidebarBlock;
+  /**
+   * The entry's index in its source config list (items/menu/footer), for the
+   * editor's drag-and-drop. Absent on derived entries.
+   */
+  srcIndex?: number;
 }
 
 /** The subset of a use entry that patches the referenced element. */
@@ -137,11 +151,19 @@ const resolveCurated = (
   }
   const all = elementIndex(config);
   const out: BarEntry[] = [];
-  for (const entry of entries as (MobileUseEntry | SidebarBlock)[]) {
+  (entries as (MobileUseEntry | SidebarBlock)[]).forEach((entry, srcIndex) => {
     if ('use' in entry) {
       const target = all.get(entry.use);
       if (!target) {
-        continue; // validation reports this; resolution just skips it
+        // Validation reports this; keep a placeholder so the editor can show
+        // and fix it (validated live configs never contain unknown refs).
+        out.push({
+          source: 'use',
+          kind: 'missing',
+          element: { title: 'Missing element', icon: 'mdi:help' } as ItemBlock,
+          srcIndex,
+        });
+        return;
       }
       const patch = patchOf(entry);
       out.push({
@@ -151,15 +173,17 @@ const resolveCurated = (
           target.kind === 'category'
             ? mergedCategory(target.element as CategoryBlock, new Set(), {}, patch)
             : merged(target.element, patch),
+        srcIndex,
       });
     } else {
       out.push({
         source: 'inline',
         kind: inlineKind ?? (((entry as SidebarBlock).type ?? 'item') as BarEntryKind),
         element: { ...entry },
+        srcIndex,
       });
     }
-  }
+  });
   return out;
 };
 
@@ -250,11 +274,17 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   }
 
   const slots: BarEntry[] = [];
-  for (const entry of mobile.items) {
+  mobile.items.forEach((entry, srcIndex) => {
     if ('use' in entry) {
       const target = byId.get(entry.use);
       if (!target) {
-        continue; // validation reports this; resolution just skips it
+        slots.push({
+          source: 'use',
+          kind: 'missing',
+          element: { title: 'Missing element', icon: 'mdi:help' } as ItemBlock,
+          srcIndex,
+        });
+        return;
       }
       const patch = patchOf(entry);
       slots.push({
@@ -264,10 +294,11 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
           target.kind === 'category'
             ? mergedCategory(target.element as CategoryBlock, new Set(), {}, patch)
             : merged(target.element, patch),
+        srcIndex,
       });
     } else {
-      slots.push({ source: 'inline', kind: 'item', element: { ...entry } });
+      slots.push({ source: 'inline', kind: 'item', element: { ...entry }, srcIndex });
     }
-  }
+  });
   return { slots, menu: [], extras, footer: footer ?? [] };
 };

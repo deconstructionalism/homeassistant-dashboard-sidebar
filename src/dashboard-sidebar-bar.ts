@@ -2,7 +2,9 @@ import { html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 import { runAction, type RunnableAction } from './lib/action';
-import { EDIT_EVENT } from './lib/const';
+import Sortable from 'sortablejs';
+
+import { EDIT_EVENT, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
@@ -61,6 +63,25 @@ export class DashboardSidebarBar extends LitElement {
   /** Whether the dashboard is in edit mode, showing the edit pencil. */
   @property({ attribute: false })
   public editMode = false;
+
+  /**
+   * Editor preview interactivity: clicks select elements for editing and the
+   * slots, menu rows, and footer strip become drag-reorderable. Only
+   * meaningful together with `preview`.
+   */
+  @property({ attribute: false })
+  public previewInteractive = false;
+
+  /** The data-loc of the element selected in the editor, for highlighting. */
+  @property({ attribute: false })
+  public previewSelected?: string;
+
+  /** Forces the sheet open (the editor's Menu sub-tab). */
+  @property({ attribute: false })
+  public previewSheetOpen = false;
+
+  /** Preview containers already wired for drag-and-drop. */
+  private readonly _sortables = new WeakSet<HTMLElement>();
 
   /** The current Home Assistant object; updates re-render live templates. */
   @property({ attribute: false })
@@ -289,12 +310,74 @@ export class DashboardSidebarBar extends LitElement {
     this._timer = undefined;
   }
 
-  /** Applies the bar-level card-mod after each render. */
+  /** Syncs the editor-forced sheet state before each render. */
+  protected willUpdate(): void {
+    if (this.preview && this.previewInteractive) {
+      this._open = this.previewSheetOpen ? 'menu' : null;
+      this._sheetClosing = false;
+    }
+  }
+
+  /** Applies the bar-level card-mod and preview drag wiring after render. */
   protected updated(): void {
     const cardMod = this._config?.mobile?.card_mod;
     if (cardMod) {
       applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
     }
+    this._wirePreviewSort();
+  }
+
+  /**
+   * In an interactive preview, wires drag-and-drop onto the slot row, the
+   * sheet's menu rows, and the sheet's footer strip, dispatching container
+   * names and indices for the editor to apply (indices map 1:1 to the config
+   * lists because folding is disabled and placeholders render).
+   */
+  private _wirePreviewSort(): void {
+    if (!this.preview || !this.previewInteractive) {
+      return;
+    }
+    const root = this.renderRoot as ParentNode;
+    root.querySelectorAll<HTMLElement>('[data-container]').forEach((el) => {
+      if (this._sortables.has(el)) {
+        return;
+      }
+      this._sortables.add(el);
+      Sortable.create(el, {
+        group: { name: `sb-bar-${el.dataset.container ?? ''}` },
+        animation: 150,
+        onEnd: (evt) => {
+          this.dispatchEvent(
+            new CustomEvent(PREVIEW_REORDER_EVENT, {
+              detail: {
+                from: evt.from.getAttribute('data-container'),
+                to: evt.to.getAttribute('data-container'),
+                oldIndex: evt.oldIndex,
+                newIndex: evt.newIndex,
+              },
+              bubbles: true,
+              composed: true,
+            }),
+          );
+        },
+      });
+    });
+  }
+
+  /** Dispatches an element selection to the editor. */
+  private _selectPreview(loc: string): void {
+    this.dispatchEvent(
+      new CustomEvent(PREVIEW_SELECT_EVENT, {
+        detail: { loc },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  /** The ` sb-selected` class suffix for the selected preview element. */
+  private _selClass(loc: string | null): string {
+    return loc !== null && this.preview && this.previewSelected === loc ? ' sb-selected' : '';
   }
 
   /** Recomputes how many slots the current width can hold. */
@@ -306,6 +389,9 @@ export class DashboardSidebarBar extends LitElement {
   /** The visible slots and the effective menu, after width folding. */
   private _layout(): { visible: BarEntry[]; menu: BarEntry[] } {
     const { slots, menu } = this._resolved;
+    if (this.preview && this.previewInteractive) {
+      return { visible: slots, menu };
+    }
     if (
       menu.length === 0 &&
       this._resolved.extras.length === 0 &&
@@ -456,9 +542,19 @@ export class DashboardSidebarBar extends LitElement {
   /** Renders one slot. */
   private _renderSlot(entry: BarEntry, index: number): TemplateResult {
     if (entry.kind === 'divider') {
-      return html`<span class="dashboard-sidebar-bar-divider"></span>`;
+      const dloc =
+        this.preview && this.previewInteractive && entry.srcIndex !== undefined
+          ? `items:${entry.srcIndex}`
+          : null;
+      return html`<span
+        class="dashboard-sidebar-bar-divider${this._selClass(dloc)}"
+        data-loc=${dloc ?? nothing}
+        @click=${dloc !== null ? () => this._selectPreview(dloc) : nothing}
+      ></span>`;
     }
     const el = entry.element as ItemBlock;
+    const interactive = this.preview && this.previewInteractive;
+    const loc = interactive && entry.srcIndex !== undefined ? `items:${entry.srcIndex}` : null;
     const time = entry.kind === 'clock' || entry.kind === 'date';
     const active = this._navActive(entry);
     const label = time ? undefined : this._label(entry);
@@ -474,7 +570,8 @@ export class DashboardSidebarBar extends LitElement {
       el.class ?? '',
     ]
       .filter(Boolean)
-      .join(' ');
+      .join(' ')
+      .concat(this._selClass(loc));
     return html`
       <button
         class=${classes}
@@ -482,7 +579,15 @@ export class DashboardSidebarBar extends LitElement {
         aria-label=${title || (time ? entry.kind : 'bar item')}
         aria-current=${active ? 'page' : nothing}
         style=${textColor ? `color:${textColor}` : ''}
-        @click=${(ev: Event) => this._onSlotTap(entry, ev)}
+        data-loc=${loc ?? nothing}
+        @click=${(ev: Event) => {
+          if (loc !== null) {
+            ev.stopPropagation();
+            this._selectPreview(loc);
+            return;
+          }
+          this._onSlotTap(entry, ev);
+        }}
       >
         ${
           time
@@ -617,13 +722,23 @@ export class DashboardSidebarBar extends LitElement {
   private _renderSheetButton(entry: BarEntry): TemplateResult {
     const el = entry.element as FooterButtonConfig;
     const active = this._navActive(entry);
+    const loc =
+      this.preview && this.previewInteractive && entry.srcIndex !== undefined
+        ? `footer:${entry.srcIndex}`
+        : null;
     return html`
       <button
         class="dashboard-sidebar-bar-sheet-footer-btn ${
           active ? 'dashboard-sidebar-bar-sheet-row-active' : ''
-        } ${el.class ?? ''}"
+        } ${el.class ?? ''}${this._selClass(loc)}"
         aria-label=${this._title(entry) || 'footer button'}
-        @click=${() => {
+        data-loc=${loc ?? nothing}
+        @click=${(ev: Event) => {
+          if (loc !== null) {
+            ev.stopPropagation();
+            this._selectPreview(loc);
+            return;
+          }
           this._close();
           this._run(el);
         }}
@@ -677,8 +792,30 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /** Renders one curated sheet-menu entry: titles and cards get their own
-   * treatments, everything else renders as a normal sheet row. */
+   * treatments, everything else renders as a normal sheet row. In an
+   * interactive preview each entry wraps with its data-loc and selects on
+   * click instead of acting. */
   private _renderSheetExtra(entry: BarEntry, index: number): TemplateResult | typeof nothing {
+    if (this.preview && this.previewInteractive) {
+      const loc = `menu:${entry.srcIndex ?? index}`;
+      return html`
+        <div
+          class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(loc)}"
+          data-loc=${loc}
+          @click=${(ev: Event) => {
+            ev.stopPropagation();
+            this._selectPreview(loc);
+          }}
+        >
+          ${this._renderSheetExtraInner(entry, index)}
+        </div>
+      `;
+    }
+    return this._renderSheetExtraInner(entry, index);
+  }
+
+  /** The uninstrumented rendering of one curated sheet-menu entry. */
+  private _renderSheetExtraInner(entry: BarEntry, index: number): TemplateResult | typeof nothing {
     if (entry.kind === 'title') {
       const el = entry.element as {
         text?: string;
@@ -768,9 +905,12 @@ export class DashboardSidebarBar extends LitElement {
         }}
       >
         ${
-          rows.length > 0 || extras.length > 0
+          rows.length > 0 || extras.length > 0 || (this.preview && this.previewInteractive)
             ? html`
-                <div class="dashboard-sidebar-bar-sheet-rows">
+                <div
+                  class="dashboard-sidebar-bar-sheet-rows"
+                  data-container=${this.preview && this.previewInteractive ? 'menu' : nothing}
+                >
                   ${rows.map((entry) => this._renderSheetRow(entry))}
                   ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
                 </div>
@@ -778,12 +918,13 @@ export class DashboardSidebarBar extends LitElement {
             : nothing
         }
         ${
-          buttons.length > 0 || content !== nothing
+          buttons.length > 0 || content !== nothing || (this.preview && this.previewInteractive)
             ? html`
                 <div
                   class="dashboard-sidebar-bar-sheet-footer ${
                     this._config?.footer?.divider === false ? 'no-divider' : ''
                   }"
+                  data-container=${this.preview && this.previewInteractive ? 'footer' : nothing}
                 >
                   ${
                     shownContent !== nothing
@@ -849,13 +990,17 @@ export class DashboardSidebarBar extends LitElement {
               </button>`
             : nothing
         }
-        <div class="dashboard-sidebar-bar-slots">
+        <div
+          class="dashboard-sidebar-bar-slots"
+          data-container=${this.preview && this.previewInteractive ? 'items' : nothing}
+        >
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
-            menu.length > 0 ||
-            this._resolved.extras.length > 0 ||
-            this._resolved.footer.length > 0 ||
-            this._footerHasContent()
+            !(this.preview && this.previewInteractive) &&
+            (menu.length > 0 ||
+              this._resolved.extras.length > 0 ||
+              this._resolved.footer.length > 0 ||
+              this._footerHasContent())
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${

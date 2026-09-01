@@ -117,15 +117,15 @@ describe('resolveBar, sheet menu', () => {
     expect(extras[3].source).toBe('inline');
   });
 
-  it('composes with explicit mode and skips unknown references', () => {
+  it('composes with explicit mode, keeping unknown refs as placeholders', () => {
     const config = {
       ...base(),
       mobile: { items: [{ use: 'rooms' }], menu: [{ use: 'nope' }, { use: 'md' }] },
     };
     const { slots, extras } = resolveBar(config);
     expect(slots).toHaveLength(1);
-    expect(extras).toHaveLength(1);
-    expect(extras[0].kind).toBe('markdown');
+    expect(extras.map((e) => e.kind)).toEqual(['missing', 'markdown']);
+    expect(extras[1].srcIndex).toBe(1);
   });
 });
 
@@ -141,14 +141,13 @@ describe('resolveBar, sheet footer strip', () => {
     expect((footer[1].element as { icon?: string }).icon).toBe('mdi:lock-open');
   });
 
-  it('fills the strip in explicit mode and skips unknown ids', () => {
+  it('fills the strip in explicit mode, keeping unknown ids as placeholders', () => {
     const config = {
       ...base(),
       mobile: { items: [{ use: 'rooms' }], footer: [{ use: 'nope' }, { use: 'lock' }] },
     };
     const { footer } = resolveBar(config);
-    expect(footer).toHaveLength(1);
-    expect(footer[0].kind).toBe('button');
+    expect(footer.map((e) => e.kind)).toEqual(['missing', 'button']);
   });
 });
 
@@ -187,8 +186,10 @@ describe('resolveBar, explicit mode', () => {
     expect(garden.items).toHaveLength(2);
   });
 
-  it('skips unresolvable references instead of throwing', () => {
+  it('keeps unresolvable references as missing placeholders', () => {
     const config = { ...base(), mobile: { items: [{ use: 'nope' }, { use: 'rooms' }] } };
-    expect(resolveBar(config).slots).toHaveLength(1);
+    const { slots } = resolveBar(config);
+    expect(slots.map((e) => e.kind)).toEqual(['missing', 'item']);
+    expect(slots.map((e) => e.srcIndex)).toEqual([0, 1]);
   });
 });
