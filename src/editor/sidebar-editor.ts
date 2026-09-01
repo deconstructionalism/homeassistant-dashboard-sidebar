@@ -309,6 +309,12 @@ export class DashboardSidebarEditor extends LitElement {
   /** Live drag bookkeeping for the mobile preview resize handle. */
   private _mobileDrag?: { startX: number; startW: number };
 
+  /** The next width to apply, coalesced to one update per animation frame. */
+  private _mobileDragPending: number | null = null;
+
+  /** Whether a drag-width frame flush is already scheduled. */
+  private _mobileDragRaf = false;
+
   /** Last config serialized into the bar preview, to skip redundant rebuilds. */
   private _barPreviewCfg = '';
 
@@ -2001,7 +2007,19 @@ export class DashboardSidebarEditor extends LitElement {
               const next = Math.round(
                 this._mobileDrag.startW + (ev.clientX - this._mobileDrag.startX),
               );
-              this._mobilePreviewWidth = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), maxW);
+              // Pointer events outpace frames; coalesce to one width update
+              // per frame so a fast drag cannot flood the render pipeline.
+              this._mobileDragPending = Math.min(Math.max(next, MIN_MOBILE_PREVIEW), maxW);
+              if (!this._mobileDragRaf) {
+                this._mobileDragRaf = true;
+                requestAnimationFrame(() => {
+                  this._mobileDragRaf = false;
+                  if (this._mobileDragPending !== null) {
+                    this._mobilePreviewWidth = this._mobileDragPending;
+                    this._mobileDragPending = null;
+                  }
+                });
+              }
             }}
             @pointerup=${() => {
               this._mobileDrag = undefined;
