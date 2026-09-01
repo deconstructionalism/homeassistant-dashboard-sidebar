@@ -382,10 +382,14 @@ export class DashboardSidebarBar extends LitElement {
         // non-entry children cost nothing.
         filter: '.dashboard-sidebar-bar-slot-overflow, .dashboard-sidebar-bar-edit',
         animation: 150,
-        fallbackOnBody: true,
-        swapThreshold: 0.65,
         onStart: (evt) => {
           this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
+          console.debug(
+            '[dashboard-sidebar] drag start:',
+            evt.from.getAttribute('data-container'),
+            '->',
+            evt.item.getAttribute('data-loc') ?? evt.item.className,
+          );
         },
         onEnd: (evt) => {
           // Capture the drop position, then revert Sortable's DOM surgery:
