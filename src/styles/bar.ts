@@ -11,6 +11,64 @@ export const barStyles = css`
     inset: 0 0 auto;
   }
 
+  /* Mid-drag morphing: while Sortable holds a dragged node inside a foreign
+     container, these container-scoped overrides approximate the destination
+     rendering, so a menu row previews as a slot over the bar and a slot
+     previews as a row over the menu. They only ever match during a drag. */
+  .dashboard-sidebar-bar-slots > .dashboard-sidebar-bar-sheet-editwrap {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-row {
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0;
+    background: none;
+  }
+
+  .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-label,
+  .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-chevron,
+  .dashboard-sidebar-bar-sheet-footer .dashboard-sidebar-bar-sheet-label,
+  .dashboard-sidebar-bar-sheet-footer .dashboard-sidebar-bar-sheet-chevron,
+  .dashboard-sidebar-bar-sheet-footer .dashboard-sidebar-bar-label,
+  .dashboard-sidebar-bar-sheet-rowgroup .dashboard-sidebar-bar-label {
+    display: none;
+  }
+
+  .dashboard-sidebar-bar-sheet-rowgroup .dashboard-sidebar-bar-slot {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    width: auto;
+    padding: 10px 12px;
+  }
+
+  .dashboard-sidebar-bar-sheet-rowgroup .dashboard-sidebar-bar-slot::after {
+    content: attr(aria-label);
+    overflow: hidden;
+    font-size: var(--ha-font-size-l, 1rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-sidebar-bar-sheet-footer .dashboard-sidebar-bar-slot {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  .dashboard-sidebar-bar-sheet-footer > .dashboard-sidebar-bar-sheet-editwrap {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  }
+
   /* Editor selection highlight, matching the desktop preview's. */
   :host([preview]) .sb-selected {
     outline: 2px solid var(--primary-color, #03a9f4);
