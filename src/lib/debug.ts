@@ -26,7 +26,6 @@ export const tick = (label: string): void => {
   counts.set(label, n);
   if (!reported && n > 240) {
     reported = true;
-    // eslint-disable-next-line no-console
     console.error(
       '[dashboard-sidebar] runaway loop suspected:',
       JSON.stringify([...counts.entries()]),

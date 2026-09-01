@@ -375,11 +375,13 @@ export class DashboardSidebarBar extends LitElement {
                 return allowed.includes(dragEl.getAttribute('data-kind') ?? '');
               },
             },
-        draggable: '[data-drag]',
+        // Default draggable (direct children), like the desktop preview: an
+        // explicit descendant selector confuses nested closest() resolution
+        // and breaks dragging children out of categories. Chrome-of-drag is
+        // excluded via filter; positions travel as data-locs, so extra
+        // non-entry children cost nothing.
+        filter: '.dashboard-sidebar-bar-slot-overflow, .dashboard-sidebar-bar-edit',
         animation: 150,
-        // Nested lists (category children inside draggable rows) need the
-        // fallback clone on the body and a forgiving swap threshold to drag
-        // reliably out of their parent list.
         fallbackOnBody: true,
         swapThreshold: 0.65,
         onStart: (evt) => {
@@ -403,6 +405,10 @@ export class DashboardSidebarBar extends LitElement {
           // indices: the dragged entry's loc plus the loc it now precedes.
           const norm = (c: string): string => (c === 'items-overflow' ? 'items' : c);
           const srcLoc = evt.item.getAttribute('data-loc');
+          if (!srcLoc) {
+            restore();
+            return;
+          }
           let sibling = evt.item.nextElementSibling;
           while (sibling && !sibling.hasAttribute('data-loc')) {
             sibling = sibling.nextElementSibling;
