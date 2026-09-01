@@ -17,3 +17,7 @@ console.info(
 );
 
 startSidebar();
+
+// Announce the loaded build so stale-cache confusion is diagnosable at a
+// glance: the ?v= query on the URL is the deployed cache-bust revision.
+console.info('[dashboard-sidebar] loaded', import.meta.url);
