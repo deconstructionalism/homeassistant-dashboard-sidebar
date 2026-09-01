@@ -2109,7 +2109,7 @@ export class DashboardSidebarEditor extends LitElement {
     el.hass = this.hass;
     const custom = this._working.mobile?.items !== undefined;
     el.previewInteractive = custom && !this._mobileYaml;
-    el.previewSheetOpen = custom && !this._mobileYaml && this._mobileSubTab === 'bar';
+    el.previewSheetOpen = custom && !this._mobileYaml;
     el.previewSelected = this._mobileSelected ?? undefined;
     const json = JSON.stringify(this._working);
     if (this._barPreviewCfg !== json) {
