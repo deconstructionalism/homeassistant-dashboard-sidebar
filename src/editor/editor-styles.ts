@@ -341,6 +341,11 @@ export const editorStyles = css`
     gap: 12px;
     min-height: 0;
     overflow-y: auto;
+
+    /* Reserve the gutter permanently: a scrollbar that appears and vanishes
+       as the sheet refolds would oscillate the measured available width
+       against the fold in a ResizeObserver loop. */
+    scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: var(--divider-color, rgb(0 0 0 / 30%)) transparent;
   }
