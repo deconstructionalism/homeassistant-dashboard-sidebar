@@ -4,6 +4,8 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { runAction, type RunnableAction } from './lib/action';
 import Sortable from 'sortablejs';
 
+import { tick } from './lib/debug';
+
 import { EDIT_EVENT, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
@@ -324,6 +326,7 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Applies the bar-level card-mod and preview drag wiring after render. */
   protected updated(): void {
+    tick('bar-updated');
     const cardMod = this._config?.mobile?.card_mod;
     if (cardMod) {
       applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
@@ -444,6 +447,7 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Recomputes how many slots the current width can hold. */
   private _measure(): void {
+    tick('bar-measure');
     const width = this.clientWidth || window.innerWidth;
     this._capacity = Math.max(1, Math.floor(width / MIN_SLOT_WIDTH));
   }
