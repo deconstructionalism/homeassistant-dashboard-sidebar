@@ -4,8 +4,6 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { runAction, type RunnableAction } from './lib/action';
 import Sortable from 'sortablejs';
 
-import { tick } from './lib/debug';
-
 import { EDIT_EVENT, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
@@ -152,7 +150,7 @@ export class DashboardSidebarBar extends LitElement {
   private readonly _templates = new TemplateManager(() => this.requestUpdate());
 
   /** Re-measures capacity as the viewport changes. */
-  private readonly _resize = new ResizeObserver(() => this._measure());
+  private readonly _resize = new ResizeObserver(() => this._measure(true));
 
   /** Re-reads the path when the frontend navigates. */
   private readonly _onLocationChange = (): void => {
@@ -326,7 +324,6 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Applies the bar-level card-mod and preview drag wiring after render. */
   protected updated(): void {
-    tick('bar-updated');
     const cardMod = this._config?.mobile?.card_mod;
     if (cardMod) {
       applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
@@ -457,11 +454,30 @@ export class DashboardSidebarBar extends LitElement {
     return loc !== null && this.preview && this.previewSelected === loc ? ' sb-selected' : '';
   }
 
-  /** Recomputes how many slots the current width can hold. */
-  private _measure(): void {
-    tick('bar-measure');
+  /** The last width the capacity was computed from. */
+  private _measuredWidth = 0;
+
+  /**
+   * Recomputes how many slots the current width can hold. The ResizeObserver
+   * fires on height changes too (the sheet refolding), so bail unless the
+   * width itself moved, and apply outside the observer's delivery frame:
+   * setting state synchronously re-triggers observed layout and Chrome kills
+   * the tab under a sustained observer loop.
+   */
+  private _measure(defer = false): void {
     const width = this.clientWidth || window.innerWidth;
-    this._capacity = Math.max(1, Math.floor(width / MIN_SLOT_WIDTH));
+    if (width === this._measuredWidth) {
+      return;
+    }
+    this._measuredWidth = width;
+    const apply = (): void => {
+      this._capacity = Math.max(1, Math.floor(width / MIN_SLOT_WIDTH));
+    };
+    if (defer) {
+      requestAnimationFrame(apply);
+    } else {
+      apply();
+    }
   }
 
   /** The visible slots and the effective menu, after width folding. */

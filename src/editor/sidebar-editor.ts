@@ -38,7 +38,6 @@ import {
 } from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
 import { collectIds } from '../lib/id';
-import { tick } from '../lib/debug';
 import {
   actionSections,
   blockFields,
@@ -473,7 +472,6 @@ export class DashboardSidebarEditor extends LitElement {
    * any code-editor field so it reads as a compact input.
    */
   protected updated(): void {
-    tick('editor-updated');
     this._compactEditors();
     this._maybeValidateCard();
     this._observeMobileWrap();
@@ -1970,7 +1968,6 @@ export class DashboardSidebarEditor extends LitElement {
    * the drag range tops out at what is really renderable.
    */
   private _measureMobileAvail(): void {
-    tick('avail-measure');
     const wrap = this.shadowRoot?.querySelector('.mobile-pv-wrap') as HTMLElement | null;
     if (!wrap) {
       return;
