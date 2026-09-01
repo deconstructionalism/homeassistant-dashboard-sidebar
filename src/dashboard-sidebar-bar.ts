@@ -346,7 +346,7 @@ export class DashboardSidebarBar extends LitElement {
       this._sortables.add(el);
       Sortable.create(el, {
         group: { name: `sb-bar-${el.dataset.container ?? ''}` },
-        draggable: '[data-loc]',
+        draggable: '[data-drag]',
         animation: 150,
         onEnd: (evt) => {
           this.dispatchEvent(
@@ -391,9 +391,6 @@ export class DashboardSidebarBar extends LitElement {
   /** The visible slots and the effective menu, after width folding. */
   private _layout(): { visible: BarEntry[]; menu: BarEntry[] } {
     const { slots, menu } = this._resolved;
-    if (this.preview && this.previewInteractive) {
-      return { visible: slots, menu };
-    }
     if (
       menu.length === 0 &&
       this._resolved.extras.length === 0 &&
@@ -551,6 +548,7 @@ export class DashboardSidebarBar extends LitElement {
       return html`<span
         class="dashboard-sidebar-bar-divider${this._selClass(dloc)}"
         data-loc=${dloc ?? nothing}
+        data-drag=${dloc ?? nothing}
         @click=${dloc !== null ? () => this._selectPreview(dloc) : nothing}
       ></span>`;
     }
@@ -582,6 +580,7 @@ export class DashboardSidebarBar extends LitElement {
         aria-current=${active ? 'page' : nothing}
         style=${textColor ? `color:${textColor}` : ''}
         data-loc=${loc ?? nothing}
+        data-drag=${loc ?? nothing}
         @click=${(ev: Event) => {
           if (loc !== null) {
             ev.stopPropagation();
@@ -735,6 +734,7 @@ export class DashboardSidebarBar extends LitElement {
         } ${el.class ?? ''}${this._selClass(loc)}"
         aria-label=${this._title(entry) || 'footer button'}
         data-loc=${loc ?? nothing}
+        data-drag=${loc ?? nothing}
         @click=${(ev: Event) => {
           if (loc !== null) {
             ev.stopPropagation();
@@ -804,6 +804,7 @@ export class DashboardSidebarBar extends LitElement {
         <div
           class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(loc)}"
           data-loc=${loc}
+          data-drag=${loc}
           @click=${(ev: Event) => {
             ev.stopPropagation();
             this._selectPreview(loc);
@@ -913,7 +914,24 @@ export class DashboardSidebarBar extends LitElement {
                   class="dashboard-sidebar-bar-sheet-rows"
                   data-container=${this.preview && this.previewInteractive ? 'menu' : nothing}
                 >
-                  ${rows.map((entry) => this._renderSheetRow(entry))}
+                  ${rows.map((entry) => {
+                    const rloc =
+                      this.preview && this.previewInteractive && entry.srcIndex !== undefined
+                        ? `items:${entry.srcIndex}`
+                        : null;
+                    return rloc !== null
+                      ? html`<div
+                          class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(rloc)}"
+                          data-loc=${rloc}
+                          @click=${(ev: Event) => {
+                            ev.stopPropagation();
+                            this._selectPreview(rloc);
+                          }}
+                        >
+                          ${this._renderSheetRow(entry)}
+                        </div>`
+                      : this._renderSheetRow(entry);
+                  })}
                   ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
                 </div>
               `
