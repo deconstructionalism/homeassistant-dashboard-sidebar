@@ -374,6 +374,11 @@ export class DashboardSidebarBar extends LitElement {
             },
         draggable: '[data-drag]',
         animation: 150,
+        // Nested lists (category children inside draggable rows) need the
+        // fallback clone on the body and a forgiving swap threshold to drag
+        // reliably out of their parent list.
+        fallbackOnBody: true,
+        swapThreshold: 0.65,
         onStart: (evt) => {
           this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
         },
