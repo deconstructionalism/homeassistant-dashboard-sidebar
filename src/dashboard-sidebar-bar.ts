@@ -340,6 +340,7 @@ export class DashboardSidebarBar extends LitElement {
     }
     const accepts: Record<string, string[] | null> = {
       items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
+      'items-overflow': ['item', 'category', 'divider', 'clock', 'date', 'button'],
       menu: null, // anything
       footer: ['item', 'button'],
     };
@@ -371,14 +372,40 @@ export class DashboardSidebarBar extends LitElement {
         draggable: '[data-drag]',
         animation: 150,
         onEnd: (evt) => {
+          const fromC = evt.from.getAttribute('data-container') ?? '';
+          const toC = evt.to.getAttribute('data-container') ?? '';
+          if (fromC.startsWith('cat:')) {
+            // Category children reorder by plain indices within their list.
+            this.dispatchEvent(
+              new CustomEvent(PREVIEW_REORDER_EVENT, {
+                detail: { from: fromC, to: toC, oldIndex: evt.oldIndex, newIndex: evt.newIndex },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+            return;
+          }
+          // The bar's items list renders split across the bar and the sheet's
+          // overflow, so moves are described by element locs, not container
+          // indices: the dragged entry's loc plus the loc it now precedes.
+          const norm = (c: string): string => (c === 'items-overflow' ? 'items' : c);
+          const srcLoc = evt.item.getAttribute('data-loc');
+          let sibling = evt.item.nextElementSibling;
+          while (sibling && !sibling.hasAttribute('data-loc')) {
+            sibling = sibling.nextElementSibling;
+          }
+          let beforeLoc = sibling?.getAttribute('data-loc') ?? null;
+          if (beforeLoc === null && toC === 'items') {
+            // Dropped at the end of the visible bar: the fold continues in
+            // the sheet, so the true position is before the first folded row.
+            beforeLoc =
+              (this.renderRoot as ParentNode)
+                .querySelector('[data-container="items-overflow"] [data-loc]')
+                ?.getAttribute('data-loc') ?? null;
+          }
           this.dispatchEvent(
             new CustomEvent(PREVIEW_REORDER_EVENT, {
-              detail: {
-                from: evt.from.getAttribute('data-container'),
-                to: evt.to.getAttribute('data-container'),
-                oldIndex: evt.oldIndex,
-                newIndex: evt.newIndex,
-              },
+              detail: { from: norm(fromC), to: norm(toC), srcLoc, beforeLoc },
               bubbles: true,
               composed: true,
             }),
@@ -957,29 +984,40 @@ export class DashboardSidebarBar extends LitElement {
         ${
           rows.length > 0 || extras.length > 0 || (this.preview && this.previewInteractive)
             ? html`
-                <div
-                  class="dashboard-sidebar-bar-sheet-rows"
-                  data-container=${this.preview && this.previewInteractive ? 'menu' : nothing}
-                >
-                  ${rows.map((entry) => {
-                    const rloc =
-                      this.preview && this.previewInteractive && entry.srcIndex !== undefined
-                        ? `items:${entry.srcIndex}`
-                        : null;
-                    return rloc !== null
-                      ? html`<div
-                          class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(rloc)}"
-                          data-loc=${rloc}
-                          @click=${(ev: Event) => {
-                            ev.stopPropagation();
-                            this._selectPreview(rloc);
-                          }}
-                        >
-                          ${this._renderSheetRow(entry, rloc)}
-                        </div>`
-                      : this._renderSheetRow(entry);
-                  })}
-                  ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
+                <div class="dashboard-sidebar-bar-sheet-rows">
+                  <div
+                    class="dashboard-sidebar-bar-sheet-rowgroup"
+                    data-container=${
+                      this.preview && this.previewInteractive ? 'items-overflow' : nothing
+                    }
+                  >
+                    ${rows.map((entry) => {
+                      const rloc =
+                        this.preview && this.previewInteractive && entry.srcIndex !== undefined
+                          ? `items:${entry.srcIndex}`
+                          : null;
+                      return rloc !== null
+                        ? html`<div
+                            class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(rloc)}"
+                            data-loc=${rloc}
+                            data-drag=${rloc}
+                            data-kind=${entry.kind}
+                            @click=${(ev: Event) => {
+                              ev.stopPropagation();
+                              this._selectPreview(rloc);
+                            }}
+                          >
+                            ${this._renderSheetRow(entry, rloc)}
+                          </div>`
+                        : this._renderSheetRow(entry);
+                    })}
+                  </div>
+                  <div
+                    class="dashboard-sidebar-bar-sheet-rowgroup"
+                    data-container=${this.preview && this.previewInteractive ? 'menu' : nothing}
+                  >
+                    ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
+                  </div>
                 </div>
               `
             : nothing

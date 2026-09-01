@@ -18,6 +18,11 @@ export const barStyles = css`
     border-radius: 8px;
   }
 
+  .dashboard-sidebar-bar-sheet-rowgroup {
+    display: flex;
+    flex-direction: column;
+  }
+
   .dashboard-sidebar-bar-sheet-editwrap {
     display: flex;
     flex-direction: column;

@@ -2129,13 +2129,15 @@ export class DashboardSidebarEditor extends LitElement {
     to: string | null;
     oldIndex?: number;
     newIndex?: number;
+    srcLoc?: string | null;
+    beforeLoc?: string | null;
   }): void {
     const { from, to, oldIndex, newIndex } = detail;
-    if (!from || !to || oldIndex === undefined || newIndex === undefined) {
+    if (!from || !to) {
       return;
     }
     if (from.startsWith('cat:') || to.startsWith('cat:')) {
-      if (from === to) {
+      if (from === to && oldIndex !== undefined && newIndex !== undefined) {
         this._reorderCategoryChildren(from.slice(4), oldIndex, newIndex);
       }
       return;
@@ -2146,19 +2148,46 @@ export class DashboardSidebarEditor extends LitElement {
     }
     const fromKey = from as 'items' | 'menu' | 'footer';
     const toKey = to as 'items' | 'menu' | 'footer';
+    let srcIndex: number;
+    if (detail.srcLoc) {
+      const [sk, sr] = detail.srcLoc.split(':');
+      srcIndex = Number(sr);
+      if (sk !== fromKey || Number.isNaN(srcIndex)) {
+        return;
+      }
+    } else if (oldIndex !== undefined) {
+      srcIndex = oldIndex;
+    } else {
+      return;
+    }
     const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
     const fromList = [...((mobile[fromKey] as unknown[]) ?? [])];
     const toList = fromKey === toKey ? fromList : [...((mobile[toKey] as unknown[]) ?? [])];
-    const [moved] = fromList.splice(oldIndex, 1);
+    const [moved] = fromList.splice(srcIndex, 1);
     if (moved === undefined) {
       return;
     }
-    toList.splice(newIndex, 0, moved);
+    let insert = toList.length;
+    if (detail.srcLoc) {
+      if (detail.beforeLoc) {
+        const [bk, br] = detail.beforeLoc.split(':');
+        let bi = Number(br);
+        if (bk === toKey && !Number.isNaN(bi)) {
+          if (bk === fromKey && bi > srcIndex) {
+            bi -= 1;
+          }
+          insert = bi;
+        }
+      }
+    } else if (newIndex !== undefined) {
+      insert = newIndex;
+    }
+    toList.splice(insert, 0, moved);
     mobile[fromKey] = fromList;
     mobile[toKey] = toList;
     this._patchConfig({ mobile });
-    if (this._mobileSelected === `${fromKey}:${oldIndex}`) {
-      this._mobileSelected = `${toKey}:${newIndex}`;
+    if (this._mobileSelected === `${fromKey}:${srcIndex}`) {
+      this._mobileSelected = `${toKey}:${insert}`;
     }
   }
 
