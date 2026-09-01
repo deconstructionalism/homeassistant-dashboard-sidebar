@@ -244,7 +244,7 @@ export class DashboardSidebarEditor extends LitElement {
   @state() private _mobileYaml = false;
 
   /** The active sub-tab of the Mobile Bar tab's custom mode. */
-  @state() private _mobileSubTab: 'settings' | 'bar' = 'settings';
+  @state() private _mobileSubTab: 'settings' | 'bar' | 'menu' | 'footer' = 'settings';
 
   /** The selected mobile element's loc (e.g. `items:2`), or null. */
   @state() private _mobileSelected: string | null = null;
@@ -1704,15 +1704,22 @@ export class DashboardSidebarEditor extends LitElement {
         ${
           custom && !this._mobileYaml
             ? html`<div class="tabs mobile-subtabs">
-                ${(['settings', 'bar'] as const).map(
-                  (t) => html`
+                ${(
+                  [
+                    ['settings', 'Settings'],
+                    ['bar', 'Bar'],
+                    ['menu', 'Menu'],
+                    ['footer', 'Menu Footer'],
+                  ] as const
+                ).map(
+                  ([t, label]) => html`
                     <button
                       class="tab ${this._mobileSubTab === t ? 'active' : ''}"
                       @click=${() => {
                         this._mobileSubTab = t;
                       }}
                     >
-                      ${t === 'settings' ? 'Settings' : 'Bar'}
+                      ${label}
                     </button>
                   `,
                 )}
@@ -2158,8 +2165,13 @@ export class DashboardSidebarEditor extends LitElement {
       el.addEventListener('bar-preview-sheet-open', () => this._scrollMobilePreview());
       el.addEventListener(PREVIEW_SELECT_EVENT, (ev: Event) => {
         ev.stopPropagation();
-        this._mobileSelected = (ev as CustomEvent<{ loc: string }>).detail.loc;
-        this._mobileSubTab = 'bar';
+        const loc = (ev as CustomEvent<{ loc: string }>).detail.loc;
+        this._mobileSelected = loc;
+        this._mobileSubTab = loc.startsWith('menu:')
+          ? 'menu'
+          : loc.startsWith('footer:')
+            ? 'footer'
+            : 'bar';
       });
       el.addEventListener(PREVIEW_REORDER_EVENT, (ev: Event) => {
         ev.stopPropagation();
