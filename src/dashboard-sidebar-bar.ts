@@ -873,9 +873,12 @@ export class DashboardSidebarBar extends LitElement {
     const content = this._renderSheetFooterContent();
     const extras = this._resolved.extras;
     const shown = this._open === 'menu' || this._sheetClosing;
+    // An interactive preview renders the sheet even when empty: it is the
+    // editing surface for the menu and footer lists.
     if (
       !shown ||
-      (menu.length === 0 &&
+      (!(this.preview && this.previewInteractive) &&
+        menu.length === 0 &&
         extras.length === 0 &&
         this._resolved.footer.length === 0 &&
         content === nothing)
