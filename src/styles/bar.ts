@@ -29,6 +29,7 @@ export const barStyles = css`
     background: none;
   }
 
+  .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-children,
   .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-label,
   .dashboard-sidebar-bar-slots .dashboard-sidebar-bar-sheet-chevron,
   .dashboard-sidebar-bar-sheet-footer .dashboard-sidebar-bar-sheet-label,
