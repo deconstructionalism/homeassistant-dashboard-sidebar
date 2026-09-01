@@ -410,6 +410,19 @@ export const editorStyles = css`
     border-bottom: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
   }
 
+  .add-menu-header {
+    padding: 8px 12px 4px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+
+  .add-menu-header:not(:first-child) {
+    margin-top: 4px;
+    border-top: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+  }
+
   .mobile-section-title {
     margin-top: 6px;
     font-size: 0.75rem;

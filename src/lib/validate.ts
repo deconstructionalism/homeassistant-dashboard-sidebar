@@ -486,7 +486,16 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         }
         checkOverridePatch(entry, ctx, errors);
       } else {
-        validateItem(entry as ItemBlock, ctx, errors);
+        const type = (entry as SidebarBlock).type;
+        if (type === undefined || type === 'item') {
+          validateItem(entry as ItemBlock, ctx, errors);
+        } else if (['category', 'divider', 'clock', 'date'].includes(type)) {
+          validateBlock(entry as SidebarBlock, ctx, errors);
+        } else {
+          errors.push(
+            `${ctx}: type "${type}" is not bar-eligible (items, categories, dividers, clocks, dates)`,
+          );
+        }
       }
     });
   }

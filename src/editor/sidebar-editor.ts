@@ -1735,10 +1735,16 @@ export class DashboardSidebarEditor extends LitElement {
               : custom
                 ? this._mobileSubTab === 'settings'
                   ? this._renderMobileSettingsFields(m)
-                  : html`${this._renderMobileAddControls('items', 'Bar')}
-                    ${this._renderMobileAddControls('menu', 'Menu Cards')}
-                    ${this._renderMobileAddControls('footer', 'Menu Footer')}
-                    ${this._renderMobileSelectedForm()}`
+                  : this._mobileSelection()
+                    ? html`${this._renderMobileSelectedForm()}
+                      ${this._renderAddMenu(this._mobileAddItems(), 'Add Element', true)}`
+                    : html`<div class="empty-state">
+                        <ha-icon class="empty-icon" icon="mdi:gesture-tap-button"></ha-icon>
+                        <p class="empty-msg">
+                          Select an element in the preview to edit it, or add a new one below.
+                        </p>
+                        ${this._renderAddMenu(this._mobileAddItems(), 'Add Element', true)}
+                      </div>`
                 : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -1795,62 +1801,91 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Renders one list's add control (the bar, the menu cards, or the menu
-   * footer): a dashed add trigger offering a new inline element or an
-   * eligible desktop element by name. The list itself is edited on the
-   * preview: click to select, drag to reorder.
+   * The consolidated Add Element menu: one section per destination (Bar,
+   * Menu, Footer), each offering its inline element types followed by
+   * reusable desktop elements.
    */
-  private _renderMobileAddControls(
-    key: 'items' | 'menu' | 'footer',
-    title?: string,
-  ): TemplateResult {
+  private _mobileAddItems(): Array<{ label: string; run: () => void; header?: boolean }> {
     const index = elementIndex(this._working);
-    const kinds: Record<typeof key, string[]> = {
-      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
-      menu: ['item', 'category', 'divider', 'clock', 'date', 'button', 'title', 'markdown', 'card'],
-      footer: ['item', 'button'],
-    };
-    const select = (i: number): void => {
+    const select = (key: string, i: number): void => {
       this._mobileSelected = `${key}:${i}`;
     };
-    const addChoices: Array<{ label: string; run: () => void }> = [
-      key === 'footer'
-        ? {
-            label: 'New Button',
-            run: () =>
-              this._patchMobileList(key, (list) => {
-                list.push(defaultFooterButton(collectIds(this._working)));
-                select(list.length - 1);
-              }),
-          }
-        : {
-            label: 'New Item',
-            run: () =>
-              this._patchMobileList(key, (list) => {
-                list.push(defaultBlock('item', collectIds(this._working)));
-                select(list.length - 1);
-              }),
-          },
-    ];
-    for (const [id, info] of index) {
-      if (!kinds[key].includes(info.kind)) {
-        continue;
-      }
-      const el = info.element as { title?: string };
-      const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
-      addChoices.push({
-        label: `Reuse: ${name}`,
-        run: () =>
-          this._patchMobileList(key, (list) => {
-            list.push({ use: id });
-            select(list.length - 1);
-          }),
+    const addBlock = (key: 'items' | 'menu', type: BlockType): void =>
+      this._patchMobileList(key, (list) => {
+        list.push(defaultBlock(type, collectIds(this._working)));
+        select(key, list.length - 1);
       });
+    const groups: Array<{
+      header: string;
+      key: 'items' | 'menu' | 'footer';
+      types: Array<[string, BlockType]>;
+      reuse: string[] | null;
+    }> = [
+      {
+        header: 'Bar',
+        key: 'items',
+        types: [
+          ['Item', 'item'],
+          ['Category', 'category'],
+          ['Clock', 'clock'],
+          ['Date', 'date'],
+          ['Divider', 'divider'],
+        ],
+        reuse: ['item', 'category', 'divider', 'clock', 'date', 'button'],
+      },
+      {
+        header: 'Menu',
+        key: 'menu',
+        types: [
+          ['Item', 'item'],
+          ['Category', 'category'],
+          ['Clock', 'clock'],
+          ['Date', 'date'],
+          ['Divider', 'divider'],
+          ['Title', 'title'],
+          ['Markdown', 'markdown'],
+          ['Card', 'card'],
+        ],
+        reuse: ['item', 'category', 'divider', 'clock', 'date', 'title', 'markdown', 'card'],
+      },
+      { header: 'Footer', key: 'footer', types: [], reuse: ['item', 'button'] },
+    ];
+    const out: Array<{ label: string; run: () => void; header?: boolean }> = [];
+    for (const group of groups) {
+      out.push({ label: group.header, run: () => undefined, header: true });
+      for (const [label, type] of group.types) {
+        out.push({
+          label: `New ${label}`,
+          run: () => addBlock(group.key as 'items' | 'menu', type),
+        });
+      }
+      if (group.key === 'footer') {
+        out.push({
+          label: 'New Button',
+          run: () =>
+            this._patchMobileList('footer', (list) => {
+              list.push(defaultFooterButton(collectIds(this._working)));
+              select('footer', list.length - 1);
+            }),
+        });
+      }
+      for (const [id, info] of index) {
+        if (!group.reuse?.includes(info.kind)) {
+          continue;
+        }
+        const el = info.element as { title?: string };
+        const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
+        out.push({
+          label: `Reuse: ${name}`,
+          run: () =>
+            this._patchMobileList(group.key, (list) => {
+              list.push({ use: id });
+              select(group.key, list.length - 1);
+            }),
+        });
+      }
     }
-    return html`
-      ${title ? html`<div class="mobile-section-title">${title}</div>` : nothing}
-      ${this._renderAddMenu(addChoices)}
-    `;
+    return out;
   }
 
   /**
@@ -1889,9 +1924,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _renderMobileSelectedForm(): TemplateResult | typeof nothing {
     const sel = this._mobileSelection();
     if (!sel) {
-      return html`<p class="tab-note">
-        Select an element on the preview to edit it; drag to reorder.
-      </p>`;
+      return nothing;
     }
     const { key, index, entry } = sel;
     const patch: Patch = (partial) => {

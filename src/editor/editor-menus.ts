@@ -9,8 +9,10 @@ import {
 export interface MenuItem {
   /** The row label. */
   label: string;
-  /** Run when the row is clicked. */
+  /** Run when the row is clicked. Ignored for headers. */
   run: () => void;
+  /** Renders as a non-clickable section header instead of a row. */
+  header?: boolean;
 }
 
 /**
@@ -46,17 +48,18 @@ export const popupMenu = (
 ): TemplateResult => html`
   <div class="menu-scrim" @click=${onClose}></div>
   <div class="add-menu" style=${menuStyle(rect, 'left')}>
-    ${items.map(
-      (item) =>
-        html`<button
-          class="add-menu-item"
-          @click=${() => {
-            item.run();
-            onClose();
-          }}
-        >
-          ${item.label}
-        </button>`,
+    ${items.map((item) =>
+      item.header
+        ? html`<div class="add-menu-header">${item.label}</div>`
+        : html`<button
+            class="add-menu-item"
+            @click=${() => {
+              item.run();
+              onClose();
+            }}
+          >
+            ${item.label}
+          </button>`,
     )}
   </div>
 `;

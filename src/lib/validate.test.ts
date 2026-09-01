@@ -504,6 +504,22 @@ describe('mobile config', () => {
     expect(mismatch.some((e) => e.includes('only used when on_mobile is "bar"'))).toBe(true);
   });
 
+  it('accepts bar-eligible inline types and rejects the rest', () => {
+    const ok = validateConfig(
+      withMobile({
+        items: [
+          { type: 'divider', id: 'zd' },
+          { type: 'clock', id: 'zc' },
+        ],
+      }),
+    );
+    expect(ok.some((e) => e.includes('mobile.items'))).toBe(false);
+    const errors = validateConfig(
+      withMobile({ items: [{ type: 'markdown', id: 'zm', content: 'x' }] }),
+    );
+    expect(errors.some((e) => e.includes('not bar-eligible'))).toBe(true);
+  });
+
   it('rejects hiding and overriding the same id', () => {
     const errors = validateConfig(
       withMobile({ hide: ['rooms'], override: { rooms: { title: 'X' } } }),

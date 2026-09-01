@@ -152,6 +152,20 @@ describe('resolveBar, sheet footer strip', () => {
 });
 
 describe('resolveBar, explicit mode', () => {
+  it('renders inline non-item kinds by their type', () => {
+    const config = {
+      ...base(),
+      mobile: {
+        items: [
+          { type: 'divider', id: 'd1' },
+          { type: 'clock', id: 'c1' },
+          { type: 'item', id: 'n1', title: 'New', tap_action: TAP },
+        ],
+      },
+    } as DashboardSidebarConfig;
+    expect(resolveBar(config).slots.map((e) => e.kind)).toEqual(['divider', 'clock', 'item']);
+  });
+
   it('maps use references, inline patches, and inline items', () => {
     const config = {
       ...base(),

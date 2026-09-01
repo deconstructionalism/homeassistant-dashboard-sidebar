@@ -297,7 +297,12 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
         srcIndex,
       });
     } else {
-      slots.push({ source: 'inline', kind: 'item', element: { ...entry }, srcIndex });
+      slots.push({
+        source: 'inline',
+        kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
+        element: { ...entry },
+        srcIndex,
+      });
     }
   });
   return { slots, menu: [], extras, footer: footer ?? [] };
