@@ -386,6 +386,9 @@ export class DashboardSidebarBar extends LitElement {
         // during target detection and behaves identically everywhere.
         forceFallback: true,
         fallbackOnBody: true,
+        // Require a little movement before a fallback drag engages, so plain
+        // taps stay clicks (fallback swallows the click after any drag).
+        fallbackTolerance: 4,
         onStart: (evt) => {
           this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
         },
