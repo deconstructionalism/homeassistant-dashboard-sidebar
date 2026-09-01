@@ -356,25 +356,24 @@ export class DashboardSidebarBar extends LitElement {
         return;
       }
       this._sortables.add(el);
-      const container = el.dataset.container ?? '';
-      const isCat = container.startsWith('cat:');
       Sortable.create(el, {
-        group: isCat
-          ? { name: `sb-bar-${container}` }
-          : {
-              name: 'sb-bar',
-              put: (to, _from, dragEl) => {
-                const target = (to.el as HTMLElement).dataset.container ?? '';
-                const allowed = accepts[target];
-                if (allowed === undefined) {
-                  return false;
-                }
-                if (allowed === null) {
-                  return true;
-                }
-                return allowed.includes(dragEl.getAttribute('data-kind') ?? '');
-              },
-            },
+        group: {
+          name: 'sb-bar',
+          put: (to, _from, dragEl) => {
+            const target = (to.el as HTMLElement).dataset.container ?? '';
+            if (target.startsWith('cat:')) {
+              return false; // children reorder internally; nothing drops in
+            }
+            const allowed = accepts[target];
+            if (allowed === undefined) {
+              return false;
+            }
+            if (allowed === null) {
+              return true;
+            }
+            return allowed.includes(dragEl.getAttribute('data-kind') ?? '');
+          },
+        },
         // Default draggable (direct children), like the desktop preview: an
         // explicit descendant selector confuses nested closest() resolution
         // and breaks dragging children out of categories. Chrome-of-drag is
@@ -382,14 +381,13 @@ export class DashboardSidebarBar extends LitElement {
         // non-entry children cost nothing.
         filter: '.dashboard-sidebar-bar-slot-overflow, .dashboard-sidebar-bar-edit',
         animation: 150,
+        // Pointer-emulation mode: native HTML5 drag is unreliable across
+        // nested shadow-DOM lists, while the fallback pierces shadow roots
+        // during target detection and behaves identically everywhere.
+        forceFallback: true,
+        fallbackOnBody: true,
         onStart: (evt) => {
           this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
-          console.debug(
-            '[dashboard-sidebar] drag start:',
-            evt.from.getAttribute('data-container'),
-            '->',
-            evt.item.getAttribute('data-loc') ?? evt.item.className,
-          );
         },
         onEnd: (evt) => {
           // Capture the drop position, then revert Sortable's DOM surgery:
@@ -778,9 +776,14 @@ export class DashboardSidebarBar extends LitElement {
                       : nothing
                   }
                 >
-                  ${children.map((child) =>
+                  ${children.map((child, ci) =>
                     this.preview && this.previewInteractive && hostLoc !== null
-                      ? html`<div class="dashboard-sidebar-bar-sheet-editwrap" data-drag="child">
+                      ? html`<div
+                          class="dashboard-sidebar-bar-sheet-editwrap"
+                          data-drag="child"
+                          data-kind="item"
+                          data-loc=${`cat:${hostLoc}:${ci}`}
+                        >
                           ${this._renderSheetRow(child)}
                         </div>`
                       : this._renderSheetRow(child),
