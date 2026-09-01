@@ -2120,7 +2120,9 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Applies a drag-reorder from the bar preview to the matching mobile list.
+   * Applies a drag from the bar preview: a reorder within one mobile list, a
+   * move between lists (bar/menu/footer), or a reorder of a category's
+   * children (which edits the underlying category, desktop or inline).
    */
   private _applyMobileReorder(detail: {
     from: string | null;
@@ -2128,20 +2130,76 @@ export class DashboardSidebarEditor extends LitElement {
     oldIndex?: number;
     newIndex?: number;
   }): void {
-    const key = detail.from as 'items' | 'menu' | 'footer' | null;
-    if (
-      !key ||
-      detail.from !== detail.to ||
-      detail.oldIndex === undefined ||
-      detail.newIndex === undefined ||
-      !['items', 'menu', 'footer'].includes(key)
-    ) {
+    const { from, to, oldIndex, newIndex } = detail;
+    if (!from || !to || oldIndex === undefined || newIndex === undefined) {
       return;
     }
-    const { oldIndex, newIndex } = detail;
-    this._patchMobileList(key, (list) => list.splice(newIndex, 0, ...list.splice(oldIndex, 1)));
-    if (this._mobileSelected === `${key}:${oldIndex}`) {
-      this._mobileSelected = `${key}:${newIndex}`;
+    if (from.startsWith('cat:') || to.startsWith('cat:')) {
+      if (from === to) {
+        this._reorderCategoryChildren(from.slice(4), oldIndex, newIndex);
+      }
+      return;
+    }
+    const lists = ['items', 'menu', 'footer'];
+    if (!lists.includes(from) || !lists.includes(to)) {
+      return;
+    }
+    const fromKey = from as 'items' | 'menu' | 'footer';
+    const toKey = to as 'items' | 'menu' | 'footer';
+    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
+    const fromList = [...((mobile[fromKey] as unknown[]) ?? [])];
+    const toList = fromKey === toKey ? fromList : [...((mobile[toKey] as unknown[]) ?? [])];
+    const [moved] = fromList.splice(oldIndex, 1);
+    if (moved === undefined) {
+      return;
+    }
+    toList.splice(newIndex, 0, moved);
+    mobile[fromKey] = fromList;
+    mobile[toKey] = toList;
+    this._patchConfig({ mobile });
+    if (this._mobileSelected === `${fromKey}:${oldIndex}`) {
+      this._mobileSelected = `${toKey}:${newIndex}`;
+    }
+  }
+
+  /**
+   * Reorders the children of the category behind a bar/menu entry: an inline
+   * category's own items, or the referenced desktop category's items.
+   */
+  private _reorderCategoryChildren(hostLoc: string, oldIndex: number, newIndex: number): void {
+    const [key, raw] = hostLoc.split(':');
+    const idx = Number(raw);
+    if (!['items', 'menu'].includes(key) || Number.isNaN(idx)) {
+      return;
+    }
+    const entry = (this._working.mobile?.[key as 'items' | 'menu'] as unknown[])?.[idx] as
+      Record<string, unknown> | undefined;
+    if (!entry) {
+      return;
+    }
+    if (typeof entry.use === 'string') {
+      const id = entry.use;
+      for (const region of ['header', 'body'] as const) {
+        for (const block of this._working[region] ?? []) {
+          if (block.id === id && Array.isArray((block as { items?: unknown[] }).items)) {
+            const items = [...((block as { items: unknown[] }).items ?? [])];
+            items.splice(newIndex, 0, ...items.splice(oldIndex, 1));
+            (block as { items: unknown[] }).items = items;
+            this._touch();
+            return;
+          }
+        }
+      }
+      return;
+    }
+    if (Array.isArray(entry.items)) {
+      this._patchMobileList(key as 'items' | 'menu', (list) => {
+        const next = { ...(list[idx] as Record<string, unknown>) };
+        const items = [...(next.items as unknown[])];
+        items.splice(newIndex, 0, ...items.splice(oldIndex, 1));
+        next.items = items;
+        list[idx] = next;
+      });
     }
   }
 

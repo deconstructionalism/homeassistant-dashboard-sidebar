@@ -338,14 +338,36 @@ export class DashboardSidebarBar extends LitElement {
     if (!this.preview || !this.previewInteractive) {
       return;
     }
+    const accepts: Record<string, string[] | null> = {
+      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
+      menu: null, // anything
+      footer: ['item', 'button'],
+    };
     const root = this.renderRoot as ParentNode;
     root.querySelectorAll<HTMLElement>('[data-container]').forEach((el) => {
       if (this._sortables.has(el)) {
         return;
       }
       this._sortables.add(el);
+      const container = el.dataset.container ?? '';
+      const isCat = container.startsWith('cat:');
       Sortable.create(el, {
-        group: { name: `sb-bar-${el.dataset.container ?? ''}` },
+        group: isCat
+          ? { name: `sb-bar-${container}` }
+          : {
+              name: 'sb-bar',
+              put: (to, _from, dragEl) => {
+                const target = (to.el as HTMLElement).dataset.container ?? '';
+                const allowed = accepts[target];
+                if (allowed === undefined) {
+                  return false;
+                }
+                if (allowed === null) {
+                  return true;
+                }
+                return allowed.includes(dragEl.getAttribute('data-kind') ?? '');
+              },
+            },
         draggable: '[data-drag]',
         animation: 150,
         onEnd: (evt) => {
@@ -549,6 +571,7 @@ export class DashboardSidebarBar extends LitElement {
         class="dashboard-sidebar-bar-divider${this._selClass(dloc)}"
         data-loc=${dloc ?? nothing}
         data-drag=${dloc ?? nothing}
+        data-kind=${dloc !== null ? 'divider' : nothing}
         @click=${dloc !== null ? () => this._selectPreview(dloc) : nothing}
       ></span>`;
     }
@@ -581,6 +604,7 @@ export class DashboardSidebarBar extends LitElement {
         style=${textColor ? `color:${textColor}` : ''}
         data-loc=${loc ?? nothing}
         data-drag=${loc ?? nothing}
+        data-kind=${loc !== null ? entry.kind : nothing}
         @click=${(ev: Event) => {
           if (loc !== null) {
             ev.stopPropagation();
@@ -655,8 +679,10 @@ export class DashboardSidebarBar extends LitElement {
     this._expanded = next;
   }
 
-  /** Renders one list row of the sheet (items, times, dividers, accordions). */
-  private _renderSheetRow(entry: BarEntry): TemplateResult {
+  /** Renders one list row of the sheet (items, times, dividers, accordions).
+   * `hostLoc` is the entry's own loc in an interactive preview, letting a
+   * category's children container register for drag-reordering. */
+  private _renderSheetRow(entry: BarEntry, hostLoc: string | null = null): TemplateResult {
     if (entry.kind === 'divider') {
       return html`<span class="dashboard-sidebar-bar-sheet-divider"></span>`;
     }
@@ -692,8 +718,21 @@ export class DashboardSidebarBar extends LitElement {
         ${
           expanded
             ? html`
-                <div class="dashboard-sidebar-bar-sheet-children">
-                  ${children.map((child) => this._renderSheetRow(child))}
+                <div
+                  class="dashboard-sidebar-bar-sheet-children"
+                  data-container=${
+                    this.preview && this.previewInteractive && hostLoc !== null
+                      ? `cat:${hostLoc}`
+                      : nothing
+                  }
+                >
+                  ${children.map((child) =>
+                    this.preview && this.previewInteractive && hostLoc !== null
+                      ? html`<div class="dashboard-sidebar-bar-sheet-editwrap" data-drag="child">
+                          ${this._renderSheetRow(child)}
+                        </div>`
+                      : this._renderSheetRow(child),
+                  )}
                 </div>
               `
             : nothing
@@ -735,6 +774,7 @@ export class DashboardSidebarBar extends LitElement {
         aria-label=${this._title(entry) || 'footer button'}
         data-loc=${loc ?? nothing}
         data-drag=${loc ?? nothing}
+        data-kind=${loc !== null ? entry.kind : nothing}
         @click=${(ev: Event) => {
           if (loc !== null) {
             ev.stopPropagation();
@@ -805,6 +845,7 @@ export class DashboardSidebarBar extends LitElement {
           class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(loc)}"
           data-loc=${loc}
           data-drag=${loc}
+          data-kind=${entry.kind}
           @click=${(ev: Event) => {
             ev.stopPropagation();
             this._selectPreview(loc);
@@ -865,7 +906,10 @@ export class DashboardSidebarBar extends LitElement {
         .join(';');
       return html` <div class="dashboard-sidebar-bar-sheet-card" style=${style}>${card}</div> `;
     }
-    return this._renderSheetRow(entry);
+    return this._renderSheetRow(
+      entry,
+      entry.srcIndex !== undefined ? `menu:${entry.srcIndex}` : null,
+    );
   }
 
   /** Renders the bottom sheet holding the dots-menu entries. */
@@ -931,7 +975,7 @@ export class DashboardSidebarBar extends LitElement {
                             this._selectPreview(rloc);
                           }}
                         >
-                          ${this._renderSheetRow(entry)}
+                          ${this._renderSheetRow(entry, rloc)}
                         </div>`
                       : this._renderSheetRow(entry);
                   })}
