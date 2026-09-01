@@ -39,6 +39,21 @@ export const barStyles = css`
     display: none;
   }
 
+  /* With labels enabled, the morphed drop preview shows its title as a slot
+     label instead of hiding it. */
+  .dashboard-sidebar-bar[data-labels='true']
+    .dashboard-sidebar-bar-slots
+    .dashboard-sidebar-bar-sheet-label {
+    display: block;
+    flex: 0 0 auto;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .dashboard-sidebar-bar-sheet-rowgroup .dashboard-sidebar-bar-slot {
     flex-direction: row;
     justify-content: flex-start;
