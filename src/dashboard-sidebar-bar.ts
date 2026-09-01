@@ -1022,8 +1022,7 @@ export class DashboardSidebarBar extends LitElement {
             menu.length > 0 ||
             this._resolved.extras.length > 0 ||
             this._resolved.footer.length > 0 ||
-            this._footerHasContent() ||
-            (this.preview && this.previewInteractive)
+            this._footerHasContent()
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${
