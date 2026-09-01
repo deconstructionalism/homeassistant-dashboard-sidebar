@@ -83,6 +83,9 @@ export class DashboardSidebarBar extends LitElement {
   /** Preview containers already wired for drag-and-drop. */
   private readonly _sortables = new WeakSet<HTMLElement>();
 
+  /** The dragged node's origin, for reverting Sortable's DOM move. */
+  private _dragOrigin?: { parent: Node; next: Node | null };
+
   /** The current Home Assistant object; updates re-render live templates. */
   @property({ attribute: false })
   public set hass(value: HomeAssistant | undefined) {
@@ -371,11 +374,25 @@ export class DashboardSidebarBar extends LitElement {
             },
         draggable: '[data-drag]',
         animation: 150,
+        onStart: (evt) => {
+          this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
+        },
         onEnd: (evt) => {
+          // Capture the drop position, then revert Sortable's DOM surgery:
+          // Lit does not own a foreign node, so the moved element would keep
+          // its origin rendering (a sheet row on the bar, say). The config
+          // update re-renders the proper element in the new place instead.
+          const restore = (): void => {
+            if (this._dragOrigin) {
+              this._dragOrigin.parent.insertBefore(evt.item, this._dragOrigin.next);
+              this._dragOrigin = undefined;
+            }
+          };
           const fromC = evt.from.getAttribute('data-container') ?? '';
           const toC = evt.to.getAttribute('data-container') ?? '';
           if (fromC.startsWith('cat:')) {
             // Category children reorder by plain indices within their list.
+            restore();
             this.dispatchEvent(
               new CustomEvent(PREVIEW_REORDER_EVENT, {
                 detail: { from: fromC, to: toC, oldIndex: evt.oldIndex, newIndex: evt.newIndex },
@@ -403,6 +420,7 @@ export class DashboardSidebarBar extends LitElement {
                 .querySelector('[data-container="items-overflow"] [data-loc]')
                 ?.getAttribute('data-loc') ?? null;
           }
+          restore();
           this.dispatchEvent(
             new CustomEvent(PREVIEW_REORDER_EVENT, {
               detail: { from: norm(fromC), to: norm(toC), srcLoc, beforeLoc },
