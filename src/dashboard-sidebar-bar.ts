@@ -310,9 +310,10 @@ export class DashboardSidebarBar extends LitElement {
     this._timer = undefined;
   }
 
-  /** Syncs the editor-forced sheet state before each render. */
-  protected willUpdate(): void {
-    if (this.preview && this.previewInteractive) {
+  /** Applies the editor's sheet-open request when it changes; the dots slot
+   * can still toggle the sheet in between. */
+  protected willUpdate(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has('previewSheetOpen') && this.preview && this.previewInteractive) {
       this._open = this.previewSheetOpen ? 'menu' : null;
       this._sheetClosing = false;
     }
@@ -345,6 +346,7 @@ export class DashboardSidebarBar extends LitElement {
       this._sortables.add(el);
       Sortable.create(el, {
         group: { name: `sb-bar-${el.dataset.container ?? ''}` },
+        draggable: '[data-loc]',
         animation: 150,
         onEnd: (evt) => {
           this.dispatchEvent(
@@ -996,11 +998,11 @@ export class DashboardSidebarBar extends LitElement {
         >
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
-            !(this.preview && this.previewInteractive) &&
-            (menu.length > 0 ||
-              this._resolved.extras.length > 0 ||
-              this._resolved.footer.length > 0 ||
-              this._footerHasContent())
+            menu.length > 0 ||
+            this._resolved.extras.length > 0 ||
+            this._resolved.footer.length > 0 ||
+            this._footerHasContent() ||
+            (this.preview && this.previewInteractive)
               ? html`
                   <button
                     class="dashboard-sidebar-bar-slot dashboard-sidebar-bar-slot-overflow ${
