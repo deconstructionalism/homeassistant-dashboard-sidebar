@@ -1,5 +1,4 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { stampMissingIds } from '../lib/id';
 
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarConfig } from '../lib/types';
@@ -11,17 +10,16 @@ const TAP = { action: 'toggle' } as const;
 
 /** A config with header, body (item + category), and a footer button. */
 const cfg = (): DashboardSidebarConfig => ({
-  header: [{ type: 'title', text: 'Home', id: 't1' }],
+  header: [{ type: 'title', text: 'Home' }],
   body: [
-    { type: 'item', title: 'A', tap_action: TAP, id: 't2' },
+    { type: 'item', title: 'A', tap_action: TAP },
     {
       type: 'category',
       title: 'Rooms',
-      id: 't3',
-      items: [{ title: 'Kitchen', tap_action: TAP, id: 't4' }],
+      items: [{ title: 'Kitchen', tap_action: TAP }],
     },
   ],
-  footer: { buttons: [{ icon: 'mdi:cog', tap_action: TAP, id: 't5' }] },
+  footer: { buttons: [{ icon: 'mdi:cog', tap_action: TAP }] },
 });
 
 /** Mounts the editor with a config and waits for its first render. */
@@ -29,7 +27,7 @@ const mount = async (config: DashboardSidebarConfig): Promise<DashboardSidebarEd
   const el = await fixture<DashboardSidebarEditor>(
     html`<dashboard-sidebar-editor></dashboard-sidebar-editor>`,
   );
-  el.config = stampMissingIds(config);
+  el.config = config;
   await el.updateComplete;
   return el;
 };
@@ -79,41 +77,58 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
   });
 
-  it('edits the custom bar on the preview: select, form, reorder, remove', async () => {
-    const el = await mount({
+  it('shows the settings form in mirror mode and a YAML editor in custom mode', async () => {
+    // Mirror mode: the bar's own options render as a UI form, no YAML.
+    const mirror = await mount({ ...cfg(), mobile: {} });
+    await tab(mirror, 'Mobile Bar');
+    expect(root(mirror).querySelector('.form-title')?.textContent).to.contain('Mirror Desktop');
+    expect(root(mirror).querySelector('.mobile-position'), 'position field').to.exist;
+    expect(
+      [...root(mirror).querySelectorAll('.settings .check-label > span')].map((s2) =>
+        s2.textContent?.trim(),
+      ),
+    ).to.include('Show Labels');
+    expect(root(mirror).querySelector('.settings textarea')).to.not.exist;
+
+    // Custom mode: the whole mobile section is edited as YAML.
+    const custom = await mount({
       ...cfg(),
-      mobile: {
-        items: [{ use: 't2' }, { type: 'item', id: 'x9', title: 'Xtra', tap_action: TAP }],
-      },
+      mobile: { items: [{ type: 'item', title: 'Xtra', tap_action: TAP }] },
     });
+    await tab(custom, 'Mobile Bar');
+    expect(root(custom).querySelector('.form-title')?.textContent).to.contain('Custom');
+    expect(root(custom).querySelector('.editor.settings.yaml-mode'), 'YAML mode').to.exist;
+    expect(root(custom).querySelector('.settings textarea, .settings ha-yaml-editor')).to.exist;
+    expect(root(custom).querySelector('.mobile-position')).to.not.exist;
+  });
+
+  it('switches the Mobile tab to a custom bar copied from the mirror', async () => {
+    const el = await mount({ ...cfg(), mobile: {} });
     await tab(el, 'Mobile Bar');
-    const bar = root(el).querySelector('dashboard-sidebar-bar') as HTMLElement & {
-      updateComplete: Promise<unknown>;
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
     };
-    await bar.updateComplete;
-    const slots = [...(bar.shadowRoot?.querySelectorAll('[data-loc]') ?? [])];
-    expect(slots.map((s2) => s2.getAttribute('data-loc'))).to.deep.equal(['items:0', 'items:1']);
-    (slots[1] as HTMLElement).click();
+    (root(el).querySelector('.tab-notes .tool') as HTMLButtonElement).click();
     await el.updateComplete;
-    const removeBtn = [...root(el).querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Remove Element'),
-    );
-    expect(removeBtn).to.exist;
-    bar.dispatchEvent(
-      new CustomEvent('dashboard-sidebar-preview-reorder', {
-        detail: { from: 'items', to: 'items', oldIndex: 0, newIndex: 1 },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    const toCustom = [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+      /Switch To Custom Bar/.test(b.textContent ?? ''),
+    ) as HTMLButtonElement;
+    expect(toCustom, 'switch-to-custom item').to.exist;
+    toCustom.click();
     await el.updateComplete;
-    await bar.updateComplete;
-    const after = [...(bar.shadowRoot?.querySelectorAll('[data-loc]') ?? [])];
-    expect(after[0]?.getAttribute('aria-label')).to.equal('Xtra');
-    (removeBtn as HTMLButtonElement).click();
-    await el.updateComplete;
-    await bar.updateComplete;
-    expect(bar.shadowRoot?.querySelectorAll('[data-loc="items:1"]').length).to.equal(0);
+    expect(root(el).querySelector('.confirm-scrim'), 'switch choice dialog').to.exist;
+    (
+      [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
+        /Copy Current Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await settle(el);
+    // The derived bar is cloned inline: the item and the category, in order.
+    expect(root(el).querySelector('.editor.settings.yaml-mode')).to.exist;
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.mobile?.items?.length).to.equal(2);
+    expect(saved?.mobile?.items?.[0]?.title).to.equal('A');
   });
 
   it('disables the Mobile tab until On Mobile is the bar, then previews it', async () => {

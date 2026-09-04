@@ -393,23 +393,6 @@ export const editorStyles = css`
     box-sizing: border-box;
   }
 
-  /* Custom-mode element sections: a small-caps section title and rows with
-     icon, title, source chip, and move/remove tools. */
-  /* The custom-mode sub-tab strip sticks where the heading otherwise sits. */
-  .mobile-subtabs {
-    position: sticky;
-    top: 0;
-    z-index: 6;
-    flex: 0 0 auto;
-    padding: 0;
-    background-color: var(--primary-background-color, #fff);
-    background-image: linear-gradient(
-      var(--card-background-color, #fff),
-      var(--card-background-color, #fff)
-    );
-    border-bottom: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
-  }
-
   .add-menu-header {
     padding: 8px 12px 4px;
     font-size: 0.7rem;
@@ -421,72 +404,6 @@ export const editorStyles = css`
   .add-menu-header:not(:first-child) {
     margin-top: 4px;
     border-top: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
-  }
-
-  .mobile-section-title {
-    margin-top: 6px;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    opacity: 0.6;
-    text-transform: uppercase;
-  }
-
-  .mobile-elem-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .mobile-elem-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 6px 10px;
-    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
-    border-radius: 8px;
-  }
-
-  .mobile-elem-row.missing {
-    opacity: 0.6;
-    border-style: dashed;
-  }
-
-  .mobile-elem-icon {
-    --mdc-icon-size: 20px;
-
-    display: flex;
-    flex: 0 0 auto;
-    width: 24px;
-    justify-content: center;
-  }
-
-  .mobile-elem-abbr {
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .mobile-elem-title {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-elem-chip {
-    flex: 0 0 auto;
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--divider-color, rgb(0 0 0 / 12%));
-    font-size: 0.7rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-
-  .mobile-elem-row .tool[disabled] {
-    opacity: 0.3;
-    cursor: default;
   }
 
   .mobile-pv-wrap {

@@ -34,8 +34,6 @@ export interface BlockCommon {
    * dashboard-sidebar-* classes, so card-mod can target this one element.
    */
   class?: string;
-  /** CSS id set on the rendered root, so card-mod can target this one element. */
-  id?: string;
   /**
    * Per-element card-mod config (a `{ style, class, ... }` object), applied to
    * this element's rendered root via the card-mod integration when installed.
@@ -271,86 +269,34 @@ export interface FooterConfig {
   double_tap_action?: ActionConfig;
 }
 
-/**
- * The properties of a reused element that mobile may replace. A patch never
- * carries `id` (the reference itself) or `type` (identity is not patchable).
- */
-export interface MobileOverride {
-  /** Replacement label. Templatable. */
-  title?: MaybeTemplate;
-  /** Replacement mdi icon. Templatable. */
-  icon?: MaybeTemplate;
-  /** Replacement collapsed glyph for an icon-less element. */
-  abbr?: string;
-  /** Replacement label color, any CSS color. Templatable. */
-  text_color?: MaybeTemplate;
-  /** Replacement icon color, any CSS color. Templatable. */
-  icon_color?: MaybeTemplate;
-  /** Replacement target entity for toggle / more-info actions. */
-  entity?: string;
-  /** Replacement tap action. */
-  tap_action?: ActionConfig;
-  /** Replacement hold action. */
-  hold_action?: ActionConfig;
-  /** Replacement double-tap action. */
-  double_tap_action?: ActionConfig;
-  /** Replacement active-highlight flag. */
-  active_highlight?: boolean;
-  /** Extra CSS class(es) on the bar rendering of this element. */
-  class?: string;
-  /** Per-element card-mod config for the bar rendering of this element. */
-  card_mod?: Record<string, unknown>;
-}
+/** An explicit bar entry: an inline item. */
+export type MobileBarEntry = ItemBlock;
 
-/**
- * One entry of an explicit mobile bar: a desktop element reused by id, with
- * any of the override properties applied inline.
- */
-export interface MobileUseEntry extends MobileOverride {
-  /** The id of the desktop item, category, or footer button to reuse. */
-  use: string;
-}
+/** One curated sheet-menu entry: an inline block of any kind. */
+export type MobileMenuEntry = SidebarBlock;
 
-/** An explicit bar entry: a reuse of a desktop element, or an inline item. */
-export type MobileBarEntry = MobileUseEntry | ItemBlock;
-
-/**
- * One curated sheet-menu entry: a reuse of any desktop element by id (no
- * bar-eligibility limit), or an inline block of any kind.
- */
-export type MobileMenuEntry = MobileUseEntry | SidebarBlock;
-
-/**
- * One curated sheet-footer entry: a reuse of an item or footer button by id,
- * or an inline footer button.
- */
-export type MobileFooterEntry = MobileUseEntry | FooterButtonConfig;
+/** One curated sheet-footer entry: an inline footer button. */
+export type MobileFooterEntry = FooterButtonConfig;
 
 /**
  * The mobile bar. Its presence hides the sidebar on narrow viewports and
- * renders a bottom bar instead. Without `items` the bar derives from the
- * desktop nav (items and categories in document order) amended by `hide` and
- * `override`; with `items` the list is the whole bar and `hide`/`override`
- * are rejected.
+ * renders a bottom bar instead. Without `items` the bar mirrors the desktop
+ * nav (items and categories in document order); with `items` the list is the
+ * whole bar.
  */
 export interface MobileConfig {
-  /** Ids of derived elements to leave off the bar. Derive mode only. */
-  hide?: string[];
-  /** Per-id property patches applied to derived elements. Derive mode only. */
-  override?: Record<string, MobileOverride>;
-  /** The explicit bar: `use:` references and inline items. */
+  /** The explicit bar: the inline items that make up the whole bar. */
   items?: MobileBarEntry[];
   /**
    * Curated entries of the dots-menu sheet, shown between any overflowed
-   * slots and the footer. `use:` may reference any element, including
-   * titles, markdown, and cards. Applies in both derive and explicit mode.
+   * slots and the footer. Any kind of block is allowed, including titles,
+   * markdown, and cards. Applies in both mirror and custom mode.
    */
   menu?: MobileMenuEntry[];
   /**
-   * The sheet's pinned footer strip: `use:` references to footer buttons or
-   * items, and inline footer buttons, rendered as icon buttons. When set it
-   * replaces the strip derived from the desktop footer (and a card/markdown
-   * footer).
+   * The sheet's pinned footer strip: inline footer buttons, rendered as icon
+   * buttons. When set it replaces the strip derived from the desktop footer
+   * (and a card/markdown footer).
    */
   footer?: MobileFooterEntry[];
   /** Screen edge the bar docks to. Default bottom. */

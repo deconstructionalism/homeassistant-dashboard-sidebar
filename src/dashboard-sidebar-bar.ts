@@ -2,9 +2,8 @@ import { html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 import { runAction, type RunnableAction } from './lib/action';
-import Sortable from 'sortablejs';
 
-import { EDIT_EVENT, PREVIEW_REORDER_EVENT, PREVIEW_SELECT_EVENT } from './lib/const';
+import { EDIT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
@@ -64,27 +63,9 @@ export class DashboardSidebarBar extends LitElement {
   @property({ attribute: false })
   public editMode = false;
 
-  /**
-   * Editor preview interactivity: clicks select elements for editing and the
-   * slots, menu rows, and footer strip become drag-reorderable. Only
-   * meaningful together with `preview`.
-   */
-  @property({ attribute: false })
-  public previewInteractive = false;
-
-  /** The data-loc of the element selected in the editor, for highlighting. */
-  @property({ attribute: false })
-  public previewSelected?: string;
-
-  /** Forces the sheet open (the editor's Menu sub-tab). */
+  /** Forces the sheet open, so the editor preview can show its contents. */
   @property({ attribute: false })
   public previewSheetOpen = false;
-
-  /** Preview containers already wired for drag-and-drop. */
-  private readonly _sortables = new WeakSet<HTMLElement>();
-
-  /** The dragged node's origin, for reverting Sortable's DOM move. */
-  private _dragOrigin?: { parent: Node; next: Node | null };
 
   /** The current Home Assistant object; updates re-render live templates. */
   @property({ attribute: false })
@@ -119,7 +100,7 @@ export class DashboardSidebarBar extends LitElement {
   /** How many slots fit the current width, from measurement. */
   @state() private _capacity = Infinity;
 
-  /** The open flyout: the dots menu, a category's id, or none. */
+  /** The open flyout: the dots menu, a category slot's position, or none. */
   @state() private _open: 'menu' | string | null = null;
 
   /** The horizontal center of the slot the open flyout anchors to. */
@@ -131,7 +112,7 @@ export class DashboardSidebarBar extends LitElement {
   /** Built card elements for card/markdown sheet-menu entries, by index. */
   @state() private _extraCards = new Map<number, HTMLElement & { hass?: HomeAssistant }>();
 
-  /** Ids of categories expanded inside the open sheet. */
+  /** Keys of the categories expanded inside the open sheet. */
   @state() private _expanded = new Set<string>();
 
   /** Whether the sheet is playing its slide-out before unmounting. */
@@ -316,142 +297,18 @@ export class DashboardSidebarBar extends LitElement {
   /** Applies the editor's sheet-open request when it changes; the dots slot
    * can still toggle the sheet in between. */
   protected willUpdate(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has('previewSheetOpen') && this.preview && this.previewInteractive) {
+    if (changed.has('previewSheetOpen') && this.preview) {
       this._open = this.previewSheetOpen ? 'menu' : null;
       this._sheetClosing = false;
     }
   }
 
-  /** Applies the bar-level card-mod and preview drag wiring after render. */
+  /** Applies the bar-level card-mod after render. */
   protected updated(): void {
     const cardMod = this._config?.mobile?.card_mod;
     if (cardMod) {
       applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
     }
-    this._wirePreviewSort();
-  }
-
-  /**
-   * In an interactive preview, wires drag-and-drop onto the slot row, the
-   * sheet's menu rows, and the sheet's footer strip, dispatching container
-   * names and indices for the editor to apply (indices map 1:1 to the config
-   * lists because folding is disabled and placeholders render).
-   */
-  private _wirePreviewSort(): void {
-    if (!this.preview || !this.previewInteractive) {
-      return;
-    }
-    const accepts: Record<string, string[] | null> = {
-      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
-      'items-overflow': ['item', 'category', 'divider', 'clock', 'date', 'button'],
-      menu: null, // anything
-      footer: ['item', 'button'],
-    };
-    const root = this.renderRoot as ParentNode;
-    root.querySelectorAll<HTMLElement>('[data-container]').forEach((el) => {
-      if (this._sortables.has(el)) {
-        return;
-      }
-      this._sortables.add(el);
-      Sortable.create(el, {
-        group: {
-          name: 'sb-bar',
-          put: (to, _from, dragEl) => {
-            const target = (to.el as HTMLElement).dataset.container ?? '';
-            if (target.startsWith('cat:')) {
-              // Categories accept plain items, like the desktop preview.
-              return dragEl.getAttribute('data-kind') === 'item';
-            }
-            const allowed = accepts[target];
-            if (allowed === undefined) {
-              return false;
-            }
-            if (allowed === null) {
-              return true;
-            }
-            return allowed.includes(dragEl.getAttribute('data-kind') ?? '');
-          },
-        },
-        // Default draggable (direct children), like the desktop preview: an
-        // explicit descendant selector confuses nested closest() resolution
-        // and breaks dragging children out of categories. Chrome-of-drag is
-        // excluded via filter; positions travel as data-locs, so extra
-        // non-entry children cost nothing.
-        filter: '.dashboard-sidebar-bar-slot-overflow, .dashboard-sidebar-bar-edit',
-        animation: 150,
-        // Pointer-emulation mode: native HTML5 drag is unreliable across
-        // nested shadow-DOM lists, while the fallback pierces shadow roots
-        // during target detection and behaves identically everywhere.
-        forceFallback: true,
-        fallbackOnBody: true,
-        // Require a little movement before a fallback drag engages, so plain
-        // taps stay clicks (fallback swallows the click after any drag).
-        fallbackTolerance: 4,
-        onStart: (evt) => {
-          this._dragOrigin = { parent: evt.from, next: evt.item.nextSibling };
-        },
-        onEnd: (evt) => {
-          // Capture the drop position, then revert Sortable's DOM surgery:
-          // Lit does not own a foreign node, so the moved element would keep
-          // its origin rendering (a sheet row on the bar, say). The config
-          // update re-renders the proper element in the new place instead.
-          const restore = (): void => {
-            if (this._dragOrigin) {
-              this._dragOrigin.parent.insertBefore(evt.item, this._dragOrigin.next);
-              this._dragOrigin = undefined;
-            }
-          };
-          const fromC = evt.from.getAttribute('data-container') ?? '';
-          const toC = evt.to.getAttribute('data-container') ?? '';
-          // The bar's items list renders split across the bar and the sheet's
-          // overflow, so moves are described by element locs, not container
-          // indices: the dragged entry's loc plus the loc it now precedes.
-          const norm = (c: string): string => (c === 'items-overflow' ? 'items' : c);
-          const srcLoc = evt.item.getAttribute('data-loc');
-          if (!srcLoc) {
-            restore();
-            return;
-          }
-          let sibling = evt.item.nextElementSibling;
-          while (sibling && !sibling.hasAttribute('data-loc')) {
-            sibling = sibling.nextElementSibling;
-          }
-          let beforeLoc = sibling?.getAttribute('data-loc') ?? null;
-          if (beforeLoc === null && toC === 'items') {
-            // Dropped at the end of the visible bar: the fold continues in
-            // the sheet, so the true position is before the first folded row.
-            beforeLoc =
-              (this.renderRoot as ParentNode)
-                .querySelector('[data-container="items-overflow"] [data-loc]')
-                ?.getAttribute('data-loc') ?? null;
-          }
-          restore();
-          this.dispatchEvent(
-            new CustomEvent(PREVIEW_REORDER_EVENT, {
-              detail: { from: norm(fromC), to: norm(toC), srcLoc, beforeLoc },
-              bubbles: true,
-              composed: true,
-            }),
-          );
-        },
-      });
-    });
-  }
-
-  /** Dispatches an element selection to the editor. */
-  private _selectPreview(loc: string): void {
-    this.dispatchEvent(
-      new CustomEvent(PREVIEW_SELECT_EVENT, {
-        detail: { loc },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-
-  /** The ` sb-selected` class suffix for the selected preview element. */
-  private _selClass(loc: string | null): string {
-    return loc !== null && this.preview && this.previewSelected === loc ? ' sb-selected' : '';
   }
 
   /** The last width the capacity was computed from. */
@@ -525,10 +382,9 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /** Handles a slot tap: categories open their flyout, others act. */
-  private _onSlotTap(entry: BarEntry, ev: Event): void {
+  private _onSlotTap(entry: BarEntry, index: number, ev: Event): void {
     if (entry.kind === 'category') {
-      const el = entry.element as CategoryBlock;
-      this._toggleFlyout(el.id ?? 'category', ev);
+      this._toggleFlyout(String(index), ev);
       return;
     }
     this._close();
@@ -633,21 +489,9 @@ export class DashboardSidebarBar extends LitElement {
   /** Renders one slot. */
   private _renderSlot(entry: BarEntry, index: number): TemplateResult {
     if (entry.kind === 'divider') {
-      const dloc =
-        this.preview && this.previewInteractive && entry.srcIndex !== undefined
-          ? `items:${entry.srcIndex}`
-          : null;
-      return html`<span
-        class="dashboard-sidebar-bar-divider${this._selClass(dloc)}"
-        data-loc=${dloc ?? nothing}
-        data-drag=${dloc ?? nothing}
-        data-kind=${dloc !== null ? 'divider' : nothing}
-        @click=${dloc !== null ? () => this._selectPreview(dloc) : nothing}
-      ></span>`;
+      return html`<span class="dashboard-sidebar-bar-divider"></span>`;
     }
     const el = entry.element as ItemBlock;
-    const interactive = this.preview && this.previewInteractive;
-    const loc = interactive && entry.srcIndex !== undefined ? `items:${entry.srcIndex}` : null;
     const time = entry.kind === 'clock' || entry.kind === 'date';
     const active = this._navActive(entry);
     const label = time ? undefined : this._label(entry);
@@ -659,30 +503,19 @@ export class DashboardSidebarBar extends LitElement {
       'dashboard-sidebar-bar-slot',
       `dashboard-sidebar-bar-slot-${entry.kind}`,
       active ? 'dashboard-sidebar-bar-slot-active' : '',
-      this._open !== null && this._open === el.id ? 'dashboard-sidebar-bar-slot-open' : '',
+      this._open === String(index) ? 'dashboard-sidebar-bar-slot-open' : '',
       el.class ?? '',
     ]
       .filter(Boolean)
-      .join(' ')
-      .concat(this._selClass(loc));
+      .join(' ');
     return html`
       <button
         class=${classes}
-        id=${el.id ?? `bar-slot-${index}`}
+        id=${`bar-slot-${index}`}
         aria-label=${title || (time ? entry.kind : 'bar item')}
         aria-current=${active ? 'page' : nothing}
         style=${textColor ? `color:${textColor}` : ''}
-        data-loc=${loc ?? nothing}
-        data-drag=${loc ?? nothing}
-        data-kind=${loc !== null ? entry.kind : nothing}
-        @click=${(ev: Event) => {
-          if (loc !== null) {
-            ev.stopPropagation();
-            this._selectPreview(loc);
-            return;
-          }
-          this._onSlotTap(entry, ev);
-        }}
+        @click=${(ev: Event) => this._onSlotTap(entry, index, ev)}
       >
         ${
           time
@@ -725,10 +558,10 @@ export class DashboardSidebarBar extends LitElement {
     if (this._open === null || this._open === 'menu') {
       return null;
     }
-    const source = [...this._resolved.slots, ...menu].find(
-      (e) => e.kind === 'category' && (e.element as CategoryBlock).id === this._open,
-    );
-    if (!source) {
+    // `_open` holds the tapped slot's position in the bar row.
+    const index = Number(this._open);
+    const source = Number.isInteger(index) ? [...this._resolved.slots, ...menu][index] : undefined;
+    if (!source || source.kind !== 'category') {
       return null;
     }
     return ((source.element as CategoryBlock).items ?? []).map((child) => ({
@@ -739,20 +572,18 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /** Toggles a category's accordion expansion inside the sheet. */
-  private _toggleExpand(id: string): void {
+  private _toggleExpand(key: string): void {
     const next = new Set(this._expanded);
-    if (next.has(id)) {
-      next.delete(id);
+    if (next.has(key)) {
+      next.delete(key);
     } else {
-      next.add(id);
+      next.add(key);
     }
     this._expanded = next;
   }
 
-  /** Renders one list row of the sheet (items, times, dividers, accordions).
-   * `hostLoc` is the entry's own loc in an interactive preview, letting a
-   * category's children container register for drag-reordering. */
-  private _renderSheetRow(entry: BarEntry, hostLoc: string | null = null): TemplateResult {
+  /** Renders one list row of the sheet (items, times, dividers, accordions). */
+  private _renderSheetRow(entry: BarEntry, key: string): TemplateResult {
     if (entry.kind === 'divider') {
       return html`<span class="dashboard-sidebar-bar-sheet-divider"></span>`;
     }
@@ -765,8 +596,7 @@ export class DashboardSidebarBar extends LitElement {
     }
     if (entry.kind === 'category') {
       const el = entry.element as CategoryBlock;
-      const id = el.id ?? '';
-      const expanded = this._expanded.has(id);
+      const expanded = this._expanded.has(key);
       const children: BarEntry[] = (el.items ?? []).map((child) => ({
         source: entry.source,
         kind: 'item',
@@ -776,7 +606,7 @@ export class DashboardSidebarBar extends LitElement {
         <button
           class="dashboard-sidebar-bar-sheet-row dashboard-sidebar-bar-sheet-category ${el.class ?? ''}"
           aria-expanded=${expanded ? 'true' : 'false'}
-          @click=${() => this._toggleExpand(id)}
+          @click=${() => this._toggleExpand(key)}
         >
           ${this._renderIcon(entry)}
           <span class="dashboard-sidebar-bar-sheet-label">${this._title(entry)}</span>
@@ -788,26 +618,8 @@ export class DashboardSidebarBar extends LitElement {
         ${
           expanded
             ? html`
-                <div
-                  class="dashboard-sidebar-bar-sheet-children"
-                  data-container=${
-                    this.preview && this.previewInteractive && hostLoc !== null
-                      ? `cat:${hostLoc}`
-                      : nothing
-                  }
-                >
-                  ${children.map((child, ci) =>
-                    this.preview && this.previewInteractive && hostLoc !== null
-                      ? html`<div
-                          class="dashboard-sidebar-bar-sheet-editwrap"
-                          data-drag="child"
-                          data-kind="item"
-                          data-loc=${`cat:${hostLoc}:${ci}`}
-                        >
-                          ${this._renderSheetRow(child)}
-                        </div>`
-                      : this._renderSheetRow(child),
-                  )}
+                <div class="dashboard-sidebar-bar-sheet-children">
+                  ${children.map((child, ci) => this._renderSheetRow(child, `${key}:${ci}`))}
                 </div>
               `
             : nothing
@@ -837,25 +649,13 @@ export class DashboardSidebarBar extends LitElement {
   private _renderSheetButton(entry: BarEntry): TemplateResult {
     const el = entry.element as FooterButtonConfig;
     const active = this._navActive(entry);
-    const loc =
-      this.preview && this.previewInteractive && entry.srcIndex !== undefined
-        ? `footer:${entry.srcIndex}`
-        : null;
     return html`
       <button
         class="dashboard-sidebar-bar-sheet-footer-btn ${
           active ? 'dashboard-sidebar-bar-sheet-row-active' : ''
-        } ${el.class ?? ''}${this._selClass(loc)}"
+        } ${el.class ?? ''}"
         aria-label=${this._title(entry) || 'footer button'}
-        data-loc=${loc ?? nothing}
-        data-drag=${loc ?? nothing}
-        data-kind=${loc !== null ? entry.kind : nothing}
-        @click=${(ev: Event) => {
-          if (loc !== null) {
-            ev.stopPropagation();
-            this._selectPreview(loc);
-            return;
-          }
+        @click=${() => {
           this._close();
           this._run(el);
         }}
@@ -909,32 +709,8 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /** Renders one curated sheet-menu entry: titles and cards get their own
-   * treatments, everything else renders as a normal sheet row. In an
-   * interactive preview each entry wraps with its data-loc and selects on
-   * click instead of acting. */
+   * treatments, everything else renders as a normal sheet row. */
   private _renderSheetExtra(entry: BarEntry, index: number): TemplateResult | typeof nothing {
-    if (this.preview && this.previewInteractive) {
-      const loc = `menu:${entry.srcIndex ?? index}`;
-      return html`
-        <div
-          class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(loc)}"
-          data-loc=${loc}
-          data-drag=${loc}
-          data-kind=${entry.kind}
-          @click=${(ev: Event) => {
-            ev.stopPropagation();
-            this._selectPreview(loc);
-          }}
-        >
-          ${this._renderSheetExtraInner(entry, index)}
-        </div>
-      `;
-    }
-    return this._renderSheetExtraInner(entry, index);
-  }
-
-  /** The uninstrumented rendering of one curated sheet-menu entry. */
-  private _renderSheetExtraInner(entry: BarEntry, index: number): TemplateResult | typeof nothing {
     if (entry.kind === 'title') {
       const el = entry.element as {
         text?: string;
@@ -981,10 +757,7 @@ export class DashboardSidebarBar extends LitElement {
         .join(';');
       return html` <div class="dashboard-sidebar-bar-sheet-card" style=${style}>${card}</div> `;
     }
-    return this._renderSheetRow(
-      entry,
-      entry.srcIndex !== undefined ? `menu:${entry.srcIndex}` : null,
-    );
+    return this._renderSheetRow(entry, `extra:${index}`);
   }
 
   /** Renders the bottom sheet holding the dots-menu entries. */
@@ -992,12 +765,9 @@ export class DashboardSidebarBar extends LitElement {
     const content = this._renderSheetFooterContent();
     const extras = this._resolved.extras;
     const shown = this._open === 'menu' || this._sheetClosing;
-    // An interactive preview renders the sheet even when empty: it is the
-    // editing surface for the menu and footer lists.
     if (
       !shown ||
-      (!(this.preview && this.previewInteractive) &&
-        menu.length === 0 &&
+      (menu.length === 0 &&
         extras.length === 0 &&
         this._resolved.footer.length === 0 &&
         content === nothing)
@@ -1030,40 +800,13 @@ export class DashboardSidebarBar extends LitElement {
         }}
       >
         ${
-          rows.length > 0 || extras.length > 0 || (this.preview && this.previewInteractive)
+          rows.length > 0 || extras.length > 0
             ? html`
                 <div class="dashboard-sidebar-bar-sheet-rows">
-                  <div
-                    class="dashboard-sidebar-bar-sheet-rowgroup"
-                    data-container=${
-                      this.preview && this.previewInteractive ? 'items-overflow' : nothing
-                    }
-                  >
-                    ${rows.map((entry) => {
-                      const rloc =
-                        this.preview && this.previewInteractive && entry.srcIndex !== undefined
-                          ? `items:${entry.srcIndex}`
-                          : null;
-                      return rloc !== null
-                        ? html`<div
-                            class="dashboard-sidebar-bar-sheet-editwrap${this._selClass(rloc)}"
-                            data-loc=${rloc}
-                            data-drag=${rloc}
-                            data-kind=${entry.kind}
-                            @click=${(ev: Event) => {
-                              ev.stopPropagation();
-                              this._selectPreview(rloc);
-                            }}
-                          >
-                            ${this._renderSheetRow(entry, rloc)}
-                          </div>`
-                        : this._renderSheetRow(entry);
-                    })}
+                  <div class="dashboard-sidebar-bar-sheet-rowgroup">
+                    ${rows.map((entry, i) => this._renderSheetRow(entry, `row:${i}`))}
                   </div>
-                  <div
-                    class="dashboard-sidebar-bar-sheet-rowgroup"
-                    data-container=${this.preview && this.previewInteractive ? 'menu' : nothing}
-                  >
+                  <div class="dashboard-sidebar-bar-sheet-rowgroup">
                     ${extras.map((entry, i) => this._renderSheetExtra(entry, i))}
                   </div>
                 </div>
@@ -1071,13 +814,12 @@ export class DashboardSidebarBar extends LitElement {
             : nothing
         }
         ${
-          buttons.length > 0 || content !== nothing || (this.preview && this.previewInteractive)
+          buttons.length > 0 || content !== nothing
             ? html`
                 <div
                   class="dashboard-sidebar-bar-sheet-footer ${
                     this._config?.footer?.divider === false ? 'no-divider' : ''
                   }"
-                  data-container=${this.preview && this.previewInteractive ? 'footer' : nothing}
                 >
                   ${
                     shownContent !== nothing
@@ -1143,10 +885,7 @@ export class DashboardSidebarBar extends LitElement {
               </button>`
             : nothing
         }
-        <div
-          class="dashboard-sidebar-bar-slots"
-          data-container=${this.preview && this.previewInteractive ? 'items' : nothing}
-        >
+        <div class="dashboard-sidebar-bar-slots">
           ${visible.map((entry, i) => this._renderSlot(entry, i))}
           ${
             menu.length > 0 ||

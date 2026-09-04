@@ -6,14 +6,8 @@ import { canPlace, defaultBlock, defaultFooterButton, moveBlock, starterSidebar 
 
 /** A two-region sidebar the move cases operate on. */
 const cfg = (): DashboardSidebarConfig => ({
-  header: [
-    { type: 'title', text: 'Home', id: 't1' },
-    { type: 'clock', id: 't2' },
-  ],
-  body: [
-    { type: 'item', title: 'A', tap_action: { action: 'toggle' }, id: 't3' },
-    { type: 'divider', id: 't4' },
-  ],
+  header: [{ type: 'title', text: 'Home' }, { type: 'clock' }],
+  body: [{ type: 'item', title: 'A', tap_action: { action: 'toggle' } }, { type: 'divider' }],
 });
 
 /** Maps a region's blocks to their types for concise assertions. */
@@ -78,23 +72,5 @@ describe('factories', () => {
         footer: { buttons: [defaultFooterButton()] },
       }),
     ).toHaveLength(0);
-  });
-});
-
-describe('generated ids', () => {
-  it('stamps a unique phrase id on every new block and button', () => {
-    const existing = new Set<string>();
-    const a = defaultBlock('item', existing);
-    const b = defaultBlock('category', existing);
-    const c = defaultFooterButton(existing);
-    const ids = [a.id, b.id, (b as { items: { id?: string }[] }).items[0].id, c.id];
-    for (const id of ids) {
-      expect(id).toMatch(/^[a-z]+-[a-z]+-[a-z]+-[a-z]+$/);
-    }
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it('starterSidebar blocks carry ids and validate', () => {
-    expect(validateConfig(starterSidebar())).toHaveLength(0);
   });
 });

@@ -5,15 +5,8 @@ import {
   FOOTER_FIELDS,
   TOP_FIELDS,
   MOBILE_FIELDS,
-  MOBILE_OVERRIDE_FIELDS,
 } from './schema.generated';
-import type {
-  DashboardSidebarConfig,
-  ItemBlock,
-  MobileOverride,
-  MobileUseEntry,
-  SidebarBlock,
-} from './types';
+import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
 /** Accepted alignment values, as a set for lookups. */
 const ALIGN_SET = new Set<string>(ALIGNS);
@@ -108,16 +101,11 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
 };
 
 /**
- * Validates the styling hooks (`class`, `card_mod`) and the required `id`.
+ * Validates the styling hooks (`class`, `card_mod`).
  */
 const checkHooks = (block: unknown, ctx: string, errors: string[]): void => {
-  const b = block as { class?: unknown; id?: unknown; card_mod?: unknown };
+  const b = block as { class?: unknown; card_mod?: unknown };
   checkString(b.class, `${ctx}.class`, errors);
-  if (b.id === undefined || b.id === '') {
-    errors.push(`${ctx}: needs a unique id (the editor generates one for new elements)`);
-  } else {
-    checkString(b.id, `${ctx}.id`, errors);
-  }
   checkMapping(b.card_mod, `${ctx}.card_mod`, errors);
 };
 
@@ -321,92 +309,9 @@ const validateFooterButton = (btn: unknown, ctx: string, errors: string[]): void
 /** Keys allowed on the mobile config. */
 const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
 
-/** Keys a mobile override (or the patch part of a use entry) may set. */
-const MOBILE_OVERRIDE_KEYS = new Set<string>(MOBILE_OVERRIDE_FIELDS);
-
-/** The element kinds that can appear on the mobile bar. */
-type BarKind = 'item' | 'category' | 'button' | 'divider' | 'clock' | 'date';
-
 /**
- * Maps every element id to what kind of element carries it, so mobile
- * references can be resolved and their eligibility checked.
- */
-export const barEligibility = (config: DashboardSidebarConfig): Map<string, BarKind | 'other'> => {
-  const kinds = new Map<string, BarKind | 'other'>();
-  const put = (el: unknown, kind: BarKind | 'other'): void => {
-    const id = (el as { id?: unknown })?.id;
-    if (typeof id === 'string' && id) {
-      kinds.set(id, kind);
-    }
-  };
-  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-  for (const block of [...list(config.header), ...list(config.body)]) {
-    const type = (block as { type?: string }).type ?? 'item';
-    const barKinds = ['item', 'category', 'divider', 'clock', 'date'];
-    put(block, barKinds.includes(type) ? (type as BarKind) : 'other');
-    if (type === 'category') {
-      for (const child of list((block as { items?: unknown[] }).items)) {
-        put(child, 'item');
-      }
-    }
-  }
-  for (const btn of list(config.footer?.buttons)) {
-    put(btn, 'button');
-  }
-  return kinds;
-};
-
-/**
- * Reports an unknown or bar-ineligible reference, listing what is known.
- */
-const checkRef = (
-  id: string,
-  kinds: Map<string, BarKind | 'other'>,
-  ctx: string,
-  errors: string[],
-  anyKind = false,
-): void => {
-  const kind = kinds.get(id);
-  if (kind === undefined) {
-    const known = anyKind
-      ? [...kinds.keys()]
-      : [...kinds.keys()].filter((k) => kinds.get(k) !== 'other');
-    errors.push(`${ctx}: unknown id "${id}" (known: ${known.join(', ') || 'none'})`);
-  } else if (kind === 'other' && !anyKind) {
-    errors.push(
-      `${ctx}: "${id}" is not bar-eligible; only items, categories, dividers, clocks, dates, and footer buttons can appear on the bar`,
-    );
-  }
-};
-
-/**
- * Validates an override patch: allowed keys only, with light type checks.
- */
-const checkOverridePatch = (patch: unknown, ctx: string, errors: string[]): void => {
-  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
-    errors.push(`${ctx}: must be a mapping of properties to replace`);
-    return;
-  }
-  for (const key of Object.keys(patch)) {
-    if (key !== 'use' && !MOBILE_OVERRIDE_KEYS.has(key)) {
-      errors.push(`${ctx}.${key}: not an overridable property`);
-    }
-  }
-  const p = patch as MobileOverride;
-  checkString(p.title, `${ctx}.title`, errors);
-  checkString(p.icon, `${ctx}.icon`, errors);
-  checkString(p.abbr, `${ctx}.abbr`, errors);
-  checkString(p.text_color, `${ctx}.text_color`, errors);
-  checkString(p.icon_color, `${ctx}.icon_color`, errors);
-  checkString(p.entity, `${ctx}.entity`, errors);
-  checkString(p.class, `${ctx}.class`, errors);
-  checkBool(p.active_highlight, `${ctx}.active_highlight`, errors);
-  checkMapping(p.card_mod, `${ctx}.card_mod`, errors);
-};
-
-/**
- * Validates the mobile bar config: known keys, mode exclusivity, resolvable
- * and bar-eligible references, patch shapes, and the bar options.
+ * Validates the mobile bar config: known keys, the inline entries of each
+ * list, and the bar options.
  */
 const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void => {
   const mobile = config.mobile;
@@ -420,11 +325,6 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   unknownKeys(mobile, new Set([...MOBILE_KEYS, 'breakpoint']), 'mobile', errors);
 
   const explicit = mobile.items !== undefined;
-  if (explicit && (mobile.hide !== undefined || mobile.override !== undefined)) {
-    errors.push(
-      'mobile: `items` defines the whole bar; `hide`/`override` only apply in derive mode',
-    );
-  }
 
   if ((mobile as Record<string, unknown>).breakpoint !== undefined) {
     errors.push('mobile.breakpoint: moved to the top-level `breakpoint` option');
@@ -435,36 +335,6 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   }
   checkString(mobile.background, 'mobile.background', errors);
   checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
-
-  const kinds = barEligibility(config);
-
-  if (mobile.hide !== undefined) {
-    if (!Array.isArray(mobile.hide)) {
-      errors.push('mobile.hide: must be a list of element ids');
-    } else {
-      mobile.hide.forEach((id, i) => {
-        if (typeof id !== 'string' || !id) {
-          errors.push(`mobile.hide[${i}]: must be an element id`);
-        } else {
-          checkRef(id, kinds, `mobile.hide[${i}]`, errors);
-          if (mobile.override && Object.prototype.hasOwnProperty.call(mobile.override, id)) {
-            errors.push(`mobile.hide[${i}]: "${id}" is both hidden and overridden; pick one`);
-          }
-        }
-      });
-    }
-  }
-
-  if (mobile.override !== undefined) {
-    if (!mobile.override || typeof mobile.override !== 'object' || Array.isArray(mobile.override)) {
-      errors.push('mobile.override: must be a mapping of element id to properties');
-    } else {
-      for (const [id, patch] of Object.entries(mobile.override)) {
-        checkRef(id, kinds, `mobile.override.${id}`, errors);
-        checkOverridePatch(patch, `mobile.override.${id}`, errors);
-      }
-    }
-  }
 
   if (explicit) {
     if (!Array.isArray(mobile.items)) {
@@ -477,25 +347,15 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         errors.push(`${ctx}: must be a mapping`);
         return;
       }
-      if ('use' in entry) {
-        const use = (entry as MobileUseEntry).use;
-        if (typeof use !== 'string' || !use) {
-          errors.push(`${ctx}.use: must be an element id`);
-        } else {
-          checkRef(use, kinds, `${ctx}.use`, errors);
-        }
-        checkOverridePatch(entry, ctx, errors);
+      const type = (entry as SidebarBlock).type;
+      if (type === undefined || type === 'item') {
+        validateItem(entry as ItemBlock, ctx, errors);
+      } else if (['category', 'divider', 'clock', 'date'].includes(type)) {
+        validateBlock(entry as SidebarBlock, ctx, errors);
       } else {
-        const type = (entry as SidebarBlock).type;
-        if (type === undefined || type === 'item') {
-          validateItem(entry as ItemBlock, ctx, errors);
-        } else if (['category', 'divider', 'clock', 'date'].includes(type)) {
-          validateBlock(entry as SidebarBlock, ctx, errors);
-        } else {
-          errors.push(
-            `${ctx}: type "${type}" is not bar-eligible (items, categories, dividers, clocks, dates)`,
-          );
-        }
+        errors.push(
+          `${ctx}: type "${type}" is not bar-eligible (items, categories, dividers, clocks, dates)`,
+        );
       }
     });
   }
@@ -511,26 +371,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         errors.push(`${ctx}: must be a mapping`);
         return;
       }
-      if ('use' in entry) {
-        const use = (entry as MobileUseEntry).use;
-        if (typeof use !== 'string' || !use) {
-          errors.push(`${ctx}.use: must be an element id`);
-        } else {
-          const kind = kinds.get(use);
-          if (kind === undefined) {
-            errors.push(
-              `${ctx}.use: unknown id "${use}" (known: ${[...kinds.keys()].join(', ') || 'none'})`,
-            );
-          } else if (kind !== 'item' && kind !== 'button') {
-            errors.push(
-              `${ctx}.use: "${use}" cannot be a footer-strip button; only items and footer buttons can`,
-            );
-          }
-        }
-        checkOverridePatch(entry, ctx, errors);
-      } else {
-        validateFooterButton(entry, ctx, errors);
-      }
+      validateFooterButton(entry, ctx, errors);
     });
   }
 
@@ -545,21 +386,11 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
         errors.push(`${ctx}: must be a mapping`);
         return;
       }
-      if ('use' in entry) {
-        const use = (entry as MobileUseEntry).use;
-        if (typeof use !== 'string' || !use) {
-          errors.push(`${ctx}.use: must be an element id`);
-        } else {
-          checkRef(use, kinds, `${ctx}.use`, errors, true);
-        }
-        checkOverridePatch(entry, ctx, errors);
+      const type = (entry as SidebarBlock).type;
+      if (type === undefined || type === 'item') {
+        validateItem(entry as ItemBlock, ctx, errors);
       } else {
-        const type = (entry as SidebarBlock).type;
-        if (type === undefined || type === 'item') {
-          validateItem(entry as ItemBlock, ctx, errors);
-        } else {
-          validateBlock(entry as SidebarBlock, ctx, errors);
-        }
+        validateBlock(entry as SidebarBlock, ctx, errors);
       }
     });
   }
@@ -632,57 +463,7 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   }
   validateFooter(config.footer, 'footer', errors);
   validateMobile(config, errors);
-  checkUniqueIds(config, errors);
   return errors;
-};
-
-/**
- * Reports duplicate element ids across header and body blocks, items nested
- * in categories, and footer buttons. Presence is checked per element; this
- * pass only adds the cross-element uniqueness errors.
- */
-const checkUniqueIds = (config: DashboardSidebarConfig, errors: string[]): void => {
-  const seen = new Map<string, string>();
-  const claim = (el: unknown, ctx: string): void => {
-    const id = (el as { id?: unknown })?.id;
-    if (typeof id !== 'string' || !id) {
-      return;
-    }
-    const prior = seen.get(id);
-    if (prior) {
-      errors.push(`${ctx}: id "${id}" is already used by ${prior}; ids must be unique`);
-    } else {
-      seen.set(id, ctx);
-    }
-  };
-  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-  (['header', 'body'] as const).forEach((region) => {
-    list(config[region]).forEach((block, i) => {
-      const ctx = `${region}[${i}]`;
-      claim(block, ctx);
-      list((block as { items?: unknown[] }).items).forEach((child, j) => {
-        claim(child, `${ctx}.items[${j}]`);
-      });
-    });
-  });
-  list(config.footer?.buttons).forEach((btn, i) => {
-    claim(btn, `footer.buttons[${i}]`);
-  });
-  list(config.mobile?.items).forEach((entry, i) => {
-    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
-      claim(entry, `mobile.items[${i}]`);
-    }
-  });
-  list(config.mobile?.menu).forEach((entry, i) => {
-    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
-      claim(entry, `mobile.menu[${i}]`);
-    }
-  });
-  list(config.mobile?.footer).forEach((entry, i) => {
-    if (entry && typeof entry === 'object' && !('use' in (entry as object))) {
-      claim(entry, `mobile.footer[${i}]`);
-    }
-  });
 };
 
 /**

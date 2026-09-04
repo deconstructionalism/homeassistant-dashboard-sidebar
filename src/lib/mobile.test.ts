@@ -7,25 +7,31 @@ const TAP = { action: 'toggle' } as const;
 
 /** A desktop config: clock, two items, a category with two children, footer. */
 const base = (): DashboardSidebarConfig => ({
-  header: [{ type: 'clock', id: 'clk' }],
+  header: [{ type: 'clock' }],
   body: [
-    { type: 'item', id: 'rooms', title: 'Rooms', icon: 'mdi:home', tap_action: TAP },
-    { type: 'item', id: 'weather', title: 'Weather', tap_action: TAP },
+    { type: 'item', title: 'Rooms', icon: 'mdi:home', tap_action: TAP },
+    { type: 'item', title: 'Weather', tap_action: TAP },
     {
       type: 'category',
-      id: 'garden',
       title: 'Garden',
       items: [
-        { id: 'plants', title: 'Plants', tap_action: TAP },
-        { id: 'soil', title: 'Soil', tap_action: TAP },
+        { title: 'Plants', tap_action: TAP },
+        { title: 'Soil', tap_action: TAP },
       ],
     },
-    { type: 'markdown', id: 'md', content: 'x' },
+    { type: 'markdown', content: 'x' },
   ],
-  footer: { buttons: [{ id: 'lock', icon: 'mdi:lock', tap_action: TAP }] },
+  footer: { buttons: [{ icon: 'mdi:lock', tap_action: TAP }] },
 });
 
-describe('resolveBar, derive mode', () => {
+/** The title (or icon, for buttons) of each resolved entry, for assertions. */
+const labels = (entries: { element: unknown }[]): (string | undefined)[] =>
+  entries.map((e) => {
+    const el = e.element as { title?: string; icon?: string };
+    return el.title ?? el.icon;
+  });
+
+describe('resolveBar, mirror mode', () => {
   it('returns nothing without a mobile config', () => {
     expect(resolveBar(base())).toEqual({ slots: [], menu: [], extras: [], footer: [] });
   });
@@ -34,53 +40,35 @@ describe('resolveBar, derive mode', () => {
     const config = { ...base(), mobile: {} };
     const { slots, menu } = resolveBar(config);
     expect(slots.map((e) => e.kind)).toEqual(['clock', 'item', 'item', 'category']);
-    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual([
-      'clk',
-      'rooms',
-      'weather',
-      'garden',
-    ]);
+    expect(labels(slots)).toEqual([undefined, 'Rooms', 'Weather', 'Garden']);
     expect(slots.every((e) => e.source === 'derived')).toBe(true);
-    expect(menu.map((e) => (e.element as ItemBlock).id)).toEqual(['lock']);
+    expect(labels(menu)).toEqual(['mdi:lock']);
     expect(menu[0].kind).toBe('button');
   });
 
-  it('applies hide to slots, category children, and menu buttons', () => {
-    const config = { ...base(), mobile: { hide: ['weather', 'soil', 'lock'] } };
-    const { slots, menu } = resolveBar(config);
-    expect(slots.map((e) => (e.element as ItemBlock).id)).toEqual(['clk', 'rooms', 'garden']);
-    const garden = slots[2].element as { items: { id?: string }[] };
-    expect(garden.items.map((c) => c.id)).toEqual(['plants']);
-    expect(menu).toEqual([]);
+  it('keeps category children intact', () => {
+    const { slots } = resolveBar({ ...base(), mobile: {} });
+    const garden = slots[3].element as { items: { title?: string }[] };
+    expect(garden.items.map((c) => c.title)).toEqual(['Plants', 'Soil']);
   });
 
-  it('applies overrides to elements and children without mutating the config', () => {
-    const config = {
-      ...base(),
-      mobile: {
-        override: {
-          rooms: { icon: 'mdi:home-variant' },
-          plants: { title: 'Green' },
-        },
-      },
-    };
-    const { slots: bar } = resolveBar(config);
-    expect((bar[1].element as ItemBlock).icon).toBe('mdi:home-variant');
-    const garden = bar[3].element as { items: { title?: string }[] };
-    expect(garden.items[0].title).toBe('Green');
+  it('copies elements instead of sharing them with the config', () => {
+    const config = { ...base(), mobile: {} };
+    const { slots } = resolveBar(config);
+    expect(slots[1].element).not.toBe(config.body?.[0]);
+    (slots[1].element as ItemBlock).icon = 'mdi:home-variant';
     expect((config.body?.[0] as ItemBlock).icon).toBe('mdi:home');
+    const garden = slots[3].element as { items: { title?: string }[] };
+    garden.items[0].title = 'Green';
     expect((config.body?.[2] as { items: { title?: string }[] }).items[0].title).toBe('Plants');
   });
 
   it('carries clocks and dates onto the bar and skips cards and markdown', () => {
     const config = base();
-    config.header = [
-      { type: 'clock', id: 'clk' },
-      { type: 'date', id: 'dt' },
-    ];
+    config.header = [{ type: 'clock' }, { type: 'date' }];
     const { slots } = resolveBar({ ...config, mobile: {} });
     expect(slots.slice(0, 2).map((e) => e.kind)).toEqual(['clock', 'date']);
-    expect(slots.some((e) => (e.element as ItemBlock).id === 'md')).toBe(false);
+    expect(slots.some((e) => e.kind === 'markdown')).toBe(false);
   });
 });
 
@@ -99,111 +87,136 @@ describe('resolveBar, viewport modes', () => {
 });
 
 describe('resolveBar, sheet menu', () => {
-  it('resolves use references to any kind, plus inline blocks', () => {
+  it('resolves inline blocks of any kind, by their type', () => {
     const config = {
       ...base(),
       mobile: {
         menu: [
-          { use: 'md' },
-          { use: 'garden', title: 'Yard' },
-          { use: 'lock' },
-          { type: 'title', id: 't1', text: 'Hello' },
+          { type: 'markdown', content: 'x' },
+          { type: 'category', title: 'Yard', items: [{ title: 'Plants', tap_action: TAP }] },
+          { type: 'title', text: 'Hello' },
+          { title: 'Bare', tap_action: TAP },
         ],
       },
     } as DashboardSidebarConfig;
     const { extras } = resolveBar(config);
-    expect(extras.map((e) => e.kind)).toEqual(['markdown', 'category', 'button', 'title']);
+    expect(extras.map((e) => e.kind)).toEqual(['markdown', 'category', 'title', 'item']);
     expect((extras[1].element as { title?: string }).title).toBe('Yard');
-    expect(extras[3].source).toBe('inline');
+    expect(extras.every((e) => e.source === 'inline')).toBe(true);
   });
 
-  it('composes with explicit mode, keeping unknown refs as placeholders', () => {
+  it('composes with custom mode', () => {
     const config = {
       ...base(),
-      mobile: { items: [{ use: 'rooms' }], menu: [{ use: 'nope' }, { use: 'md' }] },
-    };
+      mobile: {
+        items: [{ type: 'item', title: 'Rooms', tap_action: TAP }],
+        menu: [{ type: 'markdown', content: 'x' }],
+      },
+    } as DashboardSidebarConfig;
     const { slots, extras } = resolveBar(config);
     expect(slots).toHaveLength(1);
-    expect(extras.map((e) => e.kind)).toEqual(['missing', 'markdown']);
-    expect(extras[1].srcIndex).toBe(1);
+    expect(extras.map((e) => e.kind)).toEqual(['markdown']);
   });
 });
 
 describe('resolveBar, sheet footer strip', () => {
-  it('replaces the derived button strip in derive mode', () => {
+  it('replaces the derived button strip in mirror mode', () => {
     const config = {
       ...base(),
-      mobile: { footer: [{ use: 'rooms' }, { use: 'lock', icon: 'mdi:lock-open' }] },
-    };
+      mobile: {
+        footer: [
+          { icon: 'mdi:home', tap_action: TAP },
+          { icon: 'mdi:lock-open', tap_action: TAP },
+        ],
+      },
+    } as DashboardSidebarConfig;
     const { menu, footer } = resolveBar(config);
     expect(menu).toEqual([]);
-    expect(footer.map((e) => e.kind)).toEqual(['item', 'button']);
+    expect(footer.map((e) => e.kind)).toEqual(['button', 'button']);
+    expect(footer.every((e) => e.source === 'inline')).toBe(true);
     expect((footer[1].element as { icon?: string }).icon).toBe('mdi:lock-open');
   });
 
-  it('fills the strip in explicit mode, keeping unknown ids as placeholders', () => {
+  it('fills the strip in custom mode', () => {
     const config = {
       ...base(),
-      mobile: { items: [{ use: 'rooms' }], footer: [{ use: 'nope' }, { use: 'lock' }] },
-    };
+      mobile: {
+        items: [{ type: 'item', title: 'Rooms', tap_action: TAP }],
+        footer: [{ icon: 'mdi:lock', tap_action: TAP }],
+      },
+    } as DashboardSidebarConfig;
     const { footer } = resolveBar(config);
-    expect(footer.map((e) => e.kind)).toEqual(['missing', 'button']);
+    expect(footer.map((e) => e.kind)).toEqual(['button']);
+  });
+
+  it('an empty footer list still replaces the derived strip', () => {
+    const config = { ...base(), mobile: { footer: [] } } as DashboardSidebarConfig;
+    const { menu, footer } = resolveBar(config);
+    expect(menu).toEqual([]);
+    expect(footer).toEqual([]);
   });
 });
 
-describe('resolveBar, explicit mode', () => {
+describe('resolveBar, custom mode', () => {
   it('renders inline non-item kinds by their type', () => {
     const config = {
       ...base(),
       mobile: {
         items: [
-          { type: 'divider', id: 'd1' },
-          { type: 'clock', id: 'c1' },
-          { type: 'item', id: 'n1', title: 'New', tap_action: TAP },
+          { type: 'divider' },
+          { type: 'clock' },
+          { type: 'item', title: 'New', tap_action: TAP },
         ],
       },
     } as DashboardSidebarConfig;
     expect(resolveBar(config).slots.map((e) => e.kind)).toEqual(['divider', 'clock', 'item']);
   });
 
-  it('maps use references, inline patches, and inline items', () => {
+  it('the items list is the whole bar, with no derived menu', () => {
     const config = {
       ...base(),
       mobile: {
         items: [
-          { use: 'weather', icon: 'mdi:weather-cloudy' },
-          { use: 'lock' },
-          { use: 'plants' },
-          { type: 'item', id: 'extra', title: 'Extra', tap_action: TAP } as ItemBlock,
+          { title: 'Weather', icon: 'mdi:weather-cloudy', tap_action: TAP },
+          { type: 'item', title: 'Extra', tap_action: TAP } as ItemBlock,
         ],
       },
-    };
-    const { slots: bar, menu } = resolveBar(config);
+    } as DashboardSidebarConfig;
+    const { slots, menu } = resolveBar(config);
     expect(menu).toEqual([]);
-    expect(bar.map((e) => e.source)).toEqual(['use', 'use', 'use', 'inline']);
-    expect(bar.map((e) => e.kind)).toEqual(['item', 'button', 'item', 'item']);
-    expect((bar[0].element as ItemBlock).icon).toBe('mdi:weather-cloudy');
-    expect((bar[0].element as ItemBlock).title).toBe('Weather');
+    expect(slots.map((e) => e.source)).toEqual(['inline', 'inline']);
+    expect(slots.map((e) => e.kind)).toEqual(['item', 'item']);
+    expect((slots[0].element as ItemBlock).icon).toBe('mdi:weather-cloudy');
+    expect((slots[0].element as ItemBlock).title).toBe('Weather');
   });
 
-  it('permits repeated use of the same id', () => {
-    const config = { ...base(), mobile: { items: [{ use: 'rooms' }, { use: 'rooms' }] } };
-    expect(resolveBar(config).slots).toHaveLength(2);
+  it('an empty items list yields an empty bar rather than mirroring', () => {
+    const config = { ...base(), mobile: { items: [] } } as DashboardSidebarConfig;
+    const { slots, menu } = resolveBar(config);
+    expect(slots).toEqual([]);
+    expect(menu).toEqual([]);
   });
 
-  it('resolves a category by id with its children intact', () => {
-    const config = { ...base(), mobile: { items: [{ use: 'garden', title: 'Yard' }] } };
+  it('carries an inline category with its children intact', () => {
+    const config = {
+      ...base(),
+      mobile: {
+        items: [
+          {
+            type: 'category',
+            title: 'Yard',
+            items: [
+              { title: 'Plants', tap_action: TAP },
+              { title: 'Soil', tap_action: TAP },
+            ],
+          },
+        ],
+      },
+    } as unknown as DashboardSidebarConfig;
     const bar = resolveBar(config).slots;
     expect(bar[0].kind).toBe('category');
     const garden = bar[0].element as { title?: string; items: unknown[] };
     expect(garden.title).toBe('Yard');
     expect(garden.items).toHaveLength(2);
-  });
-
-  it('keeps unresolvable references as missing placeholders', () => {
-    const config = { ...base(), mobile: { items: [{ use: 'nope' }, { use: 'rooms' }] } };
-    const { slots } = resolveBar(config);
-    expect(slots.map((e) => e.kind)).toEqual(['missing', 'item']);
-    expect(slots.map((e) => e.srcIndex)).toEqual([0, 1]);
   });
 });

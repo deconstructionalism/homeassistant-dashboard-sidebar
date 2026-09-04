@@ -1,5 +1,4 @@
 import type { ActionConfig } from 'custom-card-helpers';
-import { generateId } from '../lib/id';
 
 import type {
   BlockType,
@@ -52,43 +51,39 @@ export const moveBlock = (
 };
 
 /**
- * Creates a new block of the given type with sensible defaults and a
- * generated id. `existing` guards against collisions and is extended with
- * every id handed out.
+ * Creates a new block of the given type with sensible defaults.
  */
-export const defaultBlock = (type: BlockType, existing: Set<string> = new Set()): SidebarBlock => {
-  const id = generateId(existing);
+export const defaultBlock = (type: BlockType): SidebarBlock => {
   switch (type) {
     case 'title':
-      return { type: 'title', text: 'Title', id };
+      return { type: 'title', text: 'Title' };
     case 'clock':
-      return { type: 'clock', id };
+      return { type: 'clock' };
     case 'date':
-      return { type: 'date', id };
+      return { type: 'date' };
     case 'divider':
-      return { type: 'divider', id };
+      return { type: 'divider' };
     case 'item':
-      return { type: 'item', title: 'Item', tap_action: NO_ACTION, id };
+      return { type: 'item', title: 'Item', tap_action: NO_ACTION };
     case 'category':
       return {
         type: 'category',
         title: 'Category',
-        id,
-        items: [{ type: 'item', title: 'Item', tap_action: NO_ACTION, id: generateId(existing) }],
+        items: [{ type: 'item', title: 'Item', tap_action: NO_ACTION }],
       };
     case 'markdown':
-      return { type: 'markdown', content: 'Markdown **content**', id };
+      return { type: 'markdown', content: 'Markdown **content**' };
     case 'card':
     default:
-      return { type: 'card', card: { type: 'markdown', content: 'Card content' }, id };
+      return { type: 'card', card: { type: 'markdown', content: 'Card content' } };
   }
 };
 
 /**
- * Creates a new footer button with sensible defaults and a generated id.
+ * Creates a new footer button with sensible defaults.
  */
-export const defaultFooterButton = (existing: Set<string> = new Set()): FooterButtonConfig => {
-  return { icon: 'mdi:star', tap_action: NO_ACTION, id: generateId(existing) };
+export const defaultFooterButton = (): FooterButtonConfig => {
+  return { icon: 'mdi:star', tap_action: NO_ACTION };
 };
 
 /**
@@ -96,6 +91,6 @@ export const defaultFooterButton = (existing: Set<string> = new Set()): FooterBu
  */
 export const starterSidebar = (): DashboardSidebarConfig => {
   return {
-    body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION, id: generateId(new Set()) }],
+    body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION }],
   };
 };

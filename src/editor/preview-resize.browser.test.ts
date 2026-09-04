@@ -1,6 +1,5 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import { sendMouse } from '@web/test-runner-commands';
-import { stampMissingIds } from '../lib/id';
 import type { DashboardSidebarConfig } from '../lib/types';
 import type { DashboardSidebarEditor } from './sidebar-editor';
 import './sidebar-editor';
@@ -11,19 +10,18 @@ describe('preview resize stability', () => {
   it('drags the width handle to the minimum fast without observer loops', async () => {
     const many = Array.from({ length: 10 }, (_, i) => ({
       type: 'item' as const,
-      id: `it${i}`,
       title: `I${i}`,
       icon: 'mdi:circle',
       tap_action: TAP,
     }));
     const config: DashboardSidebarConfig = {
       body: many,
-      mobile: { items: many.map((m) => ({ use: m.id })) },
+      mobile: { items: many.map((m) => ({ ...m })) },
     };
     const el = await fixture<DashboardSidebarEditor>(
       html`<dashboard-sidebar-editor></dashboard-sidebar-editor>`,
     );
-    el.config = stampMissingIds(config);
+    el.config = config;
     await el.updateComplete;
     const root = el.shadowRoot as ShadowRoot;
     (

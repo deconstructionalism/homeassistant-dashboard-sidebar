@@ -10,6 +10,7 @@ import type {
   DashboardSidebarConfig,
   FooterButtonConfig,
   ItemBlock,
+  MobileBarEntry,
   Region,
   SidebarBlock,
 } from '../lib/types';
@@ -17,7 +18,7 @@ import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import '../dashboard-sidebar-bar';
-import { elementIndex, mobileMode, resolveBar } from '../lib/mobile';
+import { mobileMode, resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
 import { renderEmptyState, renderGhost, renderGhostCards } from './editor-preview';
@@ -37,7 +38,6 @@ import {
   validateItemConfig,
 } from '../lib/validate';
 import { defaultBlock, defaultFooterButton } from './arrange';
-import { collectIds } from '../lib/id';
 import {
   actionSections,
   blockFields,
@@ -55,7 +55,6 @@ import {
   intField,
   MARKDOWN_HINT,
   selectField,
-  textField,
   type Patch,
   serviceDatalist,
   type ValidationCtx,
@@ -239,15 +238,6 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Whether the Settings tab is editing the whole sidebar config as YAML. */
   @state() private _settingsYaml = false;
-
-  /** Whether the Mobile tab is editing the mobile section as YAML. */
-  @state() private _mobileYaml = false;
-
-  /** The active sub-tab of the Mobile Bar tab's custom mode. */
-  @state() private _mobileSubTab: 'settings' | 'bar' | 'menu' | 'footer' = 'settings';
-
-  /** The selected mobile element's loc (e.g. `items:2`), or null. */
-  @state() private _mobileSelected: string | null = null;
 
   /** Whether the switch-to-custom choice dialog is showing. */
   @state() private _confirmingCustomSwitch = false;
@@ -1071,7 +1061,7 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _addBlock(region: Region, type: BlockType): void {
     const list = this._working[region] ?? (this._working[region] = []);
-    const block = defaultBlock(type, collectIds(this._working));
+    const block = defaultBlock(type);
     const selIndex = list.findIndex((b) => this._ids.get(b) === this._selected);
     if (selIndex >= 0) {
       list.splice(selIndex + 1, 0, block);
@@ -1115,7 +1105,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _addItem(region: Region, index: number): void {
     const cat = this._category(region, index);
     if (cat) {
-      const item = defaultBlock('item', collectIds(this._working)) as ItemBlock;
+      const item = defaultBlock('item') as ItemBlock;
       const selItemIndex = cat.items.findIndex((it) => this._ids.get(it) === this._selected);
       if (selItemIndex >= 0) {
         cat.items.splice(selItemIndex + 1, 0, item);
@@ -1159,7 +1149,7 @@ export class DashboardSidebarEditor extends LitElement {
     const divider = this._working.footer?.divider;
     // Switching to a button row seeds one starter button so the footer is not
     // left in its empty state.
-    const starter = defaultFooterButton(collectIds(this._working));
+    const starter = defaultFooterButton();
     const base =
       mode === 'card'
         ? { card: { type: 'markdown', content: 'Card content' } as LovelaceCardConfig }
@@ -1196,7 +1186,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _addFooterButton(): void {
     const footer = this._working.footer ?? (this._working.footer = {});
     const list = footer.buttons ?? (footer.buttons = []);
-    const btn = defaultFooterButton(collectIds(this._working));
+    const btn = defaultFooterButton();
     const selIndex = list.findIndex((b) => this._ids.get(b) === this._selected);
     if (selIndex >= 0) {
       list.splice(selIndex + 1, 0, btn);
@@ -1389,8 +1379,8 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * The mirror-to-custom switch choice: copy the derived bar into an
-   * explicit list, start empty, or cancel.
+   * The mirror-to-custom switch choice: copy the mirrored bar into an
+   * editable list, start empty, or cancel.
    */
   private _renderConfirmCustomSwitch(): TemplateResult {
     return html`
@@ -1503,7 +1493,8 @@ export class DashboardSidebarEditor extends LitElement {
             this._settingsYaml
               ? this._yamlEditor(
                   this._working,
-                  (v) => this._replaceInPlace(this._working, v),
+                  (v) =>
+                    this._replaceInPlace(this._working as unknown as Record<string, unknown>, v),
                   (parsed) => validateConfig(parsed as DashboardSidebarConfig),
                 )
               : html`
@@ -1636,45 +1627,43 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * Switches to the custom (explicit items) mode: either seeding the list
-   * from the currently derived bar so the switch is lossless in appearance,
-   * or starting from an empty list.
+   * Switches to custom mode: either seeding the `items` list with copies of
+   * the currently mirrored bar, so the switch is lossless in appearance, or
+   * starting from an empty list. Custom mode is edited as YAML.
    */
   private _switchToCustom(copy: boolean): void {
     const mobile = this._working.mobile ?? {};
-    let items: Array<{ use: string }> = [];
+    let items: MobileBarEntry[] = [];
     if (copy) {
+      // Seed the custom bar with real copies of what the mirror derives:
+      // there are no references, so the elements are cloned outright.
       const derived = resolveBar({
         ...this._working,
         mobile: { ...mobile, items: undefined },
       }).slots;
-      items = derived
-        .map((entry) => (entry.element as { id?: string }).id)
-        .filter((id): id is string => Boolean(id))
-        .map((id) => ({ use: id }));
+      items = derived.map((entry) => structuredClone(entry.element) as MobileBarEntry);
     }
-    this._patchMobile({ items, hide: undefined, override: undefined });
+    this._patchMobile({ items });
     this._confirmingCustomSwitch = false;
   }
 
   /**
    * Switches back to strict mirror mode, dropping the whole custom
-   * configuration (items, curated menu and footer, hide, override).
+   * configuration (items, curated menu and footer).
    */
   private _switchToMirror(): void {
     this._patchMobile({
       items: undefined,
       menu: undefined,
       footer: undefined,
-      hide: undefined,
-      override: undefined,
     });
     this._confirmingMirrorSwitch = false;
   }
 
   /**
-   * Renders the Mobile tab: enablement, the bar options, the mode switch,
-   * and a live phone-width preview of the real bar element.
+   * Renders the Mobile tab. Mirror mode gets the bar's own options as a
+   * form; custom mode is edited as YAML for the whole mobile section.
+   * Both sit above a live phone-width preview of the real bar element.
    */
   private _renderMobileTab(): TemplateResult {
     const mobile = this._working.mobile;
@@ -1701,55 +1690,19 @@ export class DashboardSidebarEditor extends LitElement {
         this._mobileCapNote(),
       )}
       <div class="mobile-stack">
-        ${
-          custom && !this._mobileYaml
-            ? html`<div class="tabs mobile-subtabs">
-                ${(
-                  [
-                    ['settings', 'Settings'],
-                    ['bar', 'Bar'],
-                    ['menu', 'Menu'],
-                    ['footer', 'Menu Footer'],
-                  ] as const
-                ).map(
-                  ([t, label]) => html`
-                    <button
-                      class="tab ${this._mobileSubTab === t ? 'active' : ''}"
-                      @click=${() => {
-                        this._mobileSubTab = t;
-                      }}
-                    >
-                      ${label}
-                    </button>
-                  `,
-                )}
-              </div>`
-            : html`<div class="form-head">
-                <div class="form-title">
-                  Mobile Bar Settings: ${custom ? 'Custom Bar' : 'Mirror Desktop'}
-                </div>
-              </div>`
-        }
-        <div class="editor settings ${this._mobileYaml ? 'yaml-mode' : ''}">
+        <div class="form-head">
+          <div class="form-title">Mobile Bar: ${custom ? 'Custom' : 'Mirror Desktop'}</div>
+        </div>
+        <div class="editor settings ${custom ? 'yaml-mode' : ''}">
           ${
-            this._mobileYaml
+            custom
               ? this._yamlEditor(
-                  this._working.mobile ?? {},
+                  m,
                   (v) => this._patchConfig({ mobile: v }),
                   (parsed) =>
                     validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
                 )
-              : custom
-                ? this._mobileSubTab === 'settings'
-                  ? this._renderMobileSettingsFields(m)
-                  : this._renderMobileListTab(
-                      this._mobileSubTab === 'bar'
-                        ? 'items'
-                        : this._mobileSubTab === 'menu'
-                          ? 'menu'
-                          : 'footer',
-                    )
-                : this._renderMobileSettingsFields(m)
+              : this._renderMobileSettingsFields(m)
           }
         </div>
         ${this._renderMobilePreview()}
@@ -1757,9 +1710,6 @@ export class DashboardSidebarEditor extends LitElement {
     `;
   }
 
-  /**
-   * Renders the phone-width live preview of the mobile bar.
-   */
   /**
    * The shared mobile settings fields: position, labels, and Advanced.
    */
@@ -1789,228 +1739,6 @@ export class DashboardSidebarEditor extends LitElement {
         ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
         ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
       </details>
-    `;
-  }
-
-  /**
-   * Applies a mutation to a copy of one of the mobile config's element lists.
-   */
-  private _patchMobileList(
-    key: 'items' | 'menu' | 'footer',
-    mutate: (list: unknown[]) => void,
-  ): void {
-    const list = [...((this._working.mobile?.[key] as unknown[]) ?? [])];
-    mutate(list);
-    this._patchMobile({ [key]: list });
-  }
-
-  /**
-   * The Add Element menu for one destination: its inline element types, then
-   * a Reuse section listing eligible desktop elements.
-   */
-  private _mobileAddItems(
-    key: 'items' | 'menu' | 'footer',
-  ): Array<{ label: string; run: () => void; header?: boolean }> {
-    const index = elementIndex(this._working);
-    const select = (i: number): void => {
-      this._mobileSelected = `${key}:${i}`;
-    };
-    const types: Record<typeof key, Array<[string, BlockType]>> = {
-      items: [
-        ['Item', 'item'],
-        ['Category', 'category'],
-        ['Clock', 'clock'],
-        ['Date', 'date'],
-        ['Divider', 'divider'],
-      ],
-      menu: [
-        ['Item', 'item'],
-        ['Category', 'category'],
-        ['Clock', 'clock'],
-        ['Date', 'date'],
-        ['Divider', 'divider'],
-        ['Title', 'title'],
-        ['Markdown', 'markdown'],
-        ['Card', 'card'],
-      ],
-      footer: [],
-    };
-    const reuse: Record<typeof key, string[]> = {
-      items: ['item', 'category', 'divider', 'clock', 'date', 'button'],
-      menu: ['item', 'category', 'divider', 'clock', 'date', 'title', 'markdown', 'card'],
-      footer: ['item', 'button'],
-    };
-    const out: Array<{ label: string; run: () => void; header?: boolean }> = [];
-    for (const [label, type] of types[key]) {
-      out.push({
-        label: `New ${label}`,
-        run: () =>
-          this._patchMobileList(key, (list) => {
-            list.push(defaultBlock(type, collectIds(this._working)));
-            select(list.length - 1);
-          }),
-      });
-    }
-    if (key === 'footer') {
-      out.push({
-        label: 'New Button',
-        run: () =>
-          this._patchMobileList('footer', (list) => {
-            list.push(defaultFooterButton(collectIds(this._working)));
-            select(list.length - 1);
-          }),
-      });
-    }
-    let reuseHeader = false;
-    for (const [id, info] of index) {
-      if (!reuse[key].includes(info.kind)) {
-        continue;
-      }
-      if (!reuseHeader) {
-        reuseHeader = true;
-        out.push({ label: 'Reuse', run: () => undefined, header: true });
-      }
-      const el = info.element as { title?: string };
-      const name = typeof el.title === 'string' && el.title ? el.title : `(${info.kind})`;
-      out.push({
-        label: name,
-        run: () =>
-          this._patchMobileList(key, (list) => {
-            list.push({ use: id });
-            select(list.length - 1);
-          }),
-      });
-    }
-    return out;
-  }
-
-  /**
-   * Renders one destination sub-tab: the selected element's form when the
-   * selection belongs here, else the empty state, either way with the
-   * destination's own Add Element menu.
-   */
-  private _renderMobileListTab(key: 'items' | 'menu' | 'footer'): TemplateResult {
-    const sel = this._mobileSelection();
-    const add = this._renderAddMenu(this._mobileAddItems(key), 'Add Element', true);
-    if (sel && sel.key === key) {
-      return html`${this._renderMobileSelectedForm()} ${add}`;
-    }
-    return html`
-      <div class="empty-state">
-        <ha-icon class="empty-icon" icon="mdi:gesture-tap-button"></ha-icon>
-        <p class="empty-msg">
-          Select an element in the preview to edit it, or add a new one below.
-        </p>
-        ${add}
-      </div>
-    `;
-  }
-
-  /**
-   * The selected mobile element parsed from its loc, or null when stale.
-   */
-  private _mobileSelection(): {
-    key: 'items' | 'menu' | 'footer';
-    index: number;
-    entry: Record<string, unknown>;
-  } | null {
-    if (!this._mobileSelected) {
-      return null;
-    }
-    const [key, raw] = this._mobileSelected.split(':');
-    const index = Number(raw);
-    if (!['items', 'menu', 'footer'].includes(key) || Number.isNaN(index)) {
-      return null;
-    }
-    const list = (this._working.mobile?.[key as 'items' | 'menu' | 'footer'] as unknown[]) ?? [];
-    const entry = list[index];
-    if (!entry || typeof entry !== 'object') {
-      return null;
-    }
-    return {
-      key: key as 'items' | 'menu' | 'footer',
-      index,
-      entry: entry as Record<string, unknown>,
-    };
-  }
-
-  /**
-   * Renders the form for the selected mobile element: the override patch
-   * fields for a reused element, or the full block/button form for an inline
-   * one, plus a remove action.
-   */
-  private _renderMobileSelectedForm(): TemplateResult | typeof nothing {
-    const sel = this._mobileSelection();
-    if (!sel) {
-      return nothing;
-    }
-    const { key, index, entry } = sel;
-    const patch: Patch = (partial) => {
-      this._patchMobileList(key, (list) => {
-        const next = { ...(list[index] as Record<string, unknown>) };
-        for (const [k, v] of Object.entries(partial)) {
-          if (v === undefined) {
-            delete next[k];
-          } else {
-            next[k] = v;
-          }
-        }
-        list[index] = next;
-      });
-    };
-    const isUse = typeof entry.use === 'string';
-    let fields: TemplateResult;
-    if (isUse) {
-      const p = entry as {
-        title?: string;
-        icon?: string;
-        abbr?: string;
-        icon_color?: string;
-        text_color?: string;
-        class?: string;
-        active_highlight?: boolean;
-      };
-      fields = html`
-        <p class="tab-note">
-          A reused desktop element; the fields below override its appearance on the bar only.
-        </p>
-        ${textField('Title Override', p.title, (v) => patch({ title: v || undefined }))}
-        ${textField('Icon Override', p.icon, (v) => patch({ icon: v || undefined }))}
-        ${textField('Abbreviation', p.abbr, (v) => patch({ abbr: v || undefined }))}
-        ${colorTemplateField('Icon Color', p.icon_color, (v) =>
-          patch({ icon_color: v || undefined }),
-        )}
-        ${colorTemplateField('Text Color', p.text_color, (v) =>
-          patch({ text_color: v || undefined }),
-        )}
-        ${textField('CSS Class', p.class, (v) => patch({ class: v || undefined }))}
-        ${checkboxField('Active Highlight', p.active_highlight ?? true, (v) =>
-          patch({ active_highlight: v ? undefined : false }),
-        )}
-      `;
-    } else if (key === 'footer' || (entry as { type?: string }).type === undefined) {
-      const isBtn = key === 'footer';
-      fields = isBtn
-        ? footerButtonFields(entry, patch, undefined, this.hass)
-        : blockFields({ type: 'item', ...entry } as SidebarBlock, patch, undefined, this.hass);
-    } else {
-      fields = blockFields(entry as unknown as SidebarBlock, patch, undefined, this.hass);
-    }
-    return html`
-      <div class="mobile-selected-form">
-        ${fields}
-        <div class="form-actions">
-          <button
-            class="add-btn danger"
-            @click=${() => {
-              this._patchMobileList(key, (list) => list.splice(index, 1));
-              this._mobileSelected = null;
-            }}
-          >
-            Remove Element
-          </button>
-        </div>
-      </div>
     `;
   }
 
@@ -2163,484 +1891,15 @@ export class DashboardSidebarEditor extends LitElement {
       el.preview = true;
       el.setAttribute('preview', '');
       el.addEventListener('bar-preview-sheet-open', () => this._scrollMobilePreview());
-      el.addEventListener(PREVIEW_SELECT_EVENT, (ev: Event) => {
-        ev.stopPropagation();
-        const loc = (ev as CustomEvent<{ loc: string }>).detail.loc;
-        this._mobileSelected = loc;
-        this._mobileSubTab = loc.startsWith('menu:')
-          ? 'menu'
-          : loc.startsWith('footer:')
-            ? 'footer'
-            : 'bar';
-      });
-      el.addEventListener(PREVIEW_REORDER_EVENT, (ev: Event) => {
-        ev.stopPropagation();
-        this._applyMobileReorder(
-          (ev as CustomEvent<{ from: string; to: string; oldIndex?: number; newIndex?: number }>)
-            .detail,
-        );
-      });
       this._barPreview = el;
     }
     el.hass = this.hass;
-    const custom = this._working.mobile?.items !== undefined;
-    el.previewInteractive = custom && !this._mobileYaml;
-    el.previewSheetOpen = custom && !this._mobileYaml;
-    el.previewSelected = this._mobileSelected ?? undefined;
     const json = JSON.stringify(this._working);
     if (this._barPreviewCfg !== json) {
       el.setConfig(JSON.parse(json) as DashboardSidebarConfig);
       this._barPreviewCfg = json;
     }
     return el;
-  }
-
-  /**
-   * Applies a drag from the bar preview: a reorder within one mobile list, a
-   * move between lists (bar/menu/footer), or a reorder of a category's
-   * children (which edits the underlying category, desktop or inline).
-   */
-  private _applyMobileReorder(detail: {
-    from: string | null;
-    to: string | null;
-    oldIndex?: number;
-    newIndex?: number;
-    srcLoc?: string | null;
-    beforeLoc?: string | null;
-  }): void {
-    const { from, to, oldIndex, newIndex } = detail;
-    if (!from || !to) {
-      return;
-    }
-    if (detail.srcLoc?.startsWith('cat:')) {
-      this._applyChildDrag(detail.srcLoc, to, detail.beforeLoc ?? null);
-      return;
-    }
-    if (to.startsWith('cat:') && detail.srcLoc) {
-      this._moveEntryIntoCategory(detail.srcLoc, to.slice(4), detail.beforeLoc ?? null);
-      return;
-    }
-    if (from.startsWith('cat:') || to.startsWith('cat:')) {
-      if (from === to && oldIndex !== undefined && newIndex !== undefined) {
-        this._reorderCategoryChildren(from.slice(4), oldIndex, newIndex);
-      }
-      return;
-    }
-    const lists = ['items', 'menu', 'footer'];
-    if (!lists.includes(from) || !lists.includes(to)) {
-      return;
-    }
-    const fromKey = from as 'items' | 'menu' | 'footer';
-    const toKey = to as 'items' | 'menu' | 'footer';
-    let srcIndex: number;
-    if (detail.srcLoc) {
-      const [sk, sr] = detail.srcLoc.split(':');
-      srcIndex = Number(sr);
-      if (sk !== fromKey || Number.isNaN(srcIndex)) {
-        return;
-      }
-    } else if (oldIndex !== undefined) {
-      srcIndex = oldIndex;
-    } else {
-      return;
-    }
-    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
-    const fromList = [...((mobile[fromKey] as unknown[]) ?? [])];
-    const toList = fromKey === toKey ? fromList : [...((mobile[toKey] as unknown[]) ?? [])];
-    const [moved] = fromList.splice(srcIndex, 1);
-    if (moved === undefined) {
-      return;
-    }
-    let insert = toList.length;
-    if (detail.srcLoc) {
-      if (detail.beforeLoc) {
-        const [bk, br] = detail.beforeLoc.split(':');
-        let bi = Number(br);
-        if (bk === toKey && !Number.isNaN(bi)) {
-          if (bk === fromKey && bi > srcIndex) {
-            bi -= 1;
-          }
-          insert = bi;
-        }
-      }
-    } else if (newIndex !== undefined) {
-      insert = newIndex;
-    }
-    toList.splice(insert, 0, moved);
-    mobile[fromKey] = fromList;
-    mobile[toKey] = toList;
-    this._patchConfig({ mobile });
-    if (this._mobileSelected === `${fromKey}:${srcIndex}`) {
-      this._mobileSelected = `${toKey}:${insert}`;
-    }
-  }
-
-  /**
-   * Removes a desktop element by id from wherever it lives (top-level header
-   * or body, or inside a category) and returns it, or null when not found.
-   * Region lists are cloned; the caller commits via _patchConfig.
-   */
-  private _extractDesktopElement(
-    id: string,
-    patches: Record<string, unknown>,
-  ): Record<string, unknown> | null {
-    for (const region of ['header', 'body'] as const) {
-      const regionList = [
-        ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
-      ];
-      const bi = regionList.findIndex((b) => b.id === id);
-      if (bi >= 0) {
-        const [block] = regionList.splice(bi, 1);
-        patches[region] = regionList;
-        return block as unknown as Record<string, unknown>;
-      }
-      for (let i = 0; i < regionList.length; i++) {
-        const block = regionList[i] as unknown as Record<string, unknown>;
-        const items = block.items as Array<{ id?: string }> | undefined;
-        if (!Array.isArray(items)) {
-          continue;
-        }
-        const ci = items.findIndex((c) => c.id === id);
-        if (ci >= 0) {
-          const nextBlock = { ...block, items: [...items] };
-          const [child] = (nextBlock.items as unknown[]).splice(ci, 1);
-          regionList[i] = nextBlock as unknown as (typeof regionList)[number];
-          patches[region] = regionList;
-          return child as Record<string, unknown>;
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Inserts an item block into the category behind a mobile entry: the
-   * referenced desktop category for a reused one, or the inline category's
-   * own items. Returns false when the host cannot take it.
-   */
-  private _insertIntoCategory(
-    hostLoc: string,
-    child: Record<string, unknown>,
-    insertIdx: number,
-    patches: Record<string, unknown>,
-    mobile: Record<string, unknown>,
-  ): boolean {
-    const [hostKey, rawIdx] = hostLoc.split(':');
-    const hostIdx = Number(rawIdx);
-    if (!['items', 'menu'].includes(hostKey) || Number.isNaN(hostIdx)) {
-      return false;
-    }
-    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
-    const host = hostList[hostIdx] as Record<string, unknown> | undefined;
-    if (!host) {
-      return false;
-    }
-    if (typeof host.use === 'string') {
-      for (const region of ['header', 'body'] as const) {
-        const regionList = [
-          ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
-        ];
-        const bi = regionList.findIndex((b) => b.id === host.use);
-        if (bi < 0) {
-          continue;
-        }
-        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
-        const items = [...((block.items as unknown[]) ?? [])];
-        items.splice(Math.min(insertIdx, items.length), 0, child);
-        block.items = items;
-        regionList[bi] = block as unknown as (typeof regionList)[number];
-        patches[region] = regionList;
-        return true;
-      }
-      return false;
-    }
-    if (host.type === 'category') {
-      const next = { ...host };
-      const items = [...((next.items as unknown[]) ?? [])];
-      items.splice(Math.min(insertIdx, items.length), 0, child);
-      next.items = items;
-      hostList[hostIdx] = next;
-      mobile[hostKey] = hostList;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Moves a mobile list entry into a category: a reused element relocates in
-   * the desktop config; an inline item becomes a child. The list entry is
-   * consumed either way.
-   */
-  private _moveEntryIntoCategory(srcLoc: string, hostLoc: string, beforeLoc: string | null): void {
-    const [srcKey, rawSrc] = srcLoc.split(':');
-    const srcIdx = Number(rawSrc);
-    if (!['items', 'menu', 'footer'].includes(srcKey) || Number.isNaN(srcIdx)) {
-      return;
-    }
-    let insertIdx = Number.MAX_SAFE_INTEGER;
-    if (beforeLoc) {
-      const bp = beforeLoc.split(':');
-      const bi = Number(bp[3]);
-      if (bp[0] === 'cat' && !Number.isNaN(bi)) {
-        insertIdx = bi;
-      }
-    }
-    const patches: Record<string, unknown> = {};
-    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
-    const srcList = [...((mobile[srcKey] as unknown[]) ?? [])];
-    const entry = srcList[srcIdx] as Record<string, unknown> | undefined;
-    if (!entry) {
-      return;
-    }
-    let child: Record<string, unknown> | null;
-    if (typeof entry.use === 'string') {
-      child = this._extractDesktopElement(entry.use, patches);
-    } else {
-      child = { ...entry };
-      delete child.type;
-    }
-    if (!child) {
-      return;
-    }
-    srcList.splice(srcIdx, 1);
-    mobile[srcKey] = srcList;
-    // The host loc may shift if it sits after the removed entry in the same
-    // list.
-    let adjHostLoc = hostLoc;
-    const [hostKey, rawHost] = hostLoc.split(':');
-    const hostIdx = Number(rawHost);
-    if (hostKey === srcKey && hostIdx > srcIdx) {
-      adjHostLoc = `${hostKey}:${hostIdx - 1}`;
-    }
-    if (!this._insertIntoCategory(adjHostLoc, child, insertIdx, patches, mobile)) {
-      return;
-    }
-    this._patchConfig({ ...patches, mobile });
-    this._mobileSelected = null;
-  }
-
-  /**
-   * Applies a drag that started on a category child: a reorder within its
-   * category, or a move out to sibling position in a mobile list (which,
-   * for a reused category, also moves the element out of the desktop
-   * category to sit beside it, mirroring the desktop editor's semantics).
-   */
-  private _applyChildDrag(srcLoc: string, to: string, beforeLoc: string | null): void {
-    const parts = srcLoc.split(':');
-    if (parts.length !== 4) {
-      return;
-    }
-    const hostKey = parts[1] as 'items' | 'menu';
-    const hostIdx = Number(parts[2]);
-    const childIdx = Number(parts[3]);
-    if (!['items', 'menu'].includes(hostKey) || Number.isNaN(hostIdx) || Number.isNaN(childIdx)) {
-      return;
-    }
-    if (to.startsWith('cat:')) {
-      if (to !== `cat:${hostKey}:${hostIdx}`) {
-        // A move between two categories: pull the child from its category,
-        // then insert into the destination category.
-        let insertIdx = Number.MAX_SAFE_INTEGER;
-        if (beforeLoc) {
-          const bp = beforeLoc.split(':');
-          const bi = Number(bp[3]);
-          if (bp[0] === 'cat' && !Number.isNaN(bi)) {
-            insertIdx = bi;
-          }
-        }
-        const patches: Record<string, unknown> = {};
-        const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
-        const child = this._extractCategoryChild(hostKey, hostIdx, childIdx, patches, mobile);
-        if (!child) {
-          return;
-        }
-        if (!this._insertIntoCategory(to.slice(4), child, insertIdx, patches, mobile)) {
-          return;
-        }
-        this._patchConfig({ ...patches, mobile });
-        return;
-      }
-      let insert = Number.MAX_SAFE_INTEGER;
-      if (beforeLoc) {
-        const bp = beforeLoc.split(':');
-        let bi = Number(bp[3]);
-        if (!Number.isNaN(bi)) {
-          if (bi > childIdx) {
-            bi -= 1;
-          }
-          insert = bi;
-        }
-      }
-      this._reorderCategoryChildren(`${hostKey}:${hostIdx}`, childIdx, insert);
-      return;
-    }
-    const lists = ['items', 'menu', 'footer'];
-    if (!lists.includes(to)) {
-      return;
-    }
-    const toKey = to as 'items' | 'menu' | 'footer';
-    const hostEntry = (this._working.mobile?.[hostKey] as unknown[])?.[hostIdx] as
-      Record<string, unknown> | undefined;
-    if (!hostEntry) {
-      return;
-    }
-    const mobile = { ...(this._working.mobile ?? {}) } as Record<string, unknown>;
-    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
-    const toList = toKey === hostKey ? hostList : [...((mobile[toKey] as unknown[]) ?? [])];
-    let insert = toList.length;
-    if (beforeLoc) {
-      const bp = beforeLoc.split(':');
-      const bi = Number(bp[1]);
-      if (bp[0] === toKey && !Number.isNaN(bi)) {
-        insert = bi;
-      }
-    }
-    if (typeof hostEntry.use === 'string') {
-      // A reused desktop category: move the child out beside it on desktop,
-      // then reference it at the drop position.
-      const id = hostEntry.use;
-      for (const region of ['header', 'body'] as const) {
-        const regionList = [...(this._working[region] ?? [])];
-        const bi = regionList.findIndex((b) => b.id === id);
-        if (bi < 0) {
-          continue;
-        }
-        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
-        const items = [...((block.items as unknown[]) ?? [])];
-        const [child] = items.splice(childIdx, 1);
-        if (!child) {
-          return;
-        }
-        block.items = items;
-        regionList[bi] = block as unknown as (typeof regionList)[number];
-        regionList.splice(bi + 1, 0, {
-          type: 'item',
-          ...(child as Record<string, unknown>),
-        } as unknown as (typeof regionList)[number]);
-        const childId = (child as { id?: string }).id;
-        if (!childId) {
-          return;
-        }
-        toList.splice(insert, 0, { use: childId });
-        mobile[toKey] = toList;
-        if (toKey === hostKey) {
-          mobile[hostKey] = toList;
-        }
-        this._patchConfig({ [region]: regionList, mobile });
-        this._mobileSelected = `${toKey}:${insert}`;
-        return;
-      }
-      return;
-    }
-    // An inline category: the child moves out as an inline element.
-    const hi = hostList.indexOf(hostEntry) >= 0 ? hostList.indexOf(hostEntry) : hostIdx;
-    const host = { ...(hostList[hi] as Record<string, unknown>) };
-    const items = [...((host.items as unknown[]) ?? [])];
-    const [child] = items.splice(childIdx, 1);
-    if (!child) {
-      return;
-    }
-    host.items = items;
-    hostList[hi] = host;
-    toList.splice(insert, 0, { type: 'item', ...(child as Record<string, unknown>) });
-    mobile[hostKey] = hostList;
-    mobile[toKey] = toList;
-    this._patchConfig({ mobile });
-    this._mobileSelected = `${toKey}:${insert}`;
-  }
-
-  /**
-   * Removes and returns one child of the category behind a mobile entry,
-   * cloning whatever lists it touches into the patch sets.
-   */
-  private _extractCategoryChild(
-    hostKey: 'items' | 'menu',
-    hostIdx: number,
-    childIdx: number,
-    patches: Record<string, unknown>,
-    mobile: Record<string, unknown>,
-  ): Record<string, unknown> | null {
-    const hostList = [...((mobile[hostKey] as unknown[]) ?? [])];
-    const host = hostList[hostIdx] as Record<string, unknown> | undefined;
-    if (!host) {
-      return null;
-    }
-    if (typeof host.use === 'string') {
-      for (const region of ['header', 'body'] as const) {
-        const regionList = [
-          ...((patches[region] as typeof this._working.header) ?? this._working[region] ?? []),
-        ];
-        const bi = regionList.findIndex((b) => b.id === host.use);
-        if (bi < 0) {
-          continue;
-        }
-        const block = { ...(regionList[bi] as unknown as Record<string, unknown>) };
-        const items = [...((block.items as unknown[]) ?? [])];
-        const [child] = items.splice(childIdx, 1);
-        if (!child) {
-          return null;
-        }
-        block.items = items;
-        regionList[bi] = block as unknown as (typeof regionList)[number];
-        patches[region] = regionList;
-        return child as Record<string, unknown>;
-      }
-      return null;
-    }
-    if (Array.isArray(host.items)) {
-      const next = { ...host };
-      const items = [...(next.items as unknown[])];
-      const [child] = items.splice(childIdx, 1);
-      if (!child) {
-        return null;
-      }
-      next.items = items;
-      hostList[hostIdx] = next;
-      mobile[hostKey] = hostList;
-      return child as Record<string, unknown>;
-    }
-    return null;
-  }
-
-  /**
-   * Reorders the children of the category behind a bar/menu entry: an inline
-   * category's own items, or the referenced desktop category's items.
-   */
-  private _reorderCategoryChildren(hostLoc: string, oldIndex: number, newIndex: number): void {
-    const [key, raw] = hostLoc.split(':');
-    const idx = Number(raw);
-    if (!['items', 'menu'].includes(key) || Number.isNaN(idx)) {
-      return;
-    }
-    const entry = (this._working.mobile?.[key as 'items' | 'menu'] as unknown[])?.[idx] as
-      Record<string, unknown> | undefined;
-    if (!entry) {
-      return;
-    }
-    if (typeof entry.use === 'string') {
-      const id = entry.use;
-      for (const region of ['header', 'body'] as const) {
-        for (const block of this._working[region] ?? []) {
-          if (block.id === id && Array.isArray((block as { items?: unknown[] }).items)) {
-            const items = [...((block as { items: unknown[] }).items ?? [])];
-            items.splice(newIndex, 0, ...items.splice(oldIndex, 1));
-            (block as { items: unknown[] }).items = items;
-            this._touch();
-            return;
-          }
-        }
-      }
-      return;
-    }
-    if (Array.isArray(entry.items)) {
-      this._patchMobileList(key as 'items' | 'menu', (list) => {
-        const next = { ...(list[idx] as Record<string, unknown>) };
-        const items = [...(next.items as unknown[])];
-        items.splice(newIndex, 0, ...items.splice(oldIndex, 1));
-        next.items = items;
-        list[idx] = next;
-      });
-    }
   }
 
   /**
@@ -3198,9 +2457,6 @@ export class DashboardSidebarEditor extends LitElement {
         >
           ${custom ? 'Switch To Mirror Desktop' : 'Switch To Custom Bar'}
         </button>
-        <button class="add-menu-item" @click=${() => this._toggleMobileYaml()}>
-          ${this._mobileYaml ? 'Edit With UI' : 'Edit As YAML'}
-        </button>
       `;
     } else {
       const sel = this._locate(this._selected);
@@ -3299,16 +2555,6 @@ export class DashboardSidebarEditor extends LitElement {
    * Toggles the Settings tab between the UI form and the whole-config YAML
    * editor, surfacing any schema errors on entering.
    */
-  /**
-   * Toggles the Mobile tab between the UI form and YAML for the mobile
-   * section alone.
-   */
-  private _toggleMobileYaml(): void {
-    this._mobileYaml = !this._mobileYaml;
-    this._yamlError = this._mobileYaml ? validateConfig(this._working).join(' • ') || null : null;
-    this._menus.elementOpen = false;
-  }
-
   /**
    * Toggles the Settings tab between the UI form and whole-config YAML.
    */

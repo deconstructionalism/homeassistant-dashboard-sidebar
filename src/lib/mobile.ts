@@ -1,12 +1,10 @@
 /**
  * Mobile bar resolution.
  *
- * Turns a validated config into the effective ordered bar: derive mode
+ * Turns a validated config into the effective ordered bar: mirror mode
  * mirrors the desktop nav (items, categories, clocks, dates, and dividers,
- * in document order) minus
- * `hide` and with `override` patches applied; explicit mode maps the
- * `items` list, resolving `use:` references and passing inline items
- * through. Pure logic, no rendering.
+ * in document order); custom mode maps the `items` list, which is the whole
+ * bar. Pure logic, no rendering.
  */
 
 import type {
@@ -14,9 +12,6 @@ import type {
   DashboardSidebarConfig,
   FooterButtonConfig,
   ItemBlock,
-  MobileConfig,
-  MobileOverride,
-  MobileUseEntry,
   SidebarBlock,
 } from './types';
 
@@ -35,19 +30,10 @@ export const mobileMode = (config: DashboardSidebarConfig): 'sidebar' | 'bar' | 
 
 /** What kind of desktop element a bar entry renders as. */
 export type BarEntryKind =
-  | 'item'
-  | 'category'
-  | 'button'
-  | 'divider'
-  | 'clock'
-  | 'date'
-  | 'title'
-  | 'markdown'
-  | 'card'
-  | 'missing';
+  'item' | 'category' | 'button' | 'divider' | 'clock' | 'date' | 'title' | 'markdown' | 'card';
 
 /** Where a bar entry came from. */
-export type BarEntrySource = 'derived' | 'use' | 'inline';
+export type BarEntrySource = 'derived' | 'inline';
 
 /** The resolved bar: the slot row, and the entries of the trailing menu. */
 export interface ResolvedBar {
@@ -67,41 +53,20 @@ export interface BarEntry {
   source: BarEntrySource;
   /** What it renders as. */
   kind: BarEntryKind;
-  /** The element with any mobile patches applied. Categories keep their items. */
+  /** The element. Categories keep their items. */
   element: ItemBlock | CategoryBlock | FooterButtonConfig | SidebarBlock;
-  /**
-   * The entry's index in its source config list (items/menu/footer), for the
-   * editor's drag-and-drop. Absent on derived entries.
-   */
-  srcIndex?: number;
 }
 
-/** The subset of a use entry that patches the referenced element. */
-const patchOf = (entry: MobileUseEntry): MobileOverride => {
-  const patch: Record<string, unknown> = { ...entry };
-  delete patch.use;
-  return patch as MobileOverride;
-};
-
-/** A shallow-merged copy of an element with a mobile patch applied. */
-const merged = <T extends object>(element: T, patch?: MobileOverride): T => {
-  return patch && Object.keys(patch).length ? { ...element, ...patch } : { ...element };
-};
-
-/**
- * A category copy whose children exclude the given hidden ids and carry any
- * per-child overrides.
- */
-const mergedCategory = (
-  category: CategoryBlock,
-  hidden: Set<string>,
-  overrides: Record<string, MobileOverride>,
-  patch?: MobileOverride,
-): CategoryBlock => {
-  const items = (category.items ?? [])
-    .filter((child) => !(child.id && hidden.has(child.id)))
-    .map((child) => merged(child, child.id ? overrides[child.id] : undefined));
-  return { ...merged(category, patch), items };
+/** Resolves one curated list (`mobile.menu` / `mobile.footer`) to entries. */
+const resolveCurated = (entries: unknown, inlineKind?: BarEntryKind): BarEntry[] => {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  return (entries as SidebarBlock[]).map((entry) => ({
+    source: 'inline' as const,
+    kind: inlineKind ?? ((entry.type ?? 'item') as BarEntryKind),
+    element: { ...entry },
+  }));
 };
 
 /**
@@ -110,200 +75,51 @@ const mergedCategory = (
  * @param config - A validated sidebar config with a `mobile` section.
  * @returns The ordered bar entries; empty when there is no mobile config.
  */
-/**
- * Resolves the curated `mobile.menu` sheet entries: `use:` references to any
- * element (titles, markdown, and cards included) and inline blocks.
- */
-/** An id index of every element in the config, for curated-list resolution. */
-export const elementIndex = (
-  config: DashboardSidebarConfig,
-): Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }> => {
-  const all = new Map<string, { kind: BarEntryKind; element: SidebarBlock | FooterButtonConfig }>();
-  for (const block of [...(config.header ?? []), ...(config.body ?? [])]) {
-    const type = (block.type ?? 'item') as BarEntryKind;
-    if (block.id) {
-      all.set(block.id, { kind: type, element: block });
-    }
-    if (type === 'category') {
-      for (const child of (block as CategoryBlock).items ?? []) {
-        if (child.id) {
-          all.set(child.id, { kind: 'item', element: child });
-        }
-      }
-    }
-  }
-  for (const btn of config.footer?.buttons ?? []) {
-    if (btn.id) {
-      all.set(btn.id, { kind: 'button', element: btn });
-    }
-  }
-  return all;
-};
-
-/** Resolves one curated list (`mobile.menu` / `mobile.footer`) to entries. */
-const resolveCurated = (
-  config: DashboardSidebarConfig,
-  entries: unknown,
-  inlineKind?: BarEntryKind,
-): BarEntry[] => {
-  if (!Array.isArray(entries)) {
-    return [];
-  }
-  const all = elementIndex(config);
-  const out: BarEntry[] = [];
-  (entries as (MobileUseEntry | SidebarBlock)[]).forEach((entry, srcIndex) => {
-    if ('use' in entry) {
-      const target = all.get(entry.use);
-      if (!target) {
-        // Validation reports this; keep a placeholder so the editor can show
-        // and fix it (validated live configs never contain unknown refs).
-        out.push({
-          source: 'use',
-          kind: 'missing',
-          element: { title: 'Missing element', icon: 'mdi:help' } as ItemBlock,
-          srcIndex,
-        });
-        return;
-      }
-      const patch = patchOf(entry);
-      out.push({
-        source: 'use',
-        kind: target.kind,
-        element:
-          target.kind === 'category'
-            ? mergedCategory(target.element as CategoryBlock, new Set(), {}, patch)
-            : merged(target.element, patch),
-        srcIndex,
-      });
-    } else {
-      out.push({
-        source: 'inline',
-        kind: inlineKind ?? (((entry as SidebarBlock).type ?? 'item') as BarEntryKind),
-        element: { ...entry },
-        srcIndex,
-      });
-    }
-  });
-  return out;
-};
-
-const resolveExtras = (config: DashboardSidebarConfig, mobile: MobileConfig): BarEntry[] => {
-  return resolveCurated(config, mobile.menu);
-};
-
 export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
-  // `on_mobile: bar` without a mobile section derives with all defaults.
+  // `on_mobile: bar` without a mobile section mirrors with all defaults.
   const mobile = mobileMode(config) === 'bar' ? (config.mobile ?? {}) : undefined;
   if (!mobile) {
     return { slots: [], menu: [], extras: [], footer: [] };
   }
-  const extras = resolveExtras(config, mobile);
-  const footer =
-    mobile.footer !== undefined ? resolveCurated(config, mobile.footer, 'button') : null;
-  const hidden = new Set(mobile.hide ?? []);
-  const overrides = mobile.override ?? {};
-  const blocks = [...(config.header ?? []), ...(config.body ?? [])];
+  const extras = resolveCurated(mobile.menu);
+  const footer = mobile.footer !== undefined ? resolveCurated(mobile.footer, 'button') : null;
 
   if (mobile.items === undefined) {
+    // Mirror mode: the desktop nav, in document order.
     const slots: BarEntry[] = [];
-    for (const block of blocks) {
+    for (const block of [...(config.header ?? []), ...(config.body ?? [])]) {
       const type = block.type ?? 'item';
-      if (block.id && hidden.has(block.id)) {
-        continue;
-      }
       if (type === 'category') {
+        const category = block as CategoryBlock;
         slots.push({
           source: 'derived',
           kind: 'category',
-          element: mergedCategory(
-            block as CategoryBlock,
-            hidden,
-            overrides,
-            block.id ? overrides[block.id] : undefined,
-          ),
+          element: {
+            ...category,
+            items: (category.items ?? []).map((child) => ({ ...child })),
+          },
         });
       } else if (type === 'item' || type === 'divider' || type === 'clock' || type === 'date') {
-        slots.push({
-          source: 'derived',
-          kind: type as BarEntryKind,
-          element: merged(block, block.id ? overrides[block.id] : undefined),
-        });
+        slots.push({ source: 'derived', kind: type as BarEntryKind, element: { ...block } });
       }
     }
     // An explicit mobile.footer replaces the derived button strip outright.
     const menu: BarEntry[] =
       footer !== null
         ? []
-        : (config.footer?.buttons ?? [])
-            .filter((btn) => !(btn.id && hidden.has(btn.id)))
-            .map((btn) => ({
-              source: 'derived' as const,
-              kind: 'button' as const,
-              element: merged(btn, btn.id ? overrides[btn.id] : undefined),
-            }));
+        : (config.footer?.buttons ?? []).map((btn) => ({
+            source: 'derived' as const,
+            kind: 'button' as const,
+            element: { ...btn },
+          }));
     return { slots, menu, extras, footer: footer ?? [] };
   }
 
-  const byId = new Map<
-    string,
-    { kind: BarEntryKind; element: ItemBlock | CategoryBlock | FooterButtonConfig | SidebarBlock }
-  >();
-  for (const block of blocks) {
-    const type = block.type ?? 'item';
-    const usable =
-      type === 'item' ||
-      type === 'category' ||
-      type === 'divider' ||
-      type === 'clock' ||
-      type === 'date';
-    if (block.id && usable) {
-      byId.set(block.id, { kind: type as BarEntryKind, element: block });
-    }
-    if (type === 'category') {
-      for (const child of (block as CategoryBlock).items ?? []) {
-        if (child.id) {
-          byId.set(child.id, { kind: 'item', element: child });
-        }
-      }
-    }
-  }
-  for (const btn of config.footer?.buttons ?? []) {
-    if (btn.id) {
-      byId.set(btn.id, { kind: 'button', element: btn });
-    }
-  }
-
-  const slots: BarEntry[] = [];
-  mobile.items.forEach((entry, srcIndex) => {
-    if ('use' in entry) {
-      const target = byId.get(entry.use);
-      if (!target) {
-        slots.push({
-          source: 'use',
-          kind: 'missing',
-          element: { title: 'Missing element', icon: 'mdi:help' } as ItemBlock,
-          srcIndex,
-        });
-        return;
-      }
-      const patch = patchOf(entry);
-      slots.push({
-        source: 'use',
-        kind: target.kind,
-        element:
-          target.kind === 'category'
-            ? mergedCategory(target.element as CategoryBlock, new Set(), {}, patch)
-            : merged(target.element, patch),
-        srcIndex,
-      });
-    } else {
-      slots.push({
-        source: 'inline',
-        kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
-        element: { ...entry },
-        srcIndex,
-      });
-    }
-  });
+  // Custom mode: the items list is the whole bar.
+  const slots: BarEntry[] = mobile.items.map((entry) => ({
+    source: 'inline' as const,
+    kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
+    element: { ...entry },
+  }));
   return { slots, menu: [], extras, footer: footer ?? [] };
 };

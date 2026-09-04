@@ -32,7 +32,6 @@ CSS targeting hooks shared by every block and footer button.
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so card-mod can target this one element. |
-| `id` | `string` | no | CSS id set on the rendered root, so card-mod can target this one element. |
 | `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config (a `{ style, class, ... }` object), applied to this element's rendered root via the card-mod integration when installed. |
 
 ## Title block
@@ -211,46 +210,15 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 | `double_tap_action` | `ActionConfig` | no | Optional action performed when double-tapped. Not templatable. |
 | `active_highlight` | `boolean` | no | Whether to highlight this element while its navigate tap action targets the current page. Default true; set false to disable the active highlight. |
 
-## MobileOverride
-
-The properties of a reused element that mobile may replace. A patch never carries `id` (the reference itself) or `type` (identity is not patchable).
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `title` | `MaybeTemplate` | no | Replacement label. Templatable. |
-| `icon` | `MaybeTemplate` | no | Replacement mdi icon. Templatable. |
-| `abbr` | `string` | no | Replacement collapsed glyph for an icon-less element. |
-| `text_color` | `MaybeTemplate` | no | Replacement label color, any CSS color. Templatable. |
-| `icon_color` | `MaybeTemplate` | no | Replacement icon color, any CSS color. Templatable. |
-| `entity` | `string` | no | Replacement target entity for toggle / more-info actions. |
-| `tap_action` | `ActionConfig` | no | Replacement tap action. |
-| `hold_action` | `ActionConfig` | no | Replacement hold action. |
-| `double_tap_action` | `ActionConfig` | no | Replacement double-tap action. |
-| `active_highlight` | `boolean` | no | Replacement active-highlight flag. |
-| `class` | `string` | no | Extra CSS class(es) on the bar rendering of this element. |
-| `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config for the bar rendering of this element. |
-
-## MobileUseEntry
-
-One entry of an explicit mobile bar: a desktop element reused by id, with any of the override properties applied inline.
-
-Also accepts the [MobileOverride](#mobileoverride) below.
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `use` | `string` | yes | The id of the desktop item, category, or footer button to reuse. |
-
 ## MobileConfig
 
-The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. Without `items` the bar derives from the desktop nav (items and categories in document order) amended by `hide` and `override`; with `items` the list is the whole bar and `hide`/`override` are rejected.
+The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. Without `items` the bar mirrors the desktop nav (items and categories in document order); with `items` the list is the whole bar.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `hide` | `string[]` | no | Ids of derived elements to leave off the bar. Derive mode only. |
-| `override` | `Record<string, MobileOverride>` | no | Per-id property patches applied to derived elements. Derive mode only. |
-| `items` | `MobileBarEntry[]` | no | The explicit bar: `use:` references and inline items. |
-| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. `use:` may reference any element, including titles, markdown, and cards. Applies in both derive and explicit mode. |
-| `footer` | `MobileFooterEntry[]` | no | The sheet's pinned footer strip: `use:` references to footer buttons or items, and inline footer buttons, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
+| `items` | `MobileBarEntry[]` | no | The explicit bar: the inline items that make up the whole bar. |
+| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Applies in both mirror and custom mode. |
+| `footer` | `MobileFooterEntry[]` | no | The sheet's pinned footer strip: inline footer buttons, rendered as icon buttons. When set it replaces the strip derived from the desktop footer (and a card/markdown footer). |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
@@ -298,21 +266,21 @@ Any block that can appear in the header or body region.
 
 ### `MobileBarEntry`
 
-`MobileUseEntry | ItemBlock`
+`ItemBlock`
 
-An explicit bar entry: a reuse of a desktop element, or an inline item.
+An explicit bar entry: an inline item.
 
 ### `MobileMenuEntry`
 
-`MobileUseEntry | SidebarBlock`
+`SidebarBlock`
 
-One curated sheet-menu entry: a reuse of any desktop element by id (no bar-eligibility limit), or an inline block of any kind.
+One curated sheet-menu entry: an inline block of any kind.
 
 ### `MobileFooterEntry`
 
-`MobileUseEntry | FooterButtonConfig`
+`FooterButtonConfig`
 
-One curated sheet-footer entry: a reuse of an item or footer button by id, or an inline footer button.
+One curated sheet-footer entry: an inline footer button.
 
 ### `ActionConfig`
 
