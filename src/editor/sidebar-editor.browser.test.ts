@@ -93,7 +93,7 @@ describe('<dashboard-sidebar-editor>', () => {
     // Custom mode: the whole mobile section is edited as YAML.
     const custom = await mount({
       ...cfg(),
-      mobile: { items: [{ type: 'item', title: 'Xtra', tap_action: TAP }] },
+      mobile: { mode: 'custom', items: [{ type: 'item', title: 'Xtra', tap_action: TAP }] },
     });
     await tab(custom, 'Mobile Bar');
     expect(root(custom).querySelector('.form-title')?.textContent).to.contain('Custom');
@@ -132,6 +132,57 @@ describe('<dashboard-sidebar-editor>', () => {
     // The desktop footer comes across whole, so a custom bar stands alone.
     expect(saved?.mobile?.footer?.buttons?.length, 'footer buttons copied').to.equal(1);
     expect(saved?.mobile?.footer?.buttons?.[0]?.icon).to.equal('mdi:cog');
+  });
+
+  it('offers a YAML reference with docs links in custom mode only', async () => {
+    const mirror = await mount({ ...cfg(), mobile: {} });
+    await tab(mirror, 'Mobile Bar');
+    expect(root(mirror).querySelector('.class-ref'), 'no reference in mirror mode').to.not.exist;
+
+    const el = await mount({
+      ...cfg(),
+      mobile: { mode: 'custom', items: [{ type: 'item', title: 'A', tap_action: TAP }] },
+    });
+    await tab(el, 'Mobile Bar');
+    const ref = root(el).querySelector('.class-ref');
+    expect(ref, 'reference in custom mode').to.exist;
+    expect(ref?.querySelector('summary')?.textContent).to.contain('Mobile YAML reference');
+    const text = ref?.textContent ?? '';
+    for (const key of ['mode: custom', 'items:', 'menu:', 'footer:', 'buttons:', 'markdown:']) {
+      expect(text, `documents ${key}`).to.contain(key);
+    }
+    const links = [...(ref?.querySelectorAll('a') ?? [])];
+    expect(links.length, 'two docs links').to.equal(2);
+    expect(links[0].getAttribute('href')).to.contain('/reference/#mobileconfig');
+    expect(links[1].getAttribute('href')).to.contain('/reference/#footer');
+    expect(links.every((a) => a.getAttribute('target') === '_blank')).to.equal(true);
+    expect(links.every((a) => (a.getAttribute('rel') ?? '').includes('noopener'))).to.equal(true);
+  });
+
+  it('writes mode: custom when switching, and drops it going back to mirror', async () => {
+    const el = await mount({ ...cfg(), mobile: {} });
+    await tab(el, 'Mobile Bar');
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
+    };
+    (root(el).querySelector('.tab-notes .tool') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        /Switch To Custom Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
+        /Start Empty/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await settle(el);
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.mobile?.mode).to.equal('custom');
+    expect(saved?.mobile?.items).to.deep.equal([]);
   });
 
   it('copies a card or markdown desktop footer too, not just buttons', async () => {

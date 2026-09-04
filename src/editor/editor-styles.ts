@@ -954,6 +954,11 @@ export const editorStyles = css`
     opacity: 0.7;
   }
 
+  /* The docs link closing the mobile YAML reference. */
+  .class-ref-link a {
+    color: var(--primary-color, #03a9f4);
+  }
+
   /* A resolved entity/service replaces the input with a card: the id over its
        friendly name, and a clear button. Matches the inputs' bordered box. */
   .field-picked {

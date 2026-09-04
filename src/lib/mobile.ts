@@ -12,6 +12,7 @@ import type {
   DashboardSidebarConfig,
   FooterButtonConfig,
   ItemBlock,
+  MobileMode,
   SidebarBlock,
 } from './types';
 
@@ -26,6 +27,14 @@ export const desktopMode = (config: DashboardSidebarConfig): 'sidebar' | 'hidden
  */
 export const mobileMode = (config: DashboardSidebarConfig): 'sidebar' | 'bar' | 'hidden' => {
   return config.on_mobile ?? (config.mobile ? 'bar' : 'sidebar');
+};
+
+/**
+ * Where the mobile bar's content comes from. `mirror` follows the desktop,
+ * `custom` uses only what the mobile section spells out.
+ */
+export const barMode = (config: DashboardSidebarConfig): MobileMode => {
+  return config.mobile?.mode ?? 'mirror';
 };
 
 /** What kind of desktop element a bar entry renders as. */
@@ -82,10 +91,10 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
     return { slots: [], menu: [], extras: [], footer: [] };
   }
 
-  if (mobile.items === undefined) {
-    // Mirror mode: the desktop nav in document order, and the desktop footer
-    // behind the dots. A mirror carries no curated content of its own, so
-    // `menu` and `footer` are custom-mode only and are not read here.
+  if (barMode(config) === 'mirror') {
+    // The desktop nav in document order, and the desktop footer behind the
+    // dots. A mirror carries no content of its own, so `items`, `menu` and
+    // `footer` are custom-mode only and are not read here.
     const slots: BarEntry[] = [];
     for (const block of [...(config.header ?? []), ...(config.body ?? [])]) {
       const type = block.type ?? 'item';
@@ -112,7 +121,7 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   }
 
   // Custom mode: the mobile section is the whole bar and inherits nothing.
-  const slots: BarEntry[] = mobile.items.map((entry) => ({
+  const slots: BarEntry[] = (mobile.items ?? []).map((entry) => ({
     source: 'inline' as const,
     kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
     element: { ...entry },

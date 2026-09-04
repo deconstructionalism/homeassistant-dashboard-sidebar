@@ -371,6 +371,7 @@ describe('element ids', () => {
     const errors = validateConfig({
       body: [{ type: 'item', title: 'A', tap_action: TAP }],
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', id: 'x', title: 'X', tap_action: TAP }],
         menu: [{ type: 'title', id: 'y', text: 'Y' }],
         footer: { buttons: [{ icon: 'mdi:lock', id: 'z', tap_action: TAP }] },
@@ -435,6 +436,7 @@ describe('mobile config', () => {
   it('lets the sheet menu hold inline blocks of any kind', () => {
     const ok = validateConfig(
       withMobile({
+        mode: 'custom',
         items: [],
         menu: [
           { type: 'markdown', content: 'x' },
@@ -447,28 +449,33 @@ describe('mobile config', () => {
   });
 
   it('validates inline sheet-menu blocks by their type', () => {
-    const errors = validateConfig(withMobile({ menu: [{ type: 'title' }] }));
+    const errors = validateConfig(withMobile({ mode: 'custom', menu: [{ type: 'title' }] }));
     expect(errors).toContain('mobile.menu[0]: title needs text');
   });
 
   it('takes the desktop footer shape: buttons, a card, or markdown', () => {
     const buttons = validateConfig(
       withMobile({
+        mode: 'custom',
         items: [],
         footer: { buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] },
       }),
     );
     expect(buttons.some((e) => e.includes('mobile.footer'))).toBe(false);
     const markdown = validateConfig(
-      withMobile({ items: [], footer: { markdown: 'hi', divider: false } }),
+      withMobile({ mode: 'custom', items: [], footer: { markdown: 'hi', divider: false } }),
     );
     expect(markdown.some((e) => e.includes('mobile.footer'))).toBe(false);
     const card = validateConfig(
-      withMobile({ items: [], footer: { card: { type: 'markdown', content: 'x' } } }),
+      withMobile({
+        mode: 'custom',
+        items: [],
+        footer: { card: { type: 'markdown', content: 'x' } },
+      }),
     );
     expect(card.some((e) => e.includes('mobile.footer'))).toBe(false);
     const bad = validateConfig(
-      withMobile({ items: [], footer: { buttons: [{ tap_action: 'nope' }] } }),
+      withMobile({ mode: 'custom', items: [], footer: { buttons: [{ tap_action: 'nope' }] } }),
     );
     expect(bad).toContain('mobile.footer.buttons[0]: needs an icon');
   });
@@ -499,15 +506,20 @@ describe('mobile config', () => {
   });
 
   it('accepts bar-eligible inline types and rejects the rest', () => {
-    const ok = validateConfig(withMobile({ items: [{ type: 'divider' }, { type: 'clock' }] }));
+    const ok = validateConfig(
+      withMobile({ mode: 'custom', items: [{ type: 'divider' }, { type: 'clock' }] }),
+    );
     expect(ok.some((e) => e.includes('mobile.items'))).toBe(false);
-    const errors = validateConfig(withMobile({ items: [{ type: 'markdown', content: 'x' }] }));
+    const errors = validateConfig(
+      withMobile({ mode: 'custom', items: [{ type: 'markdown', content: 'x' }] }),
+    );
     expect(errors.some((e) => e.includes('not bar-eligible'))).toBe(true);
   });
 
   it('validates inline items in custom mode', () => {
     const good = validateConfig(
       withMobile({
+        mode: 'custom',
         items: [
           {
             type: 'category',
@@ -521,16 +533,52 @@ describe('mobile config', () => {
     );
     expect(good).toHaveLength(0);
     const bad = validateConfig(
-      withMobile({ items: [{ type: 'item', tap_action: { action: 'toggle' } }] }),
+      withMobile({ mode: 'custom', items: [{ type: 'item', tap_action: { action: 'toggle' } }] }),
     );
     expect(bad).toContain('mobile.items[0]: needs a title');
   });
 
   it('rejects a non-list items, menu, or footer', () => {
-    expect(validateConfig(withMobile({ items: {} }))).toContain('mobile.items: must be a list');
-    expect(validateConfig(withMobile({ menu: {} }))).toContain('mobile.menu: must be a list');
-    expect(validateConfig(withMobile({ items: [], footer: [] }))).toContain(
+    expect(validateConfig(withMobile({ mode: 'custom', items: {} }))).toContain(
+      'mobile.items: must be a list',
+    );
+    expect(validateConfig(withMobile({ mode: 'custom', menu: {} }))).toContain(
+      'mobile.menu: must be a list',
+    );
+    expect(validateConfig(withMobile({ mode: 'custom', items: [], footer: [] }))).toContain(
       'mobile.footer: must be a mapping',
+    );
+  });
+
+  it('rejects bar content on a mirrored bar', () => {
+    for (const key of ['items', 'menu', 'footer'] as const) {
+      const errors = validateConfig(withMobile({ [key]: key === 'footer' ? {} : [] }));
+      expect(
+        errors.some((e) => e.startsWith(`mobile.${key}: not part of a mirrored bar`)),
+        `${key} rejected without mode: custom`,
+      ).toBe(true);
+    }
+  });
+
+  it('accepts the same keys once the mode is custom', () => {
+    const errors = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [{ type: 'item', title: 'A', tap_action: { action: 'toggle' } }],
+        menu: [{ type: 'title', text: 'More' }],
+        footer: { markdown: 'hi' },
+      }),
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('a custom bar may leave items out, and that is an empty bar', () => {
+    expect(validateConfig(withMobile({ mode: 'custom' }))).toEqual([]);
+  });
+
+  it('rejects an unknown mode', () => {
+    expect(validateConfig(withMobile({ mode: 'mirrored' }))).toContain(
+      'mobile.mode: must be "mirror" or "custom"',
     );
   });
 

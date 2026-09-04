@@ -18,7 +18,7 @@ import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import '../dashboard-sidebar-bar';
-import { mobileMode, resolveBar } from '../lib/mobile';
+import { barMode, mobileMode, resolveBar } from '../lib/mobile';
 import { confirmDialog } from './editor-dialogs';
 import { MenusController, menuStyle, popupMenu } from './editor-menus';
 import { renderEmptyState, renderGhost, renderGhostCards } from './editor-preview';
@@ -108,6 +108,30 @@ const TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
 ];
 
 /** The stable bar classes card-mod / themes can target, for the Mobile tab. */
+const DOCS_REFERENCE_URL =
+  'https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/reference/';
+
+/**
+ * The shape of the `mobile` section, shown beside the custom-mode YAML
+ * editor. Custom mode is YAML-only, so this is the only place the keys and
+ * the footer's three forms are discoverable while editing.
+ */
+const MOBILE_YAML_REF: Array<{ key: string; desc: string }> = [
+  { key: 'mode: custom', desc: 'Required here. `mirror` follows the desktop instead.' },
+  { key: 'items:', desc: 'The bar itself, as a list of inline elements.' },
+  { key: '  - type:', desc: 'item, category, divider, clock or date' },
+  { key: 'menu:', desc: 'Extra blocks in the dots sheet. Any kind, titles and cards included.' },
+  { key: 'footer:', desc: "The sheet's pinned footer. Same shape as the desktop footer:" },
+  { key: '  buttons:', desc: 'a list of icon buttons, or' },
+  { key: '  card:', desc: 'a manual Lovelace card, or' },
+  { key: '  markdown:', desc: 'markdown text, with markdown_color and tap_action' },
+  { key: '  divider:', desc: 'false to drop the strip top rule' },
+  { key: 'position:', desc: 'top or bottom (default bottom)' },
+  { key: 'labels:', desc: 'true to show titles under the bar icons' },
+  { key: 'background:', desc: "any CSS background (defaults to the sidebar's)" },
+  { key: 'card_mod:', desc: 'card-mod config for the bar' },
+];
+
 const BAR_TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
   { sel: 'dashboard-sidebar-bar', desc: 'The mobile bar element' },
   { sel: '.dashboard-sidebar-bar-slots', desc: 'The mobile bar slot row' },
@@ -1634,28 +1658,30 @@ export class DashboardSidebarEditor extends LitElement {
   private _switchToCustom(copy: boolean): void {
     const mobile = this._working.mobile ?? {};
     if (!copy) {
-      this._patchMobile({ items: [] });
+      this._patchMobile({ mode: 'custom', items: [] });
       this._confirmingCustomSwitch = false;
       return;
     }
     // Seed the custom bar with real copies of what the desktop mirrors:
     // there are no references, so the elements are cloned outright.
-    const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, items: undefined } });
+    const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, mode: 'mirror' } });
     const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
     // A custom bar derives nothing, so the desktop footer has to come across
     // whole or the switch silently loses it. It copies in every shape it
     // takes: a button strip, a card, or markdown.
     const footer = this._working.footer ? structuredClone(this._working.footer) : undefined;
-    this._patchMobile({ items, footer });
+    this._patchMobile({ mode: 'custom', items, footer });
     this._confirmingCustomSwitch = false;
   }
 
   /**
    * Switches back to strict mirror mode, dropping the whole custom
-   * configuration (items, curated menu and footer).
+   * configuration (items, curated menu and footer). Mirror is the default,
+   * so the mode key comes off rather than being written out.
    */
   private _switchToMirror(): void {
     this._patchMobile({
+      mode: undefined,
       items: undefined,
       menu: undefined,
       footer: undefined,
@@ -1677,7 +1703,7 @@ export class DashboardSidebarEditor extends LitElement {
       </p>`;
     }
     const m = mobile ?? {};
-    const custom = m.items !== undefined;
+    const custom = barMode(this._working) === 'custom';
     return html`
       ${this._renderTabNotes(
         'The mobile bar replaces the sidebar on narrow screens.',
@@ -1699,12 +1725,18 @@ export class DashboardSidebarEditor extends LitElement {
         <div class="editor settings ${custom ? 'yaml-mode' : ''}">
           ${
             custom
-              ? this._yamlEditor(
-                  m,
-                  (v) => this._patchConfig({ mobile: v }),
-                  (parsed) =>
-                    validateConfig({ ...this._working, mobile: parsed } as DashboardSidebarConfig),
-                )
+              ? html`
+                  ${this._mobileYamlRef()}
+                  ${this._yamlEditor(
+                    m,
+                    (v) => this._patchConfig({ mobile: v }),
+                    (parsed) =>
+                      validateConfig({
+                        ...this._working,
+                        mobile: parsed,
+                      } as DashboardSidebarConfig),
+                  )}
+                `
               : this._renderMobileSettingsFields(m)
           }
         </div>
@@ -1903,6 +1935,33 @@ export class DashboardSidebarEditor extends LitElement {
       this._barPreviewCfg = json;
     }
     return el;
+  }
+
+  /**
+   * Renders a collapsed reference of the `mobile` keys with a link to the
+   * published config reference, shown beside the custom-mode YAML editor.
+   */
+  private _mobileYamlRef(): TemplateResult {
+    return html`<details class="advanced class-ref">
+      <summary>Mobile YAML reference</summary>
+      <div class="class-ref-list">
+        ${MOBILE_YAML_REF.map(
+          (r) => html`<div class="class-ref-row"><code>${r.key}</code><span>${r.desc}</span></div>`,
+        )}
+        <div class="class-ref-row">
+          <span class="class-ref-link">
+            Full reference:
+            <a href="${DOCS_REFERENCE_URL}#mobileconfig" target="_blank" rel="noopener noreferrer"
+              >the mobile bar</a
+            >
+            and
+            <a href="${DOCS_REFERENCE_URL}#footer" target="_blank" rel="noopener noreferrer"
+              >the footer</a
+            >.
+          </span>
+        </div>
+      </div>
+    </details>`;
   }
 
   /**
@@ -2445,7 +2504,7 @@ export class DashboardSidebarEditor extends LitElement {
     if (this._tab === 'settings') {
       items = this._renderSettingsMenuItems();
     } else if (this._tab === 'mobile') {
-      const custom = this._working.mobile?.items !== undefined;
+      const custom = barMode(this._working) === 'custom';
       items = html`
         <button
           class="add-menu-item"

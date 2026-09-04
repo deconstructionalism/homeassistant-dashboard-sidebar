@@ -16,7 +16,7 @@ describe('preview resize stability', () => {
     }));
     const config: DashboardSidebarConfig = {
       body: many,
-      mobile: { items: many.map((m) => ({ ...m })) },
+      mobile: { mode: 'custom', items: many.map((m) => ({ ...m })) },
     };
     const el = await fixture<DashboardSidebarEditor>(
       html`<dashboard-sidebar-editor></dashboard-sidebar-editor>`,

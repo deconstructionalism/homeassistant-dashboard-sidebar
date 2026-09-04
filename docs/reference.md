@@ -213,13 +213,14 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 
 ## MobileConfig
 
-The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. Without `items` the bar mirrors the desktop nav (items and categories in document order); with `items` the list is the whole bar.
+The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. `mode` picks where its content comes from: `mirror` follows the desktop nav and footer, `custom` uses the `items`, `menu` and `footer` spelled out here and inherits nothing.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `items` | `MobileBarEntry[]` | no | The explicit bar: the inline items that make up the whole bar. |
-| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Custom mode only: it needs `items`, since a mirrored bar follows the desktop and carries nothing of its own. |
-| `footer` | `FooterConfig` | no | The sheet's pinned footer, in the same shape as the desktop `footer`: a button strip, a card, or markdown. Custom mode only: it needs `items`. A custom bar inherits nothing, so without this it has no footer, while a mirrored bar always shows the desktop's. |
+| `mode` | `MobileMode` | no | Whether the bar mirrors the desktop nav or is spelled out here. Default mirror. A mirrored bar follows the desktop and takes no content of its own, so `items`, `menu` and `footer` belong to `custom` only. |
+| `items` | `MobileBarEntry[]` | no | The bar itself, as inline elements. Custom mode only. |
+| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Custom mode only, since a mirrored bar follows the desktop and carries nothing of its own. |
+| `footer` | `FooterConfig` | no | The sheet's pinned footer, in the same shape as the desktop `footer`: a button strip, a card, or markdown. Custom mode only. A custom bar inherits nothing, so without this it has no footer at all, while a mirrored bar always shows the desktop's. |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
@@ -264,6 +265,12 @@ Date format: an alias (`iso` = %Y-%m-%d, `locale`) or a strftime pattern using o
 `TitleBlock | ClockBlock | DateBlock | DividerBlock | ItemBlock | CategoryBlock | MarkdownBlock | CardBlock`
 
 Any block that can appear in the header or body region.
+
+### `MobileMode`
+
+`'mirror' | 'custom'`
+
+How the mobile bar gets its content.
 
 ### `MobileBarEntry`
 

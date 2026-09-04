@@ -141,6 +141,7 @@ describe('<dashboard-sidebar-bar>', () => {
       const el = await mount({
         ...config,
         mobile: {
+          mode: 'custom',
           items: [{ type: 'item', title: 'Only', tap_action: TAP }],
           menu: [
             { type: 'title', text: 'Section' },
@@ -171,6 +172,7 @@ describe('<dashboard-sidebar-bar>', () => {
     const el = await mount({
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', title: 'Rooms', icon: 'mdi:home', tap_action: TAP }],
         footer: {
           buttons: [
@@ -288,6 +290,7 @@ describe('<dashboard-sidebar-bar>', () => {
     const el = await mount({
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [
           { type: 'item', title: 'Casa', icon: 'mdi:home-variant', tap_action: TAP },
           { type: 'item', title: 'Weather', tap_action: TAP },

@@ -27,9 +27,12 @@ export const FOOTER_FIELDS = ['divider', 'buttons', 'card', 'markdown', 'markdow
 export const FOOTER_BUTTON_FIELDS = ['icon', 'icon_color', 'title', 'entity', 'tap_action', 'hold_action', 'double_tap_action', 'active_highlight', 'class', 'id', 'card_mod'] as const;
 
 /** Fields accepted on the mobile bar config. */
-export const MOBILE_FIELDS = ['items', 'menu', 'footer', 'position', 'labels', 'background', 'card_mod'] as const;
+export const MOBILE_FIELDS = ['mode', 'items', 'menu', 'footer', 'position', 'labels', 'background', 'card_mod'] as const;
 
 /** Allowed mobile `labels` values. */
+/** Allowed mobile `mode` values. */
+export const MOBILE_MODES = ['mirror', 'custom'] as const;
+
 export const MOBILE_LABELS = [] as const;
 
 /** Allowed `align` values. */

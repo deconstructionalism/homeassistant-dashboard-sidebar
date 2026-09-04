@@ -271,6 +271,9 @@ export interface FooterConfig {
   double_tap_action?: ActionConfig;
 }
 
+/** How the mobile bar gets its content. */
+export type MobileMode = 'mirror' | 'custom';
+
 /** An explicit bar entry: an inline item. */
 export type MobileBarEntry = ItemBlock;
 
@@ -279,25 +282,31 @@ export type MobileMenuEntry = SidebarBlock;
 
 /**
  * The mobile bar. Its presence hides the sidebar on narrow viewports and
- * renders a bottom bar instead. Without `items` the bar mirrors the desktop
- * nav (items and categories in document order); with `items` the list is the
- * whole bar.
+ * renders a bottom bar instead. `mode` picks where its content comes from:
+ * `mirror` follows the desktop nav and footer, `custom` uses the `items`,
+ * `menu` and `footer` spelled out here and inherits nothing.
  */
 export interface MobileConfig {
-  /** The explicit bar: the inline items that make up the whole bar. */
+  /**
+   * Whether the bar mirrors the desktop nav or is spelled out here. Default
+   * mirror. A mirrored bar follows the desktop and takes no content of its
+   * own, so `items`, `menu` and `footer` belong to `custom` only.
+   */
+  mode?: MobileMode;
+  /** The bar itself, as inline elements. Custom mode only. */
   items?: MobileBarEntry[];
   /**
    * Curated entries of the dots-menu sheet, shown between any overflowed
    * slots and the footer. Any kind of block is allowed, including titles,
-   * markdown, and cards. Custom mode only: it needs `items`, since a
-   * mirrored bar follows the desktop and carries nothing of its own.
+   * markdown, and cards. Custom mode only, since a mirrored bar follows the
+   * desktop and carries nothing of its own.
    */
   menu?: MobileMenuEntry[];
   /**
    * The sheet's pinned footer, in the same shape as the desktop `footer`:
-   * a button strip, a card, or markdown. Custom mode only: it needs
-   * `items`. A custom bar inherits nothing, so without this it has no
-   * footer, while a mirrored bar always shows the desktop's.
+   * a button strip, a card, or markdown. Custom mode only. A custom bar
+   * inherits nothing, so without this it has no footer at all, while a
+   * mirrored bar always shows the desktop's.
    */
   footer?: FooterConfig;
   /** Screen edge the bar docks to. Default bottom. */

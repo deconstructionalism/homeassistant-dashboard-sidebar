@@ -5,6 +5,7 @@ import {
   FOOTER_FIELDS,
   TOP_FIELDS,
   MOBILE_FIELDS,
+  MOBILE_MODES,
 } from './schema.generated';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
@@ -312,6 +313,9 @@ const validateFooterButton = (btn: unknown, ctx: string, errors: string[]): void
 /** Keys allowed on the mobile config. */
 const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
 
+/** Accepted `mobile.mode` values. */
+const MOBILE_MODE_SET = new Set<string>(MOBILE_MODES);
+
 /**
  * Validates the mobile bar config: known keys, the inline entries of each
  * list, and the bar options.
@@ -327,14 +331,17 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   }
   unknownKeys(mobile, new Set([...MOBILE_KEYS, 'breakpoint']), 'mobile', errors);
 
-  const explicit = mobile.items !== undefined;
-  // A mirrored bar carries no content of its own; `menu` and `footer`
-  // describe a custom bar, so without `items` they would silently do nothing.
+  if (mobile.mode !== undefined && !MOBILE_MODE_SET.has(mobile.mode)) {
+    errors.push('mobile.mode: must be "mirror" or "custom"');
+  }
+  const explicit = mobile.mode === 'custom';
+  // A mirrored bar follows the desktop and carries no content of its own, so
+  // these keys would silently do nothing there.
   if (!explicit) {
-    for (const key of ['menu', 'footer'] as const) {
+    for (const key of ['items', 'menu', 'footer'] as const) {
       if (mobile[key] !== undefined) {
         errors.push(
-          `mobile.${key}: only applies to a custom bar; add \`items\` or remove it (a mirrored bar follows the desktop)`,
+          `mobile.${key}: not part of a mirrored bar; set \`mode: custom\` to spell the bar out, or remove it`,
         );
       }
     }
@@ -350,7 +357,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   checkString(mobile.background, 'mobile.background', errors);
   checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
 
-  if (explicit) {
+  if (explicit && mobile.items !== undefined) {
     if (!Array.isArray(mobile.items)) {
       errors.push('mobile.items: must be a list');
       return;

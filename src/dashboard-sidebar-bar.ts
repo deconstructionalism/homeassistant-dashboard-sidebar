@@ -6,7 +6,7 @@ import { runAction, type RunnableAction } from './lib/action';
 import { EDIT_EVENT } from './lib/const';
 import { applyCardMod } from './lib/card-mod';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
-import { mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
+import { barMode, mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
 import { barStyles } from './styles/bar';
 import type {
@@ -200,11 +200,10 @@ export class DashboardSidebarBar extends LitElement {
    * inherits nothing, which is why switching to custom copies the footer.
    */
   private _effectiveFooter(): FooterConfig | undefined {
-    const mobile = this._config?.mobile;
-    if (mobile?.footer !== undefined) {
-      return mobile.footer;
+    if (!this._config) {
+      return undefined;
     }
-    return mobile?.items === undefined ? this._config?.footer : undefined;
+    return barMode(this._config) === 'mirror' ? this._config.footer : this._config.mobile?.footer;
   }
 
   /** Whether the effective footer is a card or markdown footer. */

@@ -91,6 +91,7 @@ describe('resolveBar, sheet menu', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', title: 'Only', tap_action: TAP }],
         menu: [
           { type: 'markdown', content: 'x' },
@@ -110,6 +111,7 @@ describe('resolveBar, sheet menu', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', title: 'Rooms', tap_action: TAP }],
         menu: [{ type: 'markdown', content: 'x' }],
       },
@@ -125,6 +127,7 @@ describe('resolveBar, sheet footer strip', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', title: 'Only', tap_action: TAP }],
         footer: {
           buttons: [
@@ -145,6 +148,7 @@ describe('resolveBar, sheet footer strip', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [{ type: 'item', title: 'Rooms', tap_action: TAP }],
         footer: { buttons: [{ icon: 'mdi:lock', tap_action: TAP }] },
       },
@@ -156,7 +160,7 @@ describe('resolveBar, sheet footer strip', () => {
   it('a custom bar inherits no footer strip when it declares none', () => {
     const config = {
       ...base(),
-      mobile: { items: [{ type: 'item', title: 'Only', tap_action: TAP }] },
+      mobile: { mode: 'custom', items: [{ type: 'item', title: 'Only', tap_action: TAP }] },
     } as DashboardSidebarConfig;
     const { menu, footer } = resolveBar(config);
     expect(menu).toEqual([]);
@@ -186,6 +190,7 @@ describe('resolveBar, custom mode', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [
           { type: 'divider' },
           { type: 'clock' },
@@ -200,6 +205,7 @@ describe('resolveBar, custom mode', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [
           { title: 'Weather', icon: 'mdi:weather-cloudy', tap_action: TAP },
           { type: 'item', title: 'Extra', tap_action: TAP } as ItemBlock,
@@ -215,7 +221,7 @@ describe('resolveBar, custom mode', () => {
   });
 
   it('an empty items list yields an empty bar rather than mirroring', () => {
-    const config = { ...base(), mobile: { items: [] } } as DashboardSidebarConfig;
+    const config = { ...base(), mobile: { mode: 'custom', items: [] } } as DashboardSidebarConfig;
     const { slots, menu } = resolveBar(config);
     expect(slots).toEqual([]);
     expect(menu).toEqual([]);
@@ -225,6 +231,7 @@ describe('resolveBar, custom mode', () => {
     const config = {
       ...base(),
       mobile: {
+        mode: 'custom',
         items: [
           {
             type: 'category',
