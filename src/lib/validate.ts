@@ -328,6 +328,17 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   unknownKeys(mobile, new Set([...MOBILE_KEYS, 'breakpoint']), 'mobile', errors);
 
   const explicit = mobile.items !== undefined;
+  // A mirrored bar carries no content of its own; `menu` and `footer`
+  // describe a custom bar, so without `items` they would silently do nothing.
+  if (!explicit) {
+    for (const key of ['menu', 'footer'] as const) {
+      if (mobile[key] !== undefined) {
+        errors.push(
+          `mobile.${key}: only applies to a custom bar; add \`items\` or remove it (a mirrored bar follows the desktop)`,
+        );
+      }
+    }
+  }
 
   if ((mobile as Record<string, unknown>).breakpoint !== undefined) {
     errors.push('mobile.breakpoint: moved to the top-level `breakpoint` option');

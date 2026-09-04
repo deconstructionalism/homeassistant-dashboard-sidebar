@@ -435,6 +435,7 @@ describe('mobile config', () => {
   it('lets the sheet menu hold inline blocks of any kind', () => {
     const ok = validateConfig(
       withMobile({
+        items: [],
         menu: [
           { type: 'markdown', content: 'x' },
           { type: 'title', text: 'Hello' },
@@ -452,16 +453,23 @@ describe('mobile config', () => {
 
   it('takes the desktop footer shape: buttons, a card, or markdown', () => {
     const buttons = validateConfig(
-      withMobile({ footer: { buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] } }),
+      withMobile({
+        items: [],
+        footer: { buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] },
+      }),
     );
     expect(buttons.some((e) => e.includes('mobile.footer'))).toBe(false);
-    const markdown = validateConfig(withMobile({ footer: { markdown: 'hi', divider: false } }));
+    const markdown = validateConfig(
+      withMobile({ items: [], footer: { markdown: 'hi', divider: false } }),
+    );
     expect(markdown.some((e) => e.includes('mobile.footer'))).toBe(false);
     const card = validateConfig(
-      withMobile({ footer: { card: { type: 'markdown', content: 'x' } } }),
+      withMobile({ items: [], footer: { card: { type: 'markdown', content: 'x' } } }),
     );
     expect(card.some((e) => e.includes('mobile.footer'))).toBe(false);
-    const bad = validateConfig(withMobile({ footer: { buttons: [{ tap_action: 'nope' }] } }));
+    const bad = validateConfig(
+      withMobile({ items: [], footer: { buttons: [{ tap_action: 'nope' }] } }),
+    );
     expect(bad).toContain('mobile.footer.buttons[0]: needs an icon');
   });
 
@@ -521,7 +529,7 @@ describe('mobile config', () => {
   it('rejects a non-list items, menu, or footer', () => {
     expect(validateConfig(withMobile({ items: {} }))).toContain('mobile.items: must be a list');
     expect(validateConfig(withMobile({ menu: {} }))).toContain('mobile.menu: must be a list');
-    expect(validateConfig(withMobile({ footer: [] }))).toContain(
+    expect(validateConfig(withMobile({ items: [], footer: [] }))).toContain(
       'mobile.footer: must be a mapping',
     );
   });

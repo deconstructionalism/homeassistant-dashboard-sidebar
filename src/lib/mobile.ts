@@ -41,9 +41,9 @@ export interface ResolvedBar {
   slots: BarEntry[];
   /** Entries that always live behind the trailing dots menu (footer buttons). */
   menu: BarEntry[];
-  /** Curated sheet entries from `mobile.menu`, after the overflowed slots. */
+  /** Curated sheet entries from `mobile.menu`. Custom mode only. */
   extras: BarEntry[];
-  /** The button strip of `mobile.footer`; empty when unset or not buttons. */
+  /** The button strip of `mobile.footer`. Custom mode only. */
   footer: BarEntry[];
 }
 
@@ -81,12 +81,11 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
   if (!mobile) {
     return { slots: [], menu: [], extras: [], footer: [] };
   }
-  const extras = resolveCurated(mobile.menu);
-  const footer =
-    mobile.footer !== undefined ? resolveCurated(mobile.footer.buttons, 'button') : null;
 
   if (mobile.items === undefined) {
-    // Mirror mode: the desktop nav, in document order.
+    // Mirror mode: the desktop nav in document order, and the desktop footer
+    // behind the dots. A mirror carries no curated content of its own, so
+    // `menu` and `footer` are custom-mode only and are not read here.
     const slots: BarEntry[] = [];
     for (const block of [...(config.header ?? []), ...(config.body ?? [])]) {
       const type = block.type ?? 'item';
@@ -104,23 +103,24 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
         slots.push({ source: 'derived', kind: type as BarEntryKind, element: { ...block } });
       }
     }
-    // An explicit mobile.footer replaces the derived button strip outright.
-    const menu: BarEntry[] =
-      footer !== null
-        ? []
-        : (config.footer?.buttons ?? []).map((btn) => ({
-            source: 'derived' as const,
-            kind: 'button' as const,
-            element: { ...btn },
-          }));
-    return { slots, menu, extras, footer: footer ?? [] };
+    const menu: BarEntry[] = (config.footer?.buttons ?? []).map((btn) => ({
+      source: 'derived' as const,
+      kind: 'button' as const,
+      element: { ...btn },
+    }));
+    return { slots, menu, extras: [], footer: [] };
   }
 
-  // Custom mode: the items list is the whole bar.
+  // Custom mode: the mobile section is the whole bar and inherits nothing.
   const slots: BarEntry[] = mobile.items.map((entry) => ({
     source: 'inline' as const,
     kind: ((entry as SidebarBlock).type ?? 'item') as BarEntryKind,
     element: { ...entry },
   }));
-  return { slots, menu: [], extras, footer: footer ?? [] };
+  return {
+    slots,
+    menu: [],
+    extras: resolveCurated(mobile.menu),
+    footer: resolveCurated(mobile.footer?.buttons, 'button'),
+  };
 };

@@ -194,11 +194,17 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /**
-   * The footer the sheet renders: `mobile.footer` replaces the desktop one
-   * outright when set, so a custom bar carries its own.
+   * The footer the sheet renders. `mobile.footer` always wins. Failing that,
+   * a mirrored bar shows the desktop footer, while a custom bar shows none:
+   * an explicit `items` list means the bar is spelled out in full and
+   * inherits nothing, which is why switching to custom copies the footer.
    */
   private _effectiveFooter(): FooterConfig | undefined {
-    return this._config?.mobile?.footer ?? this._config?.footer;
+    const mobile = this._config?.mobile;
+    if (mobile?.footer !== undefined) {
+      return mobile.footer;
+    }
+    return mobile?.items === undefined ? this._config?.footer : undefined;
   }
 
   /** Whether the effective footer is a card or markdown footer. */

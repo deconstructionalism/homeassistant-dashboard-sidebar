@@ -91,6 +91,7 @@ describe('resolveBar, sheet menu', () => {
     const config = {
       ...base(),
       mobile: {
+        items: [{ type: 'item', title: 'Only', tap_action: TAP }],
         menu: [
           { type: 'markdown', content: 'x' },
           { type: 'category', title: 'Yard', items: [{ title: 'Plants', tap_action: TAP }] },
@@ -120,10 +121,11 @@ describe('resolveBar, sheet menu', () => {
 });
 
 describe('resolveBar, sheet footer strip', () => {
-  it('replaces the derived button strip in mirror mode', () => {
+  it('builds the strip from the custom footer buttons', () => {
     const config = {
       ...base(),
       mobile: {
+        items: [{ type: 'item', title: 'Only', tap_action: TAP }],
         footer: {
           buttons: [
             { icon: 'mdi:home', tap_action: TAP },
@@ -151,11 +153,31 @@ describe('resolveBar, sheet footer strip', () => {
     expect(footer.map((e) => e.kind)).toEqual(['button']);
   });
 
-  it('an empty footer list still replaces the derived strip', () => {
-    const config = { ...base(), mobile: { footer: {} } } as DashboardSidebarConfig;
+  it('a custom bar inherits no footer strip when it declares none', () => {
+    const config = {
+      ...base(),
+      mobile: { items: [{ type: 'item', title: 'Only', tap_action: TAP }] },
+    } as DashboardSidebarConfig;
     const { menu, footer } = resolveBar(config);
     expect(menu).toEqual([]);
     expect(footer).toEqual([]);
+  });
+
+  it('a mirrored bar ignores curated menu and footer entirely', () => {
+    // Validation rejects these keys without `items`; the resolver must not
+    // read them either, so a stale config cannot leak content into a mirror.
+    const config = {
+      ...base(),
+      mobile: {
+        menu: [{ type: 'title', text: 'Nope' }],
+        footer: { buttons: [{ icon: 'mdi:ghost', tap_action: TAP }] },
+      },
+    } as unknown as DashboardSidebarConfig;
+    const { extras, footer, menu } = resolveBar(config);
+    expect(extras).toEqual([]);
+    expect(footer).toEqual([]);
+    // The desktop footer button still rides behind the dots.
+    expect(menu.map((e) => e.kind)).toEqual(['button']);
   });
 });
 

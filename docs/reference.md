@@ -218,8 +218,8 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `items` | `MobileBarEntry[]` | no | The explicit bar: the inline items that make up the whole bar. |
-| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Applies in both mirror and custom mode. |
-| `footer` | `FooterConfig` | no | The sheet's pinned footer, in the same shape as the desktop `footer`: a button strip, a card, or markdown. When set it replaces the desktop footer entirely, so a custom bar can stand on its own. |
+| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Custom mode only: it needs `items`, since a mirrored bar follows the desktop and carries nothing of its own. |
+| `footer` | `FooterConfig` | no | The sheet's pinned footer, in the same shape as the desktop `footer`: a button strip, a card, or markdown. Custom mode only: it needs `items`. A custom bar inherits nothing, so without this it has no footer, while a mirrored bar always shows the desktop's. |
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |

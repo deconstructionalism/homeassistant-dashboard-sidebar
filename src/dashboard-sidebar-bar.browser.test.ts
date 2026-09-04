@@ -141,6 +141,7 @@ describe('<dashboard-sidebar-bar>', () => {
       const el = await mount({
         ...config,
         mobile: {
+          items: [{ type: 'item', title: 'Only', tap_action: TAP }],
           menu: [
             { type: 'title', text: 'Section' },
             { type: 'markdown', content: 'x' },
