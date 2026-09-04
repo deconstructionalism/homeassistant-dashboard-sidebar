@@ -277,9 +277,6 @@ export type MobileBarEntry = ItemBlock;
 /** One curated sheet-menu entry: an inline block of any kind. */
 export type MobileMenuEntry = SidebarBlock;
 
-/** One curated sheet-footer entry: an inline footer button. */
-export type MobileFooterEntry = FooterButtonConfig;
-
 /**
  * The mobile bar. Its presence hides the sidebar on narrow viewports and
  * renders a bottom bar instead. Without `items` the bar mirrors the desktop
@@ -296,11 +293,11 @@ export interface MobileConfig {
    */
   menu?: MobileMenuEntry[];
   /**
-   * The sheet's pinned footer strip: inline footer buttons, rendered as icon
-   * buttons. When set it replaces the strip derived from the desktop footer
-   * (and a card/markdown footer).
+   * The sheet's pinned footer, in the same shape as the desktop `footer`:
+   * a button strip, a card, or markdown. When set it replaces the desktop
+   * footer entirely, so a custom bar can stand on its own.
    */
-  footer?: MobileFooterEntry[];
+  footer?: FooterConfig;
   /** Screen edge the bar docks to. Default bottom. */
   position?: 'top' | 'bottom';
   /** Show element titles under the bar icons. Default false. */

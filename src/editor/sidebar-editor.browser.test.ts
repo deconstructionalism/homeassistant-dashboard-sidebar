@@ -129,13 +129,39 @@ describe('<dashboard-sidebar-editor>', () => {
     (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
     expect(saved?.mobile?.items?.length).to.equal(2);
     expect(saved?.mobile?.items?.[0]?.title).to.equal('A');
-    // The desktop footer buttons ride behind the dots in mirror mode, so the
-    // copy has to carry them across or switching silently loses them.
-    expect(saved?.mobile?.footer?.length, 'footer buttons copied').to.equal(1);
-    expect((saved?.mobile?.footer?.[0] as { icon?: string })?.icon).to.equal('mdi:cog');
+    // The desktop footer comes across whole, so a custom bar stands alone.
+    expect(saved?.mobile?.footer?.buttons?.length, 'footer buttons copied').to.equal(1);
+    expect(saved?.mobile?.footer?.buttons?.[0]?.icon).to.equal('mdi:cog');
   });
 
-  it('leaves the footer unset when the desktop has no footer buttons', async () => {
+  it('copies a card or markdown desktop footer too, not just buttons', async () => {
+    const md = { ...cfg(), footer: { markdown: 'Hi **there**', markdown_color: 'red' } };
+    const el = await mount({ ...md, mobile: {} });
+    await tab(el, 'Mobile Bar');
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
+    };
+    (root(el).querySelector('.tab-notes .tool') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        /Switch To Custom Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
+        /Copy Desktop Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await settle(el);
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.mobile?.footer?.markdown).to.equal('Hi **there**');
+    expect(saved?.mobile?.footer?.markdown_color).to.equal('red');
+  });
+
+  it('leaves the footer unset when the desktop has no footer at all', async () => {
     const bare = { ...cfg() };
     delete (bare as { footer?: unknown }).footer;
     const el = await mount({ ...bare, mobile: {} });

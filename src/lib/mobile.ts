@@ -43,7 +43,7 @@ export interface ResolvedBar {
   menu: BarEntry[];
   /** Curated sheet entries from `mobile.menu`, after the overflowed slots. */
   extras: BarEntry[];
-  /** The curated sheet footer strip from `mobile.footer`; empty when unset. */
+  /** The button strip of `mobile.footer`; empty when unset or not buttons. */
   footer: BarEntry[];
 }
 
@@ -82,7 +82,8 @@ export const resolveBar = (config: DashboardSidebarConfig): ResolvedBar => {
     return { slots: [], menu: [], extras: [], footer: [] };
   }
   const extras = resolveCurated(mobile.menu);
-  const footer = mobile.footer !== undefined ? resolveCurated(mobile.footer, 'button') : null;
+  const footer =
+    mobile.footer !== undefined ? resolveCurated(mobile.footer.buttons, 'button') : null;
 
   if (mobile.items === undefined) {
     // Mirror mode: the desktop nav, in document order.

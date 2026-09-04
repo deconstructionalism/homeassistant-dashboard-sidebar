@@ -171,10 +171,12 @@ describe('<dashboard-sidebar-bar>', () => {
       ...base(),
       mobile: {
         items: [{ type: 'item', title: 'Rooms', icon: 'mdi:home', tap_action: TAP }],
-        footer: [
-          { icon: 'mdi:lock', tap_action: TAP },
-          { icon: 'mdi:weather-rainy', title: 'Weather', tap_action: TAP },
-        ],
+        footer: {
+          buttons: [
+            { icon: 'mdi:lock', tap_action: TAP },
+            { icon: 'mdi:weather-rainy', title: 'Weather', tap_action: TAP },
+          ],
+        },
       },
     });
     const dots = root(el).querySelector(

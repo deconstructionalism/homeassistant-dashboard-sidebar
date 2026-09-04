@@ -373,7 +373,7 @@ describe('element ids', () => {
       mobile: {
         items: [{ type: 'item', id: 'x', title: 'X', tap_action: TAP }],
         menu: [{ type: 'title', id: 'y', text: 'Y' }],
-        footer: [{ icon: 'mdi:lock', id: 'z', tap_action: TAP }],
+        footer: { buttons: [{ icon: 'mdi:lock', id: 'z', tap_action: TAP }] },
       },
     } as unknown as DashboardSidebarConfig);
     expect(errors).toEqual([]);
@@ -450,14 +450,19 @@ describe('mobile config', () => {
     expect(errors).toContain('mobile.menu[0]: title needs text');
   });
 
-  it('restricts the sheet footer strip to inline footer buttons', () => {
-    const ok = validateConfig(
-      withMobile({ footer: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] }),
+  it('takes the desktop footer shape: buttons, a card, or markdown', () => {
+    const buttons = validateConfig(
+      withMobile({ footer: { buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] } }),
     );
-    expect(ok.some((e) => e.includes('mobile.footer'))).toBe(false);
-    const errors = validateConfig(withMobile({ footer: [{ type: 'markdown', content: 'x' }] }));
-    expect(errors).toContain('mobile.footer[0]: needs an icon');
-    expect(errors).toContain('mobile.footer[0]: unknown option "type"');
+    expect(buttons.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const markdown = validateConfig(withMobile({ footer: { markdown: 'hi', divider: false } }));
+    expect(markdown.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const card = validateConfig(
+      withMobile({ footer: { card: { type: 'markdown', content: 'x' } } }),
+    );
+    expect(card.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const bad = validateConfig(withMobile({ footer: { buttons: [{ tap_action: 'nope' }] } }));
+    expect(bad).toContain('mobile.footer.buttons[0]: needs an icon');
   });
 
   it('validates the top-level breakpoint', () => {
@@ -516,7 +521,9 @@ describe('mobile config', () => {
   it('rejects a non-list items, menu, or footer', () => {
     expect(validateConfig(withMobile({ items: {} }))).toContain('mobile.items: must be a list');
     expect(validateConfig(withMobile({ menu: {} }))).toContain('mobile.menu: must be a list');
-    expect(validateConfig(withMobile({ footer: {} }))).toContain('mobile.footer: must be a list');
+    expect(validateConfig(withMobile({ footer: [] }))).toContain(
+      'mobile.footer: must be a mapping',
+    );
   });
 
   it('checks the bar options', () => {

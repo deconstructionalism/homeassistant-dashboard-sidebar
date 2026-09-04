@@ -13,6 +13,7 @@ import type {
   CategoryBlock,
   DashboardSidebarConfig,
   FooterButtonConfig,
+  FooterConfig,
   ItemBlock,
   SidebarBlock,
 } from './lib/types';
@@ -192,9 +193,17 @@ export class DashboardSidebarBar extends LitElement {
     void this._buildCards();
   }
 
-  /** Whether the desktop footer is a card or markdown footer. */
+  /**
+   * The footer the sheet renders: `mobile.footer` replaces the desktop one
+   * outright when set, so a custom bar carries its own.
+   */
+  private _effectiveFooter(): FooterConfig | undefined {
+    return this._config?.mobile?.footer ?? this._config?.footer;
+  }
+
+  /** Whether the effective footer is a card or markdown footer. */
   private _footerHasContent(): boolean {
-    const footer = this._config?.footer;
+    const footer = this._effectiveFooter();
     return footer !== undefined && (footer.card !== undefined || footer.markdown !== undefined);
   }
 
@@ -204,7 +213,7 @@ export class DashboardSidebarBar extends LitElement {
    * the desktop sidebar's card pipeline.
    */
   private async _buildCards(): Promise<void> {
-    const footer = this._config?.footer;
+    const footer = this._effectiveFooter();
     const extraSpecs = new Map<number, unknown>();
     this._resolved.extras.forEach((entry, i) => {
       if (entry.kind === 'card') {
@@ -670,7 +679,7 @@ export class DashboardSidebarBar extends LitElement {
    * footer's chrome-less treatment, markdown color, and tap action.
    */
   private _renderSheetFooterContent(): TemplateResult | typeof nothing {
-    const footer = this._config?.footer;
+    const footer = this._effectiveFooter();
     const el = this._footerCard;
     if (!footer || !el) {
       return nothing;
@@ -818,7 +827,7 @@ export class DashboardSidebarBar extends LitElement {
             ? html`
                 <div
                   class="dashboard-sidebar-bar-sheet-footer ${
-                    this._config?.footer?.divider === false ? 'no-divider' : ''
+                    this._effectiveFooter()?.divider === false ? 'no-divider' : ''
                   }"
                 >
                   ${

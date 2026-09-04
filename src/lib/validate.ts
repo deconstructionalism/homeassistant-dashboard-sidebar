@@ -258,7 +258,7 @@ const validateFooter = (footer: unknown, ctx: string, errors: string[]): void =>
   if (footer === undefined) {
     return;
   }
-  if (!footer || typeof footer !== 'object') {
+  if (!footer || typeof footer !== 'object' || Array.isArray(footer)) {
     errors.push(`${ctx}: must be a mapping`);
     return;
   }
@@ -364,18 +364,9 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
   }
 
   if (mobile.footer !== undefined) {
-    if (!Array.isArray(mobile.footer)) {
-      errors.push('mobile.footer: must be a list');
-      return;
-    }
-    mobile.footer.forEach((entry, i) => {
-      const ctx = `mobile.footer[${i}]`;
-      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-        errors.push(`${ctx}: must be a mapping`);
-        return;
-      }
-      validateFooterButton(entry, ctx, errors);
-    });
+    // The mobile footer is the desktop footer's shape, so it validates the
+    // same way: a button strip, a card, or markdown.
+    validateFooter(mobile.footer, 'mobile.footer', errors);
   }
 
   if (mobile.menu !== undefined) {

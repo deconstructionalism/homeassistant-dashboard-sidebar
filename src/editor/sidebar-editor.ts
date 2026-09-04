@@ -11,7 +11,6 @@ import type {
   FooterButtonConfig,
   ItemBlock,
   MobileBarEntry,
-  MobileFooterEntry,
   Region,
   SidebarBlock,
 } from '../lib/types';
@@ -1643,14 +1642,10 @@ export class DashboardSidebarEditor extends LitElement {
     // there are no references, so the elements are cloned outright.
     const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, items: undefined } });
     const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
-    // The mirrored bar also puts the desktop footer buttons behind the dots.
-    // A custom bar derives nothing, so those have to be copied across or the
-    // switch silently loses them. A card or markdown footer still renders
-    // from the desktop config, so leave `footer` unset in that case.
-    const buttons = mirrored.menu.filter((entry) => entry.kind === 'button');
-    const footer = buttons.length
-      ? buttons.map((entry) => structuredClone(entry.element) as MobileFooterEntry)
-      : undefined;
+    // A custom bar derives nothing, so the desktop footer has to come across
+    // whole or the switch silently loses it. It copies in every shape it
+    // takes: a button strip, a card, or markdown.
+    const footer = this._working.footer ? structuredClone(this._working.footer) : undefined;
     this._patchMobile({ items, footer });
     this._confirmingCustomSwitch = false;
   }

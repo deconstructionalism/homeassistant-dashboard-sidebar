@@ -124,10 +124,12 @@ describe('resolveBar, sheet footer strip', () => {
     const config = {
       ...base(),
       mobile: {
-        footer: [
-          { icon: 'mdi:home', tap_action: TAP },
-          { icon: 'mdi:lock-open', tap_action: TAP },
-        ],
+        footer: {
+          buttons: [
+            { icon: 'mdi:home', tap_action: TAP },
+            { icon: 'mdi:lock-open', tap_action: TAP },
+          ],
+        },
       },
     } as DashboardSidebarConfig;
     const { menu, footer } = resolveBar(config);
@@ -142,7 +144,7 @@ describe('resolveBar, sheet footer strip', () => {
       ...base(),
       mobile: {
         items: [{ type: 'item', title: 'Rooms', tap_action: TAP }],
-        footer: [{ icon: 'mdi:lock', tap_action: TAP }],
+        footer: { buttons: [{ icon: 'mdi:lock', tap_action: TAP }] },
       },
     } as DashboardSidebarConfig;
     const { footer } = resolveBar(config);
@@ -150,7 +152,7 @@ describe('resolveBar, sheet footer strip', () => {
   });
 
   it('an empty footer list still replaces the derived strip', () => {
-    const config = { ...base(), mobile: { footer: [] } } as DashboardSidebarConfig;
+    const config = { ...base(), mobile: { footer: {} } } as DashboardSidebarConfig;
     const { menu, footer } = resolveBar(config);
     expect(menu).toEqual([]);
     expect(footer).toEqual([]);
