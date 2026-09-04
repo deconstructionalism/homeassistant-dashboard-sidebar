@@ -28,6 +28,28 @@ downloads it and makes it load on every dashboard.
     **Settings > Dashboards > (⋮) > Resources**, add
     `/local/dashboard-sidebar-card.js`, and set the type to **JavaScript Module**.
 
+## Upgrading from 1.x
+
+Version 2.0 removes one option. If your config sets `hide_on_mobile`, the
+sidebar reports:
+
+```
+hide_on_mobile: replaced by `on_mobile: hidden`
+```
+
+Change that one line and you are done:
+
+```yaml
+dashboard_sidebar:
+  # hide_on_mobile: true     ← 1.x
+  on_mobile: hidden          # 2.0
+```
+
+`on_mobile` also accepts `sidebar` (the default) and `bar`, which turns on the
+[mobile bar](mobile.md). There is a matching `on_desktop`, and a `breakpoint`
+that sets where "narrow" begins. Nothing else changed: every element option,
+including the `class` and `id` styling hooks, works as it did in 1.x.
+
 ## Add a sidebar to a dashboard
 
 The sidebar is configured **per dashboard** (it lives in that dashboard's
@@ -109,11 +131,13 @@ The starter is built from your instance so you have something real to edit:
 ## Editing
 
 Click the **pencil** on the sidebar (in dashboard edit mode) to open the editor
-modal. It has four tabs (**Settings**, **Header**, **Body**, **Footer**), each
-named for the config key it edits, and each with a **live preview** on the right
-that mirrors the real sidebar. Select any element in the preview to edit it, drag
-to reorder, and use each tab's **⋯** menu to switch between the UI form and raw
-**YAML** editing.
+modal. It has five tabs (**Settings**, **Header**, **Body**, **Footer**, and
+**Mobile Bar**), each named for the config key it edits, and each with a **live
+preview** on the right that mirrors the real sidebar. Select any element in the
+preview to edit it, drag to reorder, and use each tab's **⋯** menu to switch
+between the UI form and raw **YAML** editing. The
+[Mobile Bar](mobile.md) tab is the exception: its custom mode is edited as YAML
+against a read-only preview.
 
 Everything is saved back into the dashboard's Lovelace config; nothing is stored
 outside it.

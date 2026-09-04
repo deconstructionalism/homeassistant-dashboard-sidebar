@@ -90,5 +90,7 @@ export const defaultFooterButton = (): FooterButtonConfig => {
  * Creates a starter sidebar config for a newly added side.
  */
 export const starterSidebar = (): DashboardSidebarConfig => {
-  return { body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION }] };
+  return {
+    body: [{ type: 'item', title: 'Item', tap_action: NO_ACTION }],
+  };
 };

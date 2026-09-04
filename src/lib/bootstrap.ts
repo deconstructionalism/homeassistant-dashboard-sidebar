@@ -5,8 +5,10 @@ import {
   EDIT_EVENT,
   TOGGLE_EVENT,
 } from './const';
+import { desktopMode, mobileMode } from './mobile';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
+import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
 import type { DashboardSidebarEditor } from '../editor/sidebar-editor';
 
 /** DOM id of the flex wrapper that holds the sidebar host and the view. */
@@ -180,7 +182,9 @@ const structureKey = (config: DashboardSidebarConfig): string => {
   return [
     config.position ?? 'left',
     config.width ?? DEFAULT_WIDTH,
-    config.hide_on_mobile ? 1 : 0,
+    desktopMode(config),
+    mobileMode(config),
+    config.breakpoint ?? 768,
     config.overlay ? 1 : 0,
   ].join(':');
 };
@@ -247,10 +251,26 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
       min-width: 0;
     }
     ${
-      config.hide_on_mobile
-        ? `@media (max-width: 768px) {
+      desktopMode(config) === 'hidden'
+        ? `@media (min-width: ${(config.breakpoint ?? 768) + 1}px) {
              #${HOST_ID} { display: none; }
              #${WRAPPER_ID} > #view { flex-basis: 100%; }
+           }`
+        : ''
+    }
+    ${
+      mobileMode(config) !== 'sidebar'
+        ? `@media (max-width: ${config.breakpoint ?? 768}px) {
+             #${HOST_ID} { display: none; }
+             #${WRAPPER_ID} > #view { flex-basis: 100%; }
+           }`
+        : ''
+    }
+    ${
+      mobileMode(config) === 'bar'
+        ? `dashboard-sidebar-bar { display: none; }
+           @media (max-width: ${config.breakpoint ?? 768}px) {
+             dashboard-sidebar-bar { display: block; }
            }`
         : ''
     }
@@ -310,6 +330,14 @@ const buildSidebar = (): void => {
   } else {
     wrapper.appendChild(host);
     wrapper.appendChild(view);
+  }
+
+  if (mobileMode(config) === 'bar') {
+    const bar = document.createElement('dashboard-sidebar-bar') as DashboardSidebarBar;
+    bar.editMode = isEditMode(huiRoot);
+    bar.hass = getHass();
+    bar.setConfig(config);
+    wrapper.appendChild(bar);
   }
 
   wrapper.addEventListener(TOGGLE_EVENT, (ev: Event) => {
@@ -414,12 +442,14 @@ const ensureSidebar = (): void => {
     removeAddButton(shadow);
     const element = wrapper.querySelector('dashboard-sidebar') as DashboardSidebar | null;
 
+    const bar = wrapper.querySelector('dashboard-sidebar-bar') as DashboardSidebarBar | null;
     if (wrapper.dataset.cfg !== JSON.stringify(config ?? null)) {
       const sameStructure = Boolean(
         config && element && wrapper.dataset.struct === structureKey(config),
       );
       if (config && sameStructure && element) {
         element.setConfig(config);
+        bar?.setConfig(config);
         wrapper.dataset.cfg = JSON.stringify(config);
       } else {
         teardown(shadow);
@@ -431,6 +461,10 @@ const ensureSidebar = (): void => {
     const host = shadow.getElementById(HOST_ID);
     if (host) {
       applyHeaderOffset(shadow, host);
+    }
+    if (bar) {
+      bar.editMode = editMode;
+      bar.hass = getHass();
     }
     if (element) {
       element.editMode = editMode;

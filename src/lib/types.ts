@@ -271,6 +271,57 @@ export interface FooterConfig {
   double_tap_action?: ActionConfig;
 }
 
+/** How the mobile bar gets its content. */
+export type MobileMode = 'mirror' | 'custom';
+
+/** An explicit bar entry: an inline item. */
+export type MobileBarEntry = ItemBlock;
+
+/** One curated sheet-menu entry: an inline block of any kind. */
+export type MobileMenuEntry = SidebarBlock;
+
+/**
+ * The mobile bar. Its presence hides the sidebar on narrow viewports and
+ * renders a bottom bar instead. `mode` picks where its content comes from:
+ * `mirror` follows the desktop nav and footer, `custom` uses the `items`,
+ * `menu` and `footer` spelled out here and inherits nothing.
+ */
+export interface MobileConfig {
+  /**
+   * Whether the bar mirrors the desktop nav or is spelled out here. Default
+   * mirror. A mirrored bar follows the desktop and takes no content of its
+   * own, so `items`, `menu` and `footer` belong to `custom` only.
+   */
+  mode?: MobileMode;
+  /** The bar itself, as inline elements. Custom mode only. */
+  items?: MobileBarEntry[];
+  /**
+   * Curated entries of the dots-menu sheet, shown between any overflowed
+   * slots and the footer. Any kind of block is allowed, including titles,
+   * markdown, and cards. Custom mode only, since a mirrored bar follows the
+   * desktop and carries nothing of its own.
+   */
+  menu?: MobileMenuEntry[];
+  /**
+   * The sheet's pinned footer, in the same shape as the desktop `footer`:
+   * a button strip, a card, or markdown. Custom mode only. A custom bar
+   * inherits nothing, so without this it has no footer at all, while a
+   * mirrored bar always shows the desktop's.
+   */
+  footer?: FooterConfig;
+  /** Screen edge the bar docks to. Default bottom. */
+  position?: 'top' | 'bottom';
+  /** Show element titles under the bar icons. Default false. */
+  labels?: boolean;
+  /**
+   * Bar background: any CSS `background` value. Defaults to the sidebar's
+   * `background`, and through it to the theme card background.
+   */
+  background?: string;
+  /** Passed to the card-mod integration to style the bar. */
+  card_mod?: Record<string, unknown>;
+}
+
 /** The full configuration read from the Lovelace `dashboard_sidebar` key. */
 export interface DashboardSidebarConfig {
   /** Edge the sidebar docks to. Default left. */
@@ -284,8 +335,18 @@ export interface DashboardSidebarConfig {
    * aside. Default false (push): the view narrows by the sidebar's width.
    */
   overlay?: boolean;
-  /** Hide the sidebar on narrow (mobile) viewports. */
-  hide_on_mobile?: boolean;
+  /** What renders on wide (desktop) viewports. Default sidebar. */
+  on_desktop?: 'sidebar' | 'hidden';
+  /**
+   * What renders on narrow (mobile) viewports: the sidebar, the mobile bar,
+   * or nothing. Defaults to bar when a `mobile` section exists, else sidebar.
+   */
+  on_mobile?: 'sidebar' | 'bar' | 'hidden';
+  /**
+   * Viewport width in pixels at and below which "mobile" applies (the bar,
+   * on_mobile, on_desktop). Default 768.
+   */
+  breakpoint?: number;
   /**
    * Sidebar background: any CSS `background` value (color, gradient, image, …),
    * applied as the `background` shorthand. Defaults to the theme card background.
@@ -297,6 +358,8 @@ export interface DashboardSidebarConfig {
   body?: SidebarBlock[];
   /** The bottom bar configuration. */
   footer?: FooterConfig;
+  /** The mobile bar configuration. */
+  mobile?: MobileConfig;
   /**
    * Passed to the card-mod integration (when installed) to style the sidebar.
    * Target the dashboard-sidebar-* classes on the rendered elements.

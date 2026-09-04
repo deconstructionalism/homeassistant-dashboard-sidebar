@@ -4,6 +4,8 @@ import {
   FOOTER_BUTTON_FIELDS,
   FOOTER_FIELDS,
   TOP_FIELDS,
+  MOBILE_FIELDS,
+  MOBILE_MODES,
 } from './schema.generated';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
@@ -101,6 +103,8 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
 
 /**
  * Validates the optional card-mod hooks (`class`, `id`, and `card_mod`).
+ * `id` is a pure CSS-targeting hook: nothing reads it back, and it is
+ * neither required nor checked for uniqueness.
  */
 const checkHooks = (block: unknown, ctx: string, errors: string[]): void => {
   const b = block as { class?: unknown; id?: unknown; card_mod?: unknown };
@@ -255,7 +259,7 @@ const validateFooter = (footer: unknown, ctx: string, errors: string[]): void =>
   if (footer === undefined) {
     return;
   }
-  if (!footer || typeof footer !== 'object') {
+  if (!footer || typeof footer !== 'object' || Array.isArray(footer)) {
     errors.push(`${ctx}: must be a mapping`);
     return;
   }
@@ -306,6 +310,104 @@ const validateFooterButton = (btn: unknown, ctx: string, errors: string[]): void
   );
 };
 
+/** Keys allowed on the mobile config. */
+const MOBILE_KEYS = new Set<string>(MOBILE_FIELDS);
+
+/** Accepted `mobile.mode` values. */
+const MOBILE_MODE_SET = new Set<string>(MOBILE_MODES);
+
+/**
+ * Validates the mobile bar config: known keys, the inline entries of each
+ * list, and the bar options.
+ */
+const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void => {
+  const mobile = config.mobile;
+  if (mobile === undefined) {
+    return;
+  }
+  if (!mobile || typeof mobile !== 'object' || Array.isArray(mobile)) {
+    errors.push('mobile: must be a mapping');
+    return;
+  }
+  unknownKeys(mobile, new Set([...MOBILE_KEYS, 'breakpoint']), 'mobile', errors);
+
+  if (mobile.mode !== undefined && !MOBILE_MODE_SET.has(mobile.mode)) {
+    errors.push('mobile.mode: must be "mirror" or "custom"');
+  }
+  const explicit = mobile.mode === 'custom';
+  // A mirrored bar follows the desktop and carries no content of its own, so
+  // these keys would silently do nothing there.
+  if (!explicit) {
+    for (const key of ['items', 'menu', 'footer'] as const) {
+      if (mobile[key] !== undefined) {
+        errors.push(
+          `mobile.${key}: not part of a mirrored bar; set \`mode: custom\` to spell the bar out, or remove it`,
+        );
+      }
+    }
+  }
+
+  if ((mobile as Record<string, unknown>).breakpoint !== undefined) {
+    errors.push('mobile.breakpoint: moved to the top-level `breakpoint` option');
+  }
+  checkBool(mobile.labels, 'mobile.labels', errors);
+  if (mobile.position !== undefined && mobile.position !== 'top' && mobile.position !== 'bottom') {
+    errors.push('mobile.position: must be "top" or "bottom"');
+  }
+  checkString(mobile.background, 'mobile.background', errors);
+  checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
+
+  if (explicit && mobile.items !== undefined) {
+    if (!Array.isArray(mobile.items)) {
+      errors.push('mobile.items: must be a list');
+      return;
+    }
+    mobile.items.forEach((entry, i) => {
+      const ctx = `mobile.items[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${ctx}: must be a mapping`);
+        return;
+      }
+      const type = (entry as SidebarBlock).type;
+      if (type === undefined || type === 'item') {
+        validateItem(entry as ItemBlock, ctx, errors);
+      } else if (['category', 'divider', 'clock', 'date'].includes(type)) {
+        validateBlock(entry as SidebarBlock, ctx, errors);
+      } else {
+        errors.push(
+          `${ctx}: type "${type}" is not bar-eligible (items, categories, dividers, clocks, dates)`,
+        );
+      }
+    });
+  }
+
+  if (mobile.footer !== undefined) {
+    // The mobile footer is the desktop footer's shape, so it validates the
+    // same way: a button strip, a card, or markdown.
+    validateFooter(mobile.footer, 'mobile.footer', errors);
+  }
+
+  if (mobile.menu !== undefined) {
+    if (!Array.isArray(mobile.menu)) {
+      errors.push('mobile.menu: must be a list');
+      return;
+    }
+    mobile.menu.forEach((entry, i) => {
+      const ctx = `mobile.menu[${i}]`;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        errors.push(`${ctx}: must be a mapping`);
+        return;
+      }
+      const type = (entry as SidebarBlock).type;
+      if (type === undefined || type === 'item') {
+        validateItem(entry as ItemBlock, ctx, errors);
+      } else {
+        validateBlock(entry as SidebarBlock, ctx, errors);
+      }
+    });
+  }
+};
+
 /**
  * Validates a full sidebar config and returns every problem found, so the
  * element can surface them all at once. The list is empty when valid.
@@ -316,7 +418,14 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     return ['dashboard_sidebar: config must be a mapping'];
   }
   const c = config as unknown as Record<string, unknown>;
-  unknownKeys(config, TOP_KEYS, 'dashboard_sidebar', errors);
+  // Legacy hide keys get a targeted migration message instead of the generic
+  // unknown-option error.
+  unknownKeys(
+    config,
+    new Set([...TOP_KEYS, 'hide_on_mobile', 'hide_on_desktop']),
+    'dashboard_sidebar',
+    errors,
+  );
   if (config.position !== undefined && config.position !== 'left' && config.position !== 'right') {
     errors.push('position: must be "left" or "right"');
   }
@@ -325,7 +434,39 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   }
   checkBool(c.start_collapsed, 'start_collapsed', errors);
   checkBool(c.overlay, 'overlay', errors);
-  checkBool(c.hide_on_mobile, 'hide_on_mobile', errors);
+  if (
+    config.on_desktop !== undefined &&
+    config.on_desktop !== 'sidebar' &&
+    config.on_desktop !== 'hidden'
+  ) {
+    errors.push('on_desktop: must be "sidebar" or "hidden"');
+  }
+  if (
+    config.on_mobile !== undefined &&
+    config.on_mobile !== 'sidebar' &&
+    config.on_mobile !== 'bar' &&
+    config.on_mobile !== 'hidden'
+  ) {
+    errors.push('on_mobile: must be "sidebar", "bar", or "hidden"');
+  }
+  if (config.mobile !== undefined && config.on_mobile !== undefined && config.on_mobile !== 'bar') {
+    errors.push('on_mobile: a `mobile` bar config is only used when on_mobile is "bar"');
+  }
+  if (config.on_desktop === 'hidden' && config.on_mobile === 'hidden') {
+    errors.push('on_desktop: hidden on desktop and mobile means nothing would ever render');
+  }
+  if (
+    config.breakpoint !== undefined &&
+    (typeof config.breakpoint !== 'number' || config.breakpoint <= 0)
+  ) {
+    errors.push('breakpoint: must be a positive number of pixels');
+  }
+  if (c.hide_on_mobile !== undefined) {
+    errors.push('hide_on_mobile: replaced by `on_mobile: hidden`');
+  }
+  if (c.hide_on_desktop !== undefined) {
+    errors.push('hide_on_desktop: replaced by `on_desktop: hidden`');
+  }
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);
   validateRegion(config.body, 'body', errors);
@@ -333,6 +474,7 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
     errors.push('dashboard_sidebar: needs a header or body with at least one block');
   }
   validateFooter(config.footer, 'footer', errors);
+  validateMobile(config, errors);
   return errors;
 };
 

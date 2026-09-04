@@ -20,6 +20,41 @@ export const renderGhost = (fade: 'up' | 'down'): TemplateResult => {
 };
 
 /**
+ * Faded skeleton cards standing in for dashboard content beside the mobile
+ * bar: a two-column grid of cards with icon and text-line innards, fading
+ * away from the bar's edge.
+ */
+export const renderGhostCards = (fade: 'up' | 'down'): TemplateResult => {
+  return html`
+    <div class="pv-ghost-cards fade-${fade}">
+      <div class="ghost-card">
+        <div class="ghost-subgrid">
+          <span class="ghost-sub" style="height: 36px"></span>
+          <span class="ghost-sub" style="height: 36px"></span>
+          <span class="ghost-sub" style="height: 36px"></span>
+          <span class="ghost-sub" style="height: 36px"></span>
+        </div>
+        <span class="ghost-sub ghost-sub-fill"></span>
+      </div>
+      <div class="ghost-card">
+        <span class="ghost-sub" style="height: 30px"></span>
+        <span class="ghost-sub" style="height: 30px"></span>
+        <span class="ghost-sub" style="height: 30px"></span>
+      </div>
+      <div class="ghost-card wide">
+        <div class="ghost-subrow">
+          <span class="ghost-sub" style="height: 44px"></span>
+          <span class="ghost-sub" style="height: 44px"></span>
+          <span class="ghost-sub" style="height: 44px"></span>
+          <span class="ghost-sub" style="height: 44px"></span>
+        </div>
+        <span class="ghost-sub ghost-sub-fill"></span>
+      </div>
+    </div>
+  `;
+};
+
+/**
  * The borderless empty state for a region with no elements: a short prompt and
  * the given add control.
  */

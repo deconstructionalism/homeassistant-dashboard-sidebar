@@ -101,6 +101,12 @@ export const editorStyles = css`
     opacity: 0.7;
   }
 
+  .tab:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: auto;
+  }
+
   .tab.active {
     background-color: var(--primary-background-color, #fff);
     background-image: linear-gradient(
@@ -325,6 +331,291 @@ export const editorStyles = css`
     scrollbar-width: none;
   }
 
+  /* The mobile tab stacks the form above the preview: the bar is a
+     horizontal strip, so it gets the modal's full width below the controls,
+     capped at the breakpoint and drag-narrowable from there. */
+  .mobile-stack {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+
+    /* Reserve the gutter permanently: a scrollbar that appears and vanishes
+       as the sheet refolds would oscillate the measured available width
+       against the fold in a ResizeObserver loop. */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--divider-color, rgb(0 0 0 / 30%)) transparent;
+  }
+
+  .mobile-stack .editor {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .mobile-stack .preview {
+    flex: 0 0 auto;
+  }
+
+  /* The mobile tab's preview label scrolls with the content; the shared
+     sticky treatment only causes the frame to slide underneath it here. */
+  .mobile-stack .preview-head {
+    position: static;
+    background: none;
+  }
+
+  /* The tab-note row's overflow trigger hugs the right edge. */
+  .tab-notes .tab-notes-tool {
+    margin-left: auto;
+  }
+
+  .mobile-pv-hint {
+    display: block;
+    margin-top: 6px;
+  }
+
+  /* The heading lives on the stack itself so it sticks for the whole tab
+     scroll, above the preview chrome. */
+  .mobile-stack .form-head {
+    flex: 0 0 auto;
+    z-index: 6;
+
+    /* Match the Settings heading's height, whose dots button sets a 29px
+       content row that the title centers in. */
+    min-height: 29px;
+  }
+
+  /* Position's two buttons share a fixed width sized to "Bottom". */
+  .mobile-position .icon-choice .choice {
+    width: 96px;
+    box-sizing: border-box;
+  }
+
+  .add-menu-header {
+    padding: 8px 12px 4px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+
+  .add-menu-header:not(:first-child) {
+    margin-top: 4px;
+    border-top: 1px solid var(--divider-color, rgb(0 0 0 / 12%));
+  }
+
+  .mobile-pv-wrap {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 0;
+    /* Room for the drag arrow + caption floating above the bar. */
+    margin-top: 24px;
+  }
+
+  /* The resize handle rides the frame's right edge as a thin rail with the
+     direction arrows at its top; being absolute it takes no layout width. */
+  .mobile-pv-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    width: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    transform: translateX(-50%);
+    color: var(--secondary-text-color, #888);
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .mobile-pv-handle::before {
+    content: '';
+    position: absolute;
+
+    /* Reach up through the caption row so the rail visually attaches to the
+       drag arrow. */
+    top: -24px;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: currentcolor;
+    opacity: 0.6;
+    transform: translateX(-50%);
+  }
+
+  /* The direction arrows float above the bar, centered on the rail: both
+     sides mid-drag, only the available side at the extremes. The caption
+     hangs to their right. All share the handle's drag behavior. */
+  .mobile-pv-arrows {
+    position: absolute;
+    top: -23px;
+    left: 50%;
+    z-index: 1;
+    display: flex;
+    height: 14px;
+    align-items: center;
+  }
+
+  .mobile-pv-arrows ha-icon {
+    --mdc-icon-size: 14px;
+
+    display: flex;
+
+    /* Match the rail, which draws at 60% of the same color. */
+    opacity: 0.6;
+  }
+
+  .mobile-pv-arrows.mid {
+    transform: translateX(-50%);
+    gap: 0;
+  }
+
+  /* At full width only shrinking (leftward) remains; at minimum only
+     expanding (rightward). The lone arrow sits on the side it points to. */
+  .mobile-pv-arrows.max {
+    transform: translateX(-100%);
+  }
+
+  .mobile-pv-arrows.min {
+    margin-left: 0;
+  }
+
+  /* The width caption sits at the frame's left edge, above the bar. */
+  .mobile-pv-caption {
+    position: absolute;
+    top: -23px;
+    left: 0;
+    z-index: 1;
+    line-height: 14px;
+    white-space: nowrap;
+  }
+
+  .mobile-pv-handle:hover {
+    color: var(--primary-text-color, #000);
+  }
+
+  .mobile-pv-frame {
+    /* Pin to the inline width: the base pv-frame flex-grow would otherwise
+       stretch the frame to the wrap and defeat the drag handle. The ghost
+       strip is a backdrop layer and min-height reserves its space: an
+       opening sheet covers the ghosts first and only grows the frame once
+       it is taller than that reserve. The edge draws as a zero-layout
+       overlay (below) so the bar inside is exactly the advertised width. */
+    flex: 0 0 auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: auto;
+    min-height: 230px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+    outline: none;
+    overflow: hidden;
+  }
+
+  .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) {
+    justify-content: flex-start;
+  }
+
+  .mobile-pv-frame dashboard-sidebar-bar {
+    z-index: 1;
+  }
+
+  /* A short strip of ghost dashboard cards on the page side of the bar. */
+  .pv-ghost-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-content: start;
+    padding: 10px 14px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .pv-ghost-cards.fade-up {
+    align-content: end;
+    mask-image: linear-gradient(to top, #000 15%, transparent 95%);
+  }
+
+  .pv-ghost-cards.fade-down {
+    mask-image: linear-gradient(to bottom, #000 15%, transparent 95%);
+  }
+
+  .ghost-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 14px;
+    min-height: 96px;
+    border-radius: 10px;
+    background: rgb(127 127 127 / 10%);
+  }
+
+  .ghost-card.wide {
+    grid-column: span 2;
+  }
+
+  /* Sub-cards standing in for the tiles real dashboard cards contain. */
+  .ghost-sub {
+    display: block;
+    border-radius: 8px;
+    background: var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  .ghost-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ghost-subrow {
+    display: flex;
+    gap: 8px;
+  }
+
+  .ghost-subrow .ghost-sub {
+    flex: 1 1 0;
+  }
+
+  /* Fills whatever card height remains below its siblings. */
+  .ghost-sub-fill {
+    flex: 1 1 auto;
+    min-height: 26px;
+  }
+
+  .mobile-pv-frame .pv-ghost-cards {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    align-content: end;
+    padding-bottom: 80px;
+    opacity: 0.35;
+  }
+
+  .mobile-pv-frame:has(dashboard-sidebar-bar[data-position='top']) .pv-ghost-cards {
+    align-content: start;
+    padding-top: 80px;
+    padding-bottom: 10px;
+  }
+
+  .mobile-pv-frame::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    pointer-events: none;
+  }
+
   .pv-frame::-webkit-scrollbar {
     width: 0;
     height: 0;
@@ -342,6 +633,24 @@ export const editorStyles = css`
   .pv-frame.pv-col {
     display: flex;
     flex-direction: column;
+  }
+
+  /* The whole-sidebar Settings preview fills its frame with an opaque
+     surface that paints over the base outline. A border would eat 2px of
+     layout width and skew the footer overflow count, so draw the edge as a
+     zero-layout overlay above the content instead. */
+  .pv-frame.settings-pv-frame {
+    position: relative;
+    outline: none;
+  }
+
+  .pv-frame.settings-pv-frame::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    border: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+    pointer-events: none;
   }
 
   /* Skeleton placeholder rows standing in for the content beside a pinned
@@ -643,6 +952,11 @@ export const editorStyles = css`
   .class-ref-row span {
     font-size: 0.78rem;
     opacity: 0.7;
+  }
+
+  /* The docs link closing the mobile YAML reference. */
+  .class-ref-link a {
+    color: var(--primary-color, #03a9f4);
   }
 
   /* A resolved entity/service replaces the input with a card: the id over its
@@ -1073,6 +1387,7 @@ export const editorStyles = css`
 
   .confirm-scrim {
     position: absolute;
+    z-index: 20;
     inset: 0;
     display: flex;
     align-items: center;
@@ -1098,13 +1413,15 @@ export const editorStyles = css`
     margin: 0 0 14px;
   }
 
+  /* Every confirm stacks its options as full-width rows, dismiss last. */
   .confirm-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
     gap: 8px;
   }
 
   .confirm-actions button {
+    width: 100%;
     font: inherit;
     padding: 8px 14px;
     border: 1px solid var(--divider-color, rgb(0 0 0 / 20%));

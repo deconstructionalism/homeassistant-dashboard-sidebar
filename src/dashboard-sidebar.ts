@@ -639,15 +639,19 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * Records the footer bar's inner width, ignoring sub-pixel jitter, so a
-   * changed width re-renders with the correct inline/overflow split.
+   * Records the effective footer width using the same arithmetic live uses
+   * (panel outer width minus the 12px insets), so a preview folds exactly
+   * like the real sidebar. Measuring the bar's inner width instead would
+   * come up 2px short of live's config-width math wherever the panel draws
+   * its border, flipping boundary-tight button counts.
    */
   private _measureFooter(): void {
     const bar = this._observedFooter;
     if (!bar) {
       return;
     }
-    const width = Math.round(bar.clientWidth);
+    const panel = (this.renderRoot as ParentNode).querySelector<HTMLElement>('.sidebar');
+    const width = panel ? Math.round(panel.offsetWidth) - 24 : Math.round(bar.clientWidth);
     if (width > 0 && width !== this._footerBarWidth) {
       this._footerBarWidth = width;
     }

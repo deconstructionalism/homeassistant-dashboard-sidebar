@@ -15,11 +15,14 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `width` | `number` | no | Expanded width in pixels. Default 240. |
 | `start_collapsed` | `boolean` | no | Whether the sidebar starts collapsed, before any stored preference. |
 | `overlay` | `boolean` | no | Whether the sidebar floats over the dashboard content instead of pushing it aside. Default false (push): the view narrows by the sidebar's width. |
-| `hide_on_mobile` | `boolean` | no | Hide the sidebar on narrow (mobile) viewports. |
+| `on_desktop` | `'sidebar' \| 'hidden'` | no | What renders on wide (desktop) viewports. Default sidebar. |
+| `on_mobile` | `'sidebar' \| 'bar' \| 'hidden'` | no | What renders on narrow (mobile) viewports: the sidebar, the mobile bar, or nothing. Defaults to bar when a `mobile` section exists, else sidebar. |
+| `breakpoint` | `number` | no | Viewport width in pixels at and below which "mobile" applies (the bar, on_mobile, on_desktop). Default 768. |
 | `background` | `string` | no | Sidebar background: any CSS `background` value (color, gradient, image, …), applied as the `background` shorthand. Defaults to the theme card background. |
 | `header` | `SidebarBlock[]` | no | Blocks pinned to the top, above the scrolling body. |
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
 | `footer` | `FooterConfig` | no | The bottom bar configuration. |
+| `mobile` | `MobileConfig` | no | The mobile bar configuration. |
 | `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration (when installed) to style the sidebar. Target the dashboard-sidebar-* classes on the rendered elements. |
 
 ## Common fields (every block and footer button)
@@ -208,6 +211,21 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 | `double_tap_action` | `ActionConfig` | no | Optional action performed when double-tapped. Not templatable. |
 | `active_highlight` | `boolean` | no | Whether to highlight this element while its navigate tap action targets the current page. Default true; set false to disable the active highlight. |
 
+## MobileConfig
+
+The mobile bar. Its presence hides the sidebar on narrow viewports and renders a bottom bar instead. `mode` picks where its content comes from: `mirror` follows the desktop nav and footer, `custom` uses the `items`, `menu` and `footer` spelled out here and inherits nothing.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mode` | `MobileMode` | no | Whether the bar mirrors the desktop nav or is spelled out here. Default mirror. A mirrored bar follows the desktop and takes no content of its own, so `items`, `menu` and `footer` belong to `custom` only. |
+| `items` | `MobileBarEntry[]` | no | The bar itself, as inline elements. Custom mode only. |
+| `menu` | `MobileMenuEntry[]` | no | Curated entries of the dots-menu sheet, shown between any overflowed slots and the footer. Any kind of block is allowed, including titles, markdown, and cards. Custom mode only, since a mirrored bar follows the desktop and carries nothing of its own. |
+| `footer` | `FooterConfig` | no | The sheet's pinned footer, in the same shape as the desktop `footer`: a button strip, a card, or markdown. Custom mode only. A custom bar inherits nothing, so without this it has no footer at all, while a mirrored bar always shows the desktop's. |
+| `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
+| `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
+| `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
+| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
+
 ## Field types
 
 The types used in the tables above.
@@ -247,6 +265,24 @@ Date format: an alias (`iso` = %Y-%m-%d, `locale`) or a strftime pattern using o
 `TitleBlock | ClockBlock | DateBlock | DividerBlock | ItemBlock | CategoryBlock | MarkdownBlock | CardBlock`
 
 Any block that can appear in the header or body region.
+
+### `MobileMode`
+
+`'mirror' | 'custom'`
+
+How the mobile bar gets its content.
+
+### `MobileBarEntry`
+
+`ItemBlock`
+
+An explicit bar entry: an inline item.
+
+### `MobileMenuEntry`
+
+`SidebarBlock`
+
+One curated sheet-menu entry: an inline block of any kind.
 
 ### `ActionConfig`
 

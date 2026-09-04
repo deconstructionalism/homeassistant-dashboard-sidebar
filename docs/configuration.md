@@ -23,11 +23,16 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **Start Collapsed**: load collapsed to the icon strip.
     - **Overlay Dashboard Content**: float the sidebar over the dashboard
       instead of pushing the content aside.
-    - **Hide on Mobile**: hide entirely on narrow (phone) screens.
 
-    **Background** (any CSS background, including gradients) lives under
-    **Settings → Advanced**, alongside the whole-sidebar
-    [Card Mod](styling.md#card-mod).
+    Under **Settings → Advanced**:
+
+    - **Mobile Breakpoint (px)**: the viewport width at and below which the
+      mobile choices apply. Defaults to 768.
+    - **On Desktop**: whether the sidebar shows on wide screens, or nothing does.
+    - **On Mobile**: whether narrow screens get the sidebar, the
+      [mobile bar](mobile.md), or nothing.
+    - **Background**: any CSS background, including gradients.
+    - The whole-sidebar [Card Mod](styling.md#card-mod).
 
     ![The Settings tab, with sidebar-wide fields on the left and a live preview of the whole sidebar on the right.](assets/editor/settings.png)
 
@@ -39,7 +44,9 @@ the [Config Reference](reference.md) (generated from the source, always current)
       width: 300
       start_collapsed: false
       overlay: false
-      hide_on_mobile: true
+      on_desktop: sidebar
+      on_mobile: bar
+      breakpoint: 768
       background: linear-gradient(180deg, #1b2735, #090a0f)
       header: []
       body: []
@@ -52,7 +59,9 @@ the [Config Reference](reference.md) (generated from the source, always current)
 | `width` | number (px) | `240` | Expanded width. |
 | `start_collapsed` | boolean | `false` | Load collapsed to the icon strip. |
 | `overlay` | boolean | `false` | Float over the dashboard instead of pushing the content aside. |
-| `hide_on_mobile` | boolean | `false` | Hide entirely on narrow (phone) screens. |
+| `on_desktop` | `sidebar` \| `hidden` | `sidebar` | What renders on wide (desktop) viewports. |
+| `on_mobile` | `sidebar` \| `bar` \| `hidden` | `sidebar` | What renders on narrow (mobile) viewports. Defaults to `bar` when a `mobile` section exists. |
+| `breakpoint` | number (px) | `768` | Viewport width at and below which "mobile" applies. |
 | `background` | CSS `background` | theme card bg | Any CSS background, including gradients. |
 | `header` | list | - | Blocks pinned to the top. |
 | `body` | list | - | Blocks in the scrolling region. |

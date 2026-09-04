@@ -924,26 +924,27 @@ describe('per-block class and id hooks', () => {
       header: [{ type: 'title', text: 'Home', class: 'my-title', id: 't1' }],
       body: [{ type: 'item', title: 'A', class: 'special row-x', id: 'home', tap_action: TAP }],
     });
-    const title = root(el).querySelector('#t1');
-    expect(title, 'title by id').to.exist;
+    const title = root(el).querySelector('.my-title');
+    expect(title, 'title by class hook').to.exist;
     expect(title?.classList.contains('dashboard-sidebar-title')).to.equal(true);
-    expect(title?.classList.contains('my-title')).to.equal(true);
+    expect(title?.id, 'title carries its css id').to.equal('t1');
 
-    const item = root(el).querySelector('#home');
-    expect(item, 'item by id').to.exist;
+    const item = root(el).querySelector('.special');
+    expect(item, 'item by class hook').to.exist;
     expect(item?.classList.contains('dashboard-sidebar-item')).to.equal(true);
-    expect(item?.classList.contains('special')).to.equal(true);
     expect(item?.classList.contains('row-x')).to.equal(true);
+    // The id is a pure CSS hook, so it must be selectable as one.
+    expect(root(el).querySelector('#home'), 'item by id selector').to.equal(item);
   });
 
   it('applies class and id to footer buttons', async () => {
     const el = await mount({
       body: [{ type: 'item', title: 'A', tap_action: TAP }],
-      footer: { buttons: [{ icon: 'mdi:cog', id: 'cog', class: 'cog-btn', tap_action: TAP }] },
+      footer: { buttons: [{ icon: 'mdi:cog', class: 'cog-btn', id: 'cog', tap_action: TAP }] },
     });
-    const btn = root(el).querySelector('#cog');
-    expect(btn, 'footer button by id').to.exist;
+    const btn = root(el).querySelector('.cog-btn');
+    expect(btn, 'footer button by class hook').to.exist;
+    expect(btn?.id, 'footer button carries its css id').to.equal('cog');
     expect(btn?.classList.contains('dashboard-sidebar-footer-btn')).to.equal(true);
-    expect(btn?.classList.contains('cog-btn')).to.equal(true);
   });
 });

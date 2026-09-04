@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { DashboardSidebarConfig } from './types';
+import type { DashboardSidebarConfig, SidebarBlock } from './types';
 import { validateConfig } from './validate';
 
 /**
@@ -258,7 +258,7 @@ describe('validateConfig — every block and option together', () => {
     const config: DashboardSidebarConfig = {
       width: 300,
       start_collapsed: false,
-      hide_on_mobile: true,
+      on_mobile: 'hidden' as const,
       overlay: true,
       background: '#111',
       header: [
@@ -330,24 +330,272 @@ describe('validateConfig — every block and option together', () => {
 });
 
 // --- merged from hooks.test.ts ---
-describe('validateConfig — class/id hooks', () => {
-  it('accepts class and id on blocks and footer buttons', () => {
+describe('validateConfig — class/card_mod hooks', () => {
+  it('accepts class and card_mod on blocks and footer buttons', () => {
     const config: DashboardSidebarConfig = {
-      header: [{ type: 'title', text: 'Home', class: 'my-title', id: 'title-1' }],
-      body: [{ type: 'item', title: 'A', class: 'a b', id: 'home', tap_action: TAP }],
-      footer: { buttons: [{ icon: 'mdi:cog', class: 'cog', id: 'cog', tap_action: TAP }] },
+      header: [{ type: 'title', text: 'Home', class: 'my-title' }],
+      body: [{ type: 'item', title: 'A', class: 'a b', tap_action: TAP }],
+      footer: { buttons: [{ icon: 'mdi:cog', class: 'cog', tap_action: TAP }] },
     };
     expect(validateConfig(config)).toHaveLength(0);
   });
 
-  it('rejects a non-string class or id', () => {
+  it('rejects a non-string class', () => {
     expect(
       validateConfig({
         body: [{ type: 'item', title: 'A', class: 5, tap_action: TAP }],
       } as unknown as DashboardSidebarConfig),
     ).toContain('body[0].class: must be a string');
     expect(
-      validateConfig({ header: [{ type: 'divider', id: 5 }] } as unknown as DashboardSidebarConfig),
-    ).toContain('header[0].id: must be a string');
+      validateConfig({
+        header: [{ type: 'divider', class: 5 }],
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('header[0].class: must be a string');
+  });
+});
+
+describe('element ids', () => {
+  it('accepts an optional id on blocks, category items, and footer buttons', () => {
+    const errors = validateConfig({
+      header: [{ type: 'clock', id: 'clk' }],
+      body: [
+        { type: 'item', id: 'home', title: 'A', tap_action: TAP },
+        { type: 'category', title: 'C', items: [{ id: 'kid', title: 'K', tap_action: TAP }] },
+      ],
+      footer: { buttons: [{ icon: 'mdi:cog', id: 'cog', tap_action: TAP }] },
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toEqual([]);
+  });
+
+  it('accepts an optional id on inline mobile entries', () => {
+    const errors = validateConfig({
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      mobile: {
+        mode: 'custom',
+        items: [{ type: 'item', id: 'x', title: 'X', tap_action: TAP }],
+        menu: [{ type: 'title', id: 'y', text: 'Y' }],
+        footer: { buttons: [{ icon: 'mdi:lock', id: 'z', tap_action: TAP }] },
+      },
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toEqual([]);
+  });
+
+  it('never requires an id, and never minds a repeated one', () => {
+    const errors = validateConfig({
+      body: [
+        { type: 'item', title: 'A', tap_action: TAP },
+        { type: 'item', id: 'dup', title: 'B', tap_action: TAP },
+        { type: 'item', id: 'dup', title: 'C', tap_action: TAP },
+      ],
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toEqual([]);
+  });
+
+  it('rejects a non-string id', () => {
+    const errors = validateConfig({
+      body: [{ type: 'item', id: 7, title: 'A', tap_action: TAP }],
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toContain('body[0].id: must be a string');
+  });
+});
+
+describe('mobile config', () => {
+  const withMobile = (mobile: unknown): DashboardSidebarConfig =>
+    ({
+      body: [
+        { type: 'item', title: 'Rooms', tap_action: { action: 'toggle' } },
+        {
+          type: 'category',
+          title: 'Garden',
+          items: [{ title: 'Plants', tap_action: { action: 'toggle' } }],
+        },
+        { type: 'markdown', content: 'x' },
+      ],
+      footer: {
+        buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }],
+      },
+      mobile,
+    }) as DashboardSidebarConfig;
+
+  it('accepts an empty mobile config (pure mirror)', () => {
+    expect(validateConfig(withMobile({}))).toHaveLength(0);
+  });
+
+  it('rejects mobile together with hide_on_mobile', () => {
+    const config = withMobile({});
+    (config as { hide_on_mobile?: boolean }).hide_on_mobile = true;
+    expect(validateConfig(config).some((e) => e.includes('hide_on_mobile'))).toBe(true);
+  });
+
+  it('rejects the removed hide and override keys as unknown options', () => {
+    const errors = validateConfig(withMobile({ hide: ['plants'], override: { rooms: {} } }));
+    expect(errors).toContain('mobile: unknown option "hide"');
+    expect(errors).toContain('mobile: unknown option "override"');
+  });
+
+  it('lets the sheet menu hold inline blocks of any kind', () => {
+    const ok = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [],
+        menu: [
+          { type: 'markdown', content: 'x' },
+          { type: 'title', text: 'Hello' },
+          { title: 'Bare', tap_action: { action: 'toggle' } },
+        ],
+      }),
+    );
+    expect(ok.some((e) => e.includes('mobile.menu'))).toBe(false);
+  });
+
+  it('validates inline sheet-menu blocks by their type', () => {
+    const errors = validateConfig(withMobile({ mode: 'custom', menu: [{ type: 'title' }] }));
+    expect(errors).toContain('mobile.menu[0]: title needs text');
+  });
+
+  it('takes the desktop footer shape: buttons, a card, or markdown', () => {
+    const buttons = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [],
+        footer: { buttons: [{ icon: 'mdi:lock', tap_action: { action: 'toggle' } }] },
+      }),
+    );
+    expect(buttons.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const markdown = validateConfig(
+      withMobile({ mode: 'custom', items: [], footer: { markdown: 'hi', divider: false } }),
+    );
+    expect(markdown.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const card = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [],
+        footer: { card: { type: 'markdown', content: 'x' } },
+      }),
+    );
+    expect(card.some((e) => e.includes('mobile.footer'))).toBe(false);
+    const bad = validateConfig(
+      withMobile({ mode: 'custom', items: [], footer: { buttons: [{ tap_action: 'nope' }] } }),
+    );
+    expect(bad).toContain('mobile.footer.buttons[0]: needs an icon');
+  });
+
+  it('validates the top-level breakpoint', () => {
+    const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
+    const errors = validateConfig({ body: [item], breakpoint: -5 });
+    expect(errors.some((e) => e.includes('breakpoint: must be a positive number'))).toBe(true);
+  });
+
+  it('validates the viewport modes and their combinations', () => {
+    const item = { type: 'item', title: 'A', tap_action: { action: 'toggle' } } as SidebarBlock;
+    const ok = validateConfig({ body: [item], on_desktop: 'hidden' });
+    expect(ok).toEqual([]);
+    const both = validateConfig({ body: [item], on_desktop: 'hidden', on_mobile: 'hidden' });
+    expect(both.some((e) => e.includes('nothing would ever render'))).toBe(true);
+    const legacy = validateConfig({ body: [item], hide_on_mobile: true } as DashboardSidebarConfig);
+    expect(legacy.some((e) => e.includes('replaced by `on_mobile: hidden`'))).toBe(true);
+    expect(legacy.some((e) => e.includes('unknown option'))).toBe(false);
+    const orphanMobile = validateConfig(withMobile({}));
+    expect(orphanMobile).toEqual([]);
+    const mismatch = validateConfig({
+      body: [item],
+      on_mobile: 'sidebar',
+      mobile: {},
+    } as DashboardSidebarConfig);
+    expect(mismatch.some((e) => e.includes('only used when on_mobile is "bar"'))).toBe(true);
+  });
+
+  it('accepts bar-eligible inline types and rejects the rest', () => {
+    const ok = validateConfig(
+      withMobile({ mode: 'custom', items: [{ type: 'divider' }, { type: 'clock' }] }),
+    );
+    expect(ok.some((e) => e.includes('mobile.items'))).toBe(false);
+    const errors = validateConfig(
+      withMobile({ mode: 'custom', items: [{ type: 'markdown', content: 'x' }] }),
+    );
+    expect(errors.some((e) => e.includes('not bar-eligible'))).toBe(true);
+  });
+
+  it('validates inline items in custom mode', () => {
+    const good = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [
+          {
+            type: 'category',
+            title: 'Yard',
+            items: [{ title: 'Plants', tap_action: { action: 'toggle' } }],
+          },
+          { type: 'item', title: 'Rooms', tap_action: { action: 'toggle' } },
+          { title: 'Extra', tap_action: { action: 'toggle' } },
+        ],
+      }),
+    );
+    expect(good).toHaveLength(0);
+    const bad = validateConfig(
+      withMobile({ mode: 'custom', items: [{ type: 'item', tap_action: { action: 'toggle' } }] }),
+    );
+    expect(bad).toContain('mobile.items[0]: needs a title');
+  });
+
+  it('rejects a non-list items, menu, or footer', () => {
+    expect(validateConfig(withMobile({ mode: 'custom', items: {} }))).toContain(
+      'mobile.items: must be a list',
+    );
+    expect(validateConfig(withMobile({ mode: 'custom', menu: {} }))).toContain(
+      'mobile.menu: must be a list',
+    );
+    expect(validateConfig(withMobile({ mode: 'custom', items: [], footer: [] }))).toContain(
+      'mobile.footer: must be a mapping',
+    );
+  });
+
+  it('rejects bar content on a mirrored bar', () => {
+    for (const key of ['items', 'menu', 'footer'] as const) {
+      const errors = validateConfig(withMobile({ [key]: key === 'footer' ? {} : [] }));
+      expect(
+        errors.some((e) => e.startsWith(`mobile.${key}: not part of a mirrored bar`)),
+        `${key} rejected without mode: custom`,
+      ).toBe(true);
+    }
+  });
+
+  it('accepts the same keys once the mode is custom', () => {
+    const errors = validateConfig(
+      withMobile({
+        mode: 'custom',
+        items: [{ type: 'item', title: 'A', tap_action: { action: 'toggle' } }],
+        menu: [{ type: 'title', text: 'More' }],
+        footer: { markdown: 'hi' },
+      }),
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('a custom bar may leave items out, and that is an empty bar', () => {
+    expect(validateConfig(withMobile({ mode: 'custom' }))).toEqual([]);
+  });
+
+  it('rejects an unknown mode', () => {
+    expect(validateConfig(withMobile({ mode: 'mirrored' }))).toContain(
+      'mobile.mode: must be "mirror" or "custom"',
+    );
+  });
+
+  it('checks the bar options', () => {
+    const errors = validateConfig(
+      withMobile({
+        breakpoint: -1,
+        position: 'left',
+        labels: 'sometimes',
+        background: 5,
+        extra: true,
+      }),
+    );
+    expect(errors.some((e) => e.includes('moved to the top-level'))).toBe(true);
+    expect(errors.some((e) => e.includes('position'))).toBe(true);
+    expect(errors.some((e) => e.includes('labels'))).toBe(true);
+    expect(errors.some((e) => e.includes('background'))).toBe(true);
+    expect(errors.some((e) => e.includes('extra'))).toBe(true);
   });
 });
