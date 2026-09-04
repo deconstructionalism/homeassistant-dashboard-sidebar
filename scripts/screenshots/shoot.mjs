@@ -232,6 +232,11 @@ const bundleEditor = async () => {
         // Expose every MDI path so the icon stub can resolve real icons by name.
         `import * as __mdi from '@mdi/js';`,
         `window.__MDI = __mdi;`,
+        // Home Assistant's <ha-yaml-editor> is absent here, and without it the
+        // card falls back to a JSON textarea, which is not what a user sees.
+        // Give the stub below a real YAML dumper so the shots show YAML.
+        `import { dump as __yamlDump } from 'js-yaml';`,
+        `window.__YAML = __yamlDump;`,
       ].join('\n'),
       resolveDir: root,
       loader: 'ts',
@@ -316,6 +321,45 @@ class IconStub extends HTMLElement {
 for (const tag of ['ha-icon', 'ha-svg-icon']) {
   if (!customElements.get(tag)) customElements.define(tag, class extends IconStub {});
 }
+
+// Stand in for HA's YAML editor. Without it the card falls back to a JSON
+// textarea, so the docs would show braces and quotes where a real user sees
+// YAML. Display only: the shots never type into it. The card looks for an
+// <ha-code-editor> inside this element's shadow root to size it, so the stub
+// nests one rather than leaving that probe to retry forever.
+class CodeEditorStub extends HTMLElement {
+  set value(v) { this._value = v; this._render(); }
+  get value() { return this._value || ''; }
+  connectedCallback() { this._render(); }
+  _render() {
+    this.style.cssText = 'display:block;font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;padding:8px 10px;color:var(--primary-text-color,#212121)';
+    this.textContent = this.value;
+  }
+}
+class YamlEditorStub extends HTMLElement {
+  constructor() { super(); this.attachShadow({ mode: 'open' }); }
+  set defaultValue(v) { this._value = v; this._render(); }
+  get defaultValue() { return this._value; }
+  connectedCallback() { this._render(); }
+  _render() {
+    if (!this.shadowRoot) return;
+    let inner = this.shadowRoot.querySelector('ha-code-editor');
+    if (!inner) {
+      this.shadowRoot.innerHTML = '<style>:host{display:block;border:1px solid var(--divider-color,rgba(0,0,0,.12));border-radius:6px;background:var(--card-background-color,#fff);overflow:auto}</style>';
+      inner = document.createElement('ha-code-editor');
+      this.shadowRoot.appendChild(inner);
+    }
+    let text = '';
+    try {
+      text = window.__YAML ? window.__YAML(this._value ?? {}, { noRefs: true, lineWidth: 100 }) : '';
+    } catch (e) {
+      text = String(e);
+    }
+    inner.value = text.trimEnd();
+  }
+}
+if (!customElements.get('ha-code-editor')) customElements.define('ha-code-editor', CodeEditorStub);
+if (!customElements.get('ha-yaml-editor')) customElements.define('ha-yaml-editor', YamlEditorStub);
 
 // The card builds markdown blocks and manual cards through HA's card helpers,
 // absent here. Stub them so a markdown block renders its text (with basic bold);
