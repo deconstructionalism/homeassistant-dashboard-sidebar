@@ -50,7 +50,6 @@ describe('preview resize stability', () => {
     await sendMouse({ type: 'up' });
     await aTimeout(300);
     const caption = root.querySelector('.mobile-pv-caption');
-    console.log('survived; caption:', caption?.textContent?.trim());
     expect(caption).to.exist;
   });
 });
