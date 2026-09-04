@@ -5,8 +5,6 @@
 [![HACS: Dashboard](https://img.shields.io/badge/HACS-Dashboard-41BDF5.svg)](https://hacs.xyz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=deconstructionalism&repository=homeassistant-dashboard-sidebar)
-
 A collapsible dashboard sidebar card for Home Assistant Lovelace: navigation,
 clock, and custom content in a side rail that collapses to an icon strip. It is
 edited in place through a five-tab visual editor (Settings, Header, Body,
