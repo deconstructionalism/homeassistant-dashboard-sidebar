@@ -120,15 +120,49 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(root(el).querySelector('.confirm-scrim'), 'switch choice dialog').to.exist;
     (
       [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
-        /Copy Current Bar/.test(b.textContent ?? ''),
+        /Copy Desktop Bar/.test(b.textContent ?? ''),
       ) as HTMLButtonElement
     ).click();
     await settle(el);
-    // The derived bar is cloned inline: the item and the category, in order.
+    // The mirrored bar is cloned inline: the item and the category, in order.
     expect(root(el).querySelector('.editor.settings.yaml-mode')).to.exist;
     (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
     expect(saved?.mobile?.items?.length).to.equal(2);
     expect(saved?.mobile?.items?.[0]?.title).to.equal('A');
+    // The desktop footer buttons ride behind the dots in mirror mode, so the
+    // copy has to carry them across or switching silently loses them.
+    expect(saved?.mobile?.footer?.length, 'footer buttons copied').to.equal(1);
+    expect((saved?.mobile?.footer?.[0] as { icon?: string })?.icon).to.equal('mdi:cog');
+  });
+
+  it('leaves the footer unset when the desktop has no footer buttons', async () => {
+    const bare = { ...cfg() };
+    delete (bare as { footer?: unknown }).footer;
+    const el = await mount({ ...bare, mobile: {} });
+    await tab(el, 'Mobile Bar');
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
+    };
+    (root(el).querySelector('.tab-notes .tool') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        /Switch To Custom Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
+        /Copy Desktop Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await settle(el);
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.mobile?.items?.length).to.equal(2);
+    expect(saved?.mobile?.footer, 'no footer key when there is nothing to copy').to.equal(
+      undefined,
+    );
   });
 
   it('disables the Mobile tab until On Mobile is the bar, then previews it', async () => {

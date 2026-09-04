@@ -11,6 +11,7 @@ import type {
   FooterButtonConfig,
   ItemBlock,
   MobileBarEntry,
+  MobileFooterEntry,
   Region,
   SidebarBlock,
 } from '../lib/types';
@@ -1379,19 +1380,19 @@ export class DashboardSidebarEditor extends LitElement {
   }
 
   /**
-   * The mirror-to-custom switch choice: copy the mirrored bar into an
-   * editable list, start empty, or cancel.
+   * The mirror-to-custom switch choice: copy the bar the desktop mirrors
+   * into an editable list, start empty, or cancel.
    */
   private _renderConfirmCustomSwitch(): TemplateResult {
     return html`
       <div class="confirm-scrim">
         <div class="confirm" role="alertdialog" aria-label="Switch to custom bar">
           <p>
-            Switch to a custom bar? You can start from the current bar's elements or from an empty
+            Switch to a custom bar? You can start from the desktop bar's elements or from an empty
             list.
           </p>
           <div class="confirm-actions">
-            <button @click=${() => this._switchToCustom(true)}>Copy Current Bar</button>
+            <button @click=${() => this._switchToCustom(true)}>Copy Desktop Bar</button>
             <button @click=${() => this._switchToCustom(false)}>Start Empty</button>
             <button
               @click=${() => {
@@ -1633,17 +1634,24 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _switchToCustom(copy: boolean): void {
     const mobile = this._working.mobile ?? {};
-    let items: MobileBarEntry[] = [];
-    if (copy) {
-      // Seed the custom bar with real copies of what the mirror derives:
-      // there are no references, so the elements are cloned outright.
-      const derived = resolveBar({
-        ...this._working,
-        mobile: { ...mobile, items: undefined },
-      }).slots;
-      items = derived.map((entry) => structuredClone(entry.element) as MobileBarEntry);
+    if (!copy) {
+      this._patchMobile({ items: [] });
+      this._confirmingCustomSwitch = false;
+      return;
     }
-    this._patchMobile({ items });
+    // Seed the custom bar with real copies of what the desktop mirrors:
+    // there are no references, so the elements are cloned outright.
+    const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, items: undefined } });
+    const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
+    // The mirrored bar also puts the desktop footer buttons behind the dots.
+    // A custom bar derives nothing, so those have to be copied across or the
+    // switch silently loses them. A card or markdown footer still renders
+    // from the desktop config, so leave `footer` unset in that case.
+    const buttons = mirrored.menu.filter((entry) => entry.kind === 'button');
+    const footer = buttons.length
+      ? buttons.map((entry) => structuredClone(entry.element) as MobileFooterEntry)
+      : undefined;
+    this._patchMobile({ items, footer });
     this._confirmingCustomSwitch = false;
   }
 
