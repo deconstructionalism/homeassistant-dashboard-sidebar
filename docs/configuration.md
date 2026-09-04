@@ -23,15 +23,16 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **Start Collapsed**: load collapsed to the icon strip.
     - **Overlay Dashboard Content**: float the sidebar over the dashboard
       instead of pushing the content aside.
-    - **On Desktop**: whether the sidebar shows on wide screens, or nothing does.
-    - **On Mobile**: whether narrow screens get the sidebar, the mobile bar, or
-      nothing.
-    - **Breakpoint**: the viewport width, in pixels, at and below which "mobile"
-      applies. Defaults to 768.
 
-    **Background** (any CSS background, including gradients) lives under
-    **Settings → Advanced**, alongside the whole-sidebar
-    [Card Mod](styling.md#card-mod).
+    Under **Settings → Advanced**:
+
+    - **Mobile Breakpoint (px)**: the viewport width at and below which the
+      mobile choices apply. Defaults to 768.
+    - **On Desktop**: whether the sidebar shows on wide screens, or nothing does.
+    - **On Mobile**: whether narrow screens get the sidebar, the
+      [mobile bar](mobile.md), or nothing.
+    - **Background**: any CSS background, including gradients.
+    - The whole-sidebar [Card Mod](styling.md#card-mod).
 
     ![The Settings tab, with sidebar-wide fields on the left and a live preview of the whole sidebar on the right.](assets/editor/settings.png)
 

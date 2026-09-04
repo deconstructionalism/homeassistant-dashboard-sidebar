@@ -109,11 +109,13 @@ The starter is built from your instance so you have something real to edit:
 ## Editing
 
 Click the **pencil** on the sidebar (in dashboard edit mode) to open the editor
-modal. It has four tabs (**Settings**, **Header**, **Body**, **Footer**), each
-named for the config key it edits, and each with a **live preview** on the right
-that mirrors the real sidebar. Select any element in the preview to edit it, drag
-to reorder, and use each tab's **⋯** menu to switch between the UI form and raw
-**YAML** editing.
+modal. It has five tabs (**Settings**, **Header**, **Body**, **Footer**, and
+**Mobile Bar**), each named for the config key it edits, and each with a **live
+preview** on the right that mirrors the real sidebar. Select any element in the
+preview to edit it, drag to reorder, and use each tab's **⋯** menu to switch
+between the UI form and raw **YAML** editing. The
+[Mobile Bar](mobile.md) tab is the exception: its custom mode is edited as YAML
+against a read-only preview.
 
 Everything is saved back into the dashboard's Lovelace config; nothing is stored
 outside it.

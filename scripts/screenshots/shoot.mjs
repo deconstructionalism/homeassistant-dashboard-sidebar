@@ -85,6 +85,8 @@ const DEMO = {
       { icon: 'mdi:power', tap_action: { action: 'toggle' } },
     ],
   },
+  // Turns the Mobile Bar tab on; mirror mode, which is the default.
+  mobile: { labels: true },
 };
 
 // A standalone sidebar for the "what does it look like" hero shots. Deliberately
@@ -202,6 +204,20 @@ const SHOTS = [
     steps: async (H) => {
       await H.tab('Body');
       await H.collapse();
+    },
+  },
+  {
+    name: 'mobile-mirror',
+    steps: async (H) => {
+      await H.tab('Mobile Bar');
+    },
+  },
+  {
+    name: 'mobile-custom',
+    steps: async (H) => {
+      await H.customBar();
+      await H.tab('Mobile Bar');
+      await H.openRef();
     },
   },
 ];
@@ -357,6 +373,30 @@ window.H = {
     await el.updateComplete;
     const item = [...el.shadowRoot.querySelectorAll('.add-menu-item')].find((b) => /Edit As YAML/.test(b.textContent));
     item.click();
+    await settle();
+  },
+  // Remount the demo with an explicit custom bar, for the custom-mode shot.
+  async customBar() {
+    const el = editorEl();
+    const cfg = JSON.parse(JSON.stringify(el.config));
+    cfg.mobile = {
+      mode: 'custom',
+      labels: true,
+      items: [
+        { type: 'clock', format: '%-I:%M %p' },
+        { type: 'item', title: 'Overview', icon: 'mdi:view-dashboard', tap_action: { action: 'navigate', navigation_path: '/lovelace/0' } },
+        { type: 'item', title: 'Lights', icon: 'mdi:lightbulb-group', tap_action: { action: 'toggle', entity: 'light.kitchen' } },
+      ],
+      footer: { divider: true, buttons: [{ icon: 'mdi:cog', tap_action: { action: 'navigate', navigation_path: '/config' } }] },
+    };
+    el.config = cfg;
+    await settle();
+    return true;
+  },
+  // Expand the collapsed YAML reference so the shot shows its contents.
+  async openRef() {
+    const ref = editorEl().shadowRoot.querySelector('details.class-ref');
+    if (ref) ref.open = true;
     await settle();
   },
   // Mount a plain sidebar card (no editor) in a dashboard-like frame, for the

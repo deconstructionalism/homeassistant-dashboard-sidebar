@@ -229,10 +229,10 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
   including gradients, and
   [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the whole
   sidebar and per-element level.
-- 🖱️ **Built by clicking, not typing**: a four-tab editor (Settings, Header, Body,
-  Footer, each named for the config key it edits) with a live preview that
-  mirrors the real sidebar, drag-to-reorder, and a YAML escape hatch on every tab
-  and element.
+- 🖱️ **Built by clicking, not typing**: a five-tab editor (Settings, Header, Body,
+  Footer, Mobile Bar, each named for the config key it edits) with a live preview
+  that mirrors the real sidebar, drag-to-reorder, and a YAML escape hatch on every
+  tab and element.
 
 ## Requirements
 
