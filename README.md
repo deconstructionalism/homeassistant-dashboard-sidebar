@@ -5,6 +5,8 @@
 [![HACS: Dashboard](https://img.shields.io/badge/HACS-Dashboard-41BDF5.svg)](https://hacs.xyz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=deconstructionalism&repository=homeassistant-dashboard-sidebar)
+
 A collapsible dashboard sidebar card for Home Assistant Lovelace: navigation,
 clock, and custom content in a side rail that collapses to an icon strip. It is
 edited in place through a five-tab visual editor (Settings, Header, Body,
@@ -22,47 +24,37 @@ docked to the bottom of the display.
 
 ## Features
 
-- 📐 **Docks where you want it.** Left or right, any width, pushing the view
-  over or floating on top of it.
+- 📐 **Position and width.** Left or right edge, any width, pushing the view
+  aside or floating over it.
   ([settings](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/configuration/))
-- ↔️ **Collapses to an icon strip.** One toggle on the edge, remembered per browser.
-  Items keep hover tooltips, categories pop out their children.
-- 🧩 **Three regions, plenty to fill them with.** A pinned header, a scrolling body,
-  and a pinned footer, holding titles, clocks, dates, dividers, tappable items,
-  collapsible categories, markdown, and any Lovelace card.
+- ↔️ **Collapsible.** One toggle collapses it to an icon strip, remembered per
+  browser. Items keep tooltips, categories pop out their children.
+- 🧩 **Header, body, and footer.** Titles, clocks, dates, dividers, tappable
+  items, collapsible categories, markdown, and any Lovelace card.
   ([elements](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/elements/),
   [footer](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/footer/))
-- 📱 **Becomes a bar on phones.** Narrow screens can swap the sidebar for a bar
-  docked bottom or top, with the overflow folding into a slide-up sheet. It
-  either mirrors the desktop nav, so it follows along as you edit, or is spelled
-  out on its own with its own items, sheet entries, and footer.
+- 📱 **Mobile bar.** Narrow screens can swap the sidebar for a bar docked bottom
+  or top, with the overflow folding into a slide-up sheet. It either mirrors the
+  desktop nav or is defined separately.
   ([mobile bar](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/mobile/))
 - 👆 **Tap, hold, and double tap.** Toggle, more-info, navigate, url, or
   call-service, each gesture with its own target.
   ([actions](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/actions/))
-- 📍 **Knows where you are.** Navigation links highlight the page you're on,
-  sub-paths included, and follow you as you move.
-- 🪄 **Jinja where it counts.** Text, icons, and color fields all template, so a
-  lock icon can go red when it's unlocked.
-- 🎨 **Wears your theme.** Colors, corners, shadows, and type follow the active
-  Home Assistant theme, reading the same variables as HA's own nav sidebar.
-- 🖌️ **Styleable down to the pixel.** Per-element colors, any CSS background, and
-  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the whole
-  sidebar and per-element level.
+- 📍 **Active page highlighting.** Navigation items mark the page you are on,
+  sub-paths included.
+- 🪄 **Jinja templates.** Text, icons, and color fields template against Home
+  Assistant state.
+- 🎨 **Theme aware.** Colors, corners, shadows, and type follow the active theme,
+  reading the same variables as HA's own nav sidebar.
+- 🖌️ **card-mod support.** Per-element colors, any CSS background, and
+  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the
+  sidebar and element level.
   ([styling](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/styling/))
-- 🖱️ **Built by clicking, not typing.** A five-tab editor with a live preview,
-  drag-to-reorder, an icon picker, a Test Action button, and a YAML escape hatch
-  on every tab and element. The mobile preview renders at phone width and drags
-  narrower, so you can watch the bar fold.
-- 🌱 **Starts with something real.** The **+ Sidebar** button seeds a starter built
-  from your own views and lights, not an empty box.
+- 🖱️ **Visual editor.** Five tabs with a live preview, drag to reorder, an icon
+  picker, a Test Action button, and a YAML escape hatch on every tab and element.
+- 🌱 **Starter config.** The **+ Sidebar** button seeds one from your own views
+  and lights rather than an empty box.
   ([install](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/install/))
-
-## Upgrading from 1.x
-
-2.0 removes one option: replace `hide_on_mobile: true` with `on_mobile: hidden`.
-The sidebar tells you if you miss one, and nothing else changed.
-([details](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/install/#upgrading-from-1x))
 
 ## Installation
 
