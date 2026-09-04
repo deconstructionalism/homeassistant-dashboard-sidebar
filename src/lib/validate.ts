@@ -101,11 +101,14 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
 };
 
 /**
- * Validates the styling hooks (`class`, `card_mod`).
+ * Validates the optional card-mod hooks (`class`, `id`, and `card_mod`).
+ * `id` is a pure CSS-targeting hook: nothing reads it back, and it is
+ * neither required nor checked for uniqueness.
  */
 const checkHooks = (block: unknown, ctx: string, errors: string[]): void => {
-  const b = block as { class?: unknown; card_mod?: unknown };
+  const b = block as { class?: unknown; id?: unknown; card_mod?: unknown };
   checkString(b.class, `${ctx}.class`, errors);
+  checkString(b.id, `${ctx}.id`, errors);
   checkMapping(b.card_mod, `${ctx}.card_mod`, errors);
 };
 

@@ -1317,6 +1317,7 @@ export class DashboardSidebar extends LitElement {
       case 'divider':
         return html`<div
           class="entry-divider dashboard-sidebar-divider${this._hookClass(block)}${this._selClass(loc)}"
+          id=${block.id ?? nothing}
           data-loc=${loc}
           style=${styleMap(
             block.color
@@ -1359,6 +1360,7 @@ export class DashboardSidebar extends LitElement {
     const clickable = this._actionable(block) ? ' clickable' : '';
     return html`<div
       class="app-title dashboard-sidebar-title${clickable}${this._navClass(block)}${this._hookClass(block)}${this._selClass(loc)}"
+      id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
       @pointerdown=${() => this._onActionDown(block)}
@@ -1405,6 +1407,7 @@ export class DashboardSidebar extends LitElement {
     const clickable = this._actionable(block) ? ' clickable' : '';
     return html`<div
       class="clock dashboard-sidebar-clock${clickable}${this._navClass(block)}${this._hookClass(block)}${this._selClass(loc)}"
+      id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
       @pointerdown=${() => this._onActionDown(block)}
@@ -1430,6 +1433,7 @@ export class DashboardSidebar extends LitElement {
     const clickable = this._actionable(block) ? ' clickable' : '';
     return html`<div
       class="date dashboard-sidebar-date${clickable}${this._navClass(block)}${this._hookClass(block)}${this._selClass(loc)}"
+      id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
       @pointerdown=${() => this._onActionDown(block)}
@@ -1470,6 +1474,7 @@ export class DashboardSidebar extends LitElement {
     };
     return html`<div
       class="content dashboard-sidebar-markdown${this._hookClass(block)}${this._selClass(loc)}"
+      id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
     >
@@ -1513,6 +1518,7 @@ export class DashboardSidebar extends LitElement {
     const fill = stringCard ? '' : ' card-fill';
     return html`<div
       class="content dashboard-sidebar-content${fill}${this._hookClass(block)}${this._selClass(loc)}"
+      id=${block.id ?? nothing}
       data-loc=${loc}
       style=${styleMap(style)}
     >
@@ -1550,6 +1556,7 @@ export class DashboardSidebar extends LitElement {
       return html`
         <button
           class="row item collapsed-row dashboard-sidebar-item${this._navClass(item)}${this._hookClass(item)}${this._selClass(loc)}"
+          id=${item.id ?? nothing}
           data-loc=${loc}
           aria-label=${title}
           @mouseenter=${(ev: MouseEvent) => this._showTip(ev, title)}
@@ -1577,6 +1584,7 @@ export class DashboardSidebar extends LitElement {
     return html`
       <button
         class="row item dashboard-sidebar-item${this._navClass(item)}${this._hookClass(item)}${this._selClass(loc)}"
+        id=${item.id ?? nothing}
         data-loc=${loc}
         @pointerdown=${() => this._onActionDown(item)}
         @pointerup=${this._cancelHold}
@@ -1617,7 +1625,10 @@ export class DashboardSidebar extends LitElement {
       ? (this.previewCollapsedCats?.includes(loc) ?? false)
       : this._collapsedCats.has(key);
     return html`
-      <div class="category dashboard-sidebar-category${this._hookClass(category)}">
+      <div
+        class="category dashboard-sidebar-category${this._hookClass(category)}"
+        id=${category.id ?? nothing}
+      >
         <button
           class="row category-header dashboard-sidebar-category-header${this._selClass(loc)}"
           data-loc=${loc}
@@ -1664,7 +1675,10 @@ export class DashboardSidebar extends LitElement {
     const open = this._openCategory === key;
     const pinned = this._pinnedCategoryLoc() === loc;
     return html`
-      <div class="category-anchor dashboard-sidebar-category${this._hookClass(category)}">
+      <div
+        class="category-anchor dashboard-sidebar-category${this._hookClass(category)}"
+        id=${category.id ?? nothing}
+      >
         <button
           class="row item collapsed-row dashboard-sidebar-item ${open ? 'active' : ''}${this._selClass(loc)}"
           data-loc=${loc}
@@ -1899,6 +1913,7 @@ export class DashboardSidebar extends LitElement {
     return html`
       <button
         class="footer-btn dashboard-sidebar-footer-btn${this._navClass(btn)}${this._hookClass(btn)}${this._selClass(loc)}"
+        id=${btn.id ?? nothing}
         data-loc=${loc}
         aria-label=${title}
         @mouseenter=${(ev: MouseEvent) => this._showTip(ev, title)}

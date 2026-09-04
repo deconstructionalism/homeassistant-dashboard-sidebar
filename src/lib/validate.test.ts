@@ -355,7 +355,7 @@ describe('validateConfig — class/card_mod hooks', () => {
 });
 
 describe('element ids', () => {
-  it('rejects id as an unknown key on blocks, category items, and footer buttons', () => {
+  it('accepts an optional id on blocks, category items, and footer buttons', () => {
     const errors = validateConfig({
       header: [{ type: 'clock', id: 'clk' }],
       body: [
@@ -364,13 +364,10 @@ describe('element ids', () => {
       ],
       footer: { buttons: [{ icon: 'mdi:cog', id: 'cog', tap_action: TAP }] },
     } as unknown as DashboardSidebarConfig);
-    expect(errors).toContain('header[0]: unknown option "id"');
-    expect(errors).toContain('body[0]: unknown option "id"');
-    expect(errors).toContain('body[1].items[0]: unknown option "id"');
-    expect(errors).toContain('footer.buttons[0]: unknown option "id"');
+    expect(errors).toEqual([]);
   });
 
-  it('rejects id on inline mobile entries too', () => {
+  it('accepts an optional id on inline mobile entries', () => {
     const errors = validateConfig({
       body: [{ type: 'item', title: 'A', tap_action: TAP }],
       mobile: {
@@ -379,9 +376,25 @@ describe('element ids', () => {
         footer: [{ icon: 'mdi:lock', id: 'z', tap_action: TAP }],
       },
     } as unknown as DashboardSidebarConfig);
-    expect(errors).toContain('mobile.items[0]: unknown option "id"');
-    expect(errors).toContain('mobile.menu[0]: unknown option "id"');
-    expect(errors).toContain('mobile.footer[0]: unknown option "id"');
+    expect(errors).toEqual([]);
+  });
+
+  it('never requires an id, and never minds a repeated one', () => {
+    const errors = validateConfig({
+      body: [
+        { type: 'item', title: 'A', tap_action: TAP },
+        { type: 'item', id: 'dup', title: 'B', tap_action: TAP },
+        { type: 'item', id: 'dup', title: 'C', tap_action: TAP },
+      ],
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toEqual([]);
+  });
+
+  it('rejects a non-string id', () => {
+    const errors = validateConfig({
+      body: [{ type: 'item', id: 7, title: 'A', tap_action: TAP }],
+    } as unknown as DashboardSidebarConfig);
+    expect(errors).toContain('body[0].id: must be a string');
   });
 });
 

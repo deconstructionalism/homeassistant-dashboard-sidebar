@@ -511,7 +511,7 @@ export class DashboardSidebarBar extends LitElement {
     return html`
       <button
         class=${classes}
-        id=${`bar-slot-${index}`}
+        id=${el.id ?? `bar-slot-${index}`}
         aria-label=${title || (time ? entry.kind : 'bar item')}
         aria-current=${active ? 'page' : nothing}
         style=${textColor ? `color:${textColor}` : ''}

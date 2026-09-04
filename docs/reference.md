@@ -32,6 +32,7 @@ CSS targeting hooks shared by every block and footer button.
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so card-mod can target this one element. |
+| `id` | `string` | no | CSS id set on the rendered root, so card-mod can target this one element. |
 | `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config (a `{ style, class, ... }` object), applied to this element's rendered root via the card-mod integration when installed. |
 
 ## Title block
