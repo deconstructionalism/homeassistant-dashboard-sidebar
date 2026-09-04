@@ -40,8 +40,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      # web-test-runner.config.mjs launches both, so both must be installed.
+      - name: Install Playwright Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
       - name: Browser render tests
         run: npm run test:browser
 
