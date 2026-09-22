@@ -134,9 +134,19 @@ export class DashboardSidebarBar extends LitElement {
   /** Re-measures capacity as the viewport changes. */
   private readonly _resize = new ResizeObserver(() => this._measure(true));
 
+  /** Suppresses the next location-changed close when it was caused by
+   * running a sheet/bar item's own action (e.g. a hash-popup button),
+   * rather than the user actually navigating elsewhere. One-shot: cleared
+   * either when consumed or after a short window if nothing fired. */
+  private _suppressLocationClose = false;
+
   /** Re-reads the path when the frontend navigates. */
   private readonly _onLocationChange = (): void => {
     this._path = window.location.pathname;
+    if (this._suppressLocationClose) {
+      this._suppressLocationClose = false;
+      return;
+    }
     this._close();
   };
 
@@ -385,13 +395,19 @@ export class DashboardSidebarBar extends LitElement {
     return target !== '' && (current === target || current.startsWith(`${target}/`));
   }
 
-  /** Runs an element's tap action. Inert in editor preview. */
+  /** Runs an element's tap action. Inert in editor preview. A navigate
+   * action (e.g. a hash-popup button) fires location-changed, which would
+   * otherwise close the sheet the tap came from; suppress that one close. */
   private _run(el: ItemBlock | FooterButtonConfig): void {
     if (this.preview) {
       return;
     }
     if (this._hass) {
+      this._suppressLocationClose = true;
       runAction(this, this._hass, el.tap_action as RunnableAction | undefined, el.entity);
+      setTimeout(() => {
+        this._suppressLocationClose = false;
+      }, 50);
     }
   }
 
@@ -709,7 +725,11 @@ export class DashboardSidebarBar extends LitElement {
           action
             ? () => {
                 if (this._hass) {
+                  this._suppressLocationClose = true;
                   runAction(this, this._hass, action, undefined);
+                  setTimeout(() => {
+                    this._suppressLocationClose = false;
+                  }, 50);
                 }
               }
             : nothing
