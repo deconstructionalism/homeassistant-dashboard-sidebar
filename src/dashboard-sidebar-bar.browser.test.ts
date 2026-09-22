@@ -338,3 +338,56 @@ describe('<dashboard-sidebar-bar>', () => {
     );
   });
 });
+
+/** Stubs card-mod's element, recording every applyToElement invocation. */
+class StubBarCardMod extends HTMLElement {
+  /** The recorded calls, inspected by the tests. */
+  static calls: Array<{ element: HTMLElement; type: string; config: unknown }> = [];
+
+  /** Mimics card-mod's static apply surface by recording the arguments. */
+  static applyToElement(element: HTMLElement, type: string, config: unknown): void {
+    StubBarCardMod.calls.push({ element, type, config });
+  }
+}
+
+describe('<dashboard-sidebar-bar> card-mod delegation', () => {
+  before(() => {
+    if (!customElements.get('card-mod')) {
+      customElements.define('card-mod', StubBarCardMod);
+    }
+  });
+
+  beforeEach(() => {
+    StubBarCardMod.calls = [];
+  });
+
+  it('falls back to the desktop card_mod while mirroring, unset otherwise', async () => {
+    const cardMod = { style: '.sb-mache { color: red; }' };
+    const el = await mount({ ...base(), card_mod: cardMod, mobile: { mode: 'mirror' } });
+    expect(StubBarCardMod.calls.length).to.equal(1);
+    expect(StubBarCardMod.calls[0].element).to.equal(el);
+    expect(StubBarCardMod.calls[0].config).to.deep.equal(cardMod);
+  });
+
+  it('prefers an explicit mobile.card_mod over the desktop one, even while mirroring', async () => {
+    const desktop = { style: '.sb-mache { color: red; }' };
+    const bar = { style: '.sb-mache { color: blue; }' };
+    const el = await mount({
+      ...base(),
+      card_mod: desktop,
+      mobile: { mode: 'mirror', card_mod: bar },
+    });
+    expect(StubBarCardMod.calls.length).to.equal(1);
+    expect(StubBarCardMod.calls[0].element).to.equal(el);
+    expect(StubBarCardMod.calls[0].config).to.deep.equal(bar);
+  });
+
+  it('does not fall back to the desktop card_mod in custom mode', async () => {
+    await mount({
+      ...base(),
+      card_mod: { style: '.sb-mache { color: red; }' },
+      mobile: { mode: 'custom', items: [{ type: 'item', title: 'A', tap_action: TAP }] },
+    });
+    expect(StubBarCardMod.calls.length).to.equal(0);
+  });
+});

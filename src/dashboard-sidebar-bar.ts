@@ -216,6 +216,24 @@ export class DashboardSidebarBar extends LitElement {
     return barMode(this._config) === 'mirror' ? this._config.footer : this._config.mobile?.footer;
   }
 
+  /**
+   * The card-mod config that styles the bar itself. `mobile.card_mod`
+   * always wins when set, so a bar can carry its own extra styling in
+   * either mode; unset and mirroring, it falls back to the desktop
+   * sidebar's own card_mod, since a mirrored bar's elements reuse the
+   * desktop's classes (a footer button's `sb-mache`, say) and otherwise
+   * silently rendered unstyled.
+   */
+  private _effectiveCardMod(): Record<string, unknown> | undefined {
+    if (!this._config) {
+      return undefined;
+    }
+    if (this._config.mobile?.card_mod) {
+      return this._config.mobile.card_mod;
+    }
+    return barMode(this._config) === 'mirror' ? this._config.card_mod : undefined;
+  }
+
   /** Whether the effective footer is a card or markdown footer. */
   private _footerHasContent(): boolean {
     const footer = this._effectiveFooter();
@@ -329,7 +347,7 @@ export class DashboardSidebarBar extends LitElement {
 
   /** Applies the bar-level card-mod after render. */
   protected updated(): void {
-    const cardMod = this._config?.mobile?.card_mod;
+    const cardMod = this._effectiveCardMod();
     if (cardMod) {
       applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
     }
