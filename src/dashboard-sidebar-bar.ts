@@ -551,7 +551,6 @@ export class DashboardSidebarBar extends LitElement {
           active ? 'dashboard-sidebar-bar-flyout-row-active' : ''
         } ${el.class ?? ''}"
         @click=${() => {
-          this._close();
           this._run(el);
         }}
       >
@@ -649,7 +648,6 @@ export class DashboardSidebarBar extends LitElement {
         } ${el.class ?? ''}"
         aria-current=${active ? 'page' : nothing}
         @click=${() => {
-          this._close();
           this._run(el);
         }}
       >
@@ -710,7 +708,6 @@ export class DashboardSidebarBar extends LitElement {
         @click=${
           action
             ? () => {
-                this._close();
                 if (this._hass) {
                   runAction(this, this._hass, action, undefined);
                 }
@@ -744,7 +741,6 @@ export class DashboardSidebarBar extends LitElement {
           @click=${
             el.tap_action
               ? () => {
-                  this._close();
                   this._run(entry.element as ItemBlock);
                 }
               : nothing
