@@ -1666,11 +1666,12 @@ export class DashboardSidebarEditor extends LitElement {
     // there are no references, so the elements are cloned outright.
     const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, mode: 'mirror' } });
     const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
-    // A custom bar derives nothing, so the desktop footer has to come across
-    // whole or the switch silently loses it. It copies in every shape it
-    // takes: a button strip, a card, or markdown.
+    // A custom bar derives nothing, so the desktop footer and card_mod have
+    // to come across whole or the switch silently loses them. The footer
+    // copies in every shape it takes: a button strip, a card, or markdown.
     const footer = this._working.footer ? structuredClone(this._working.footer) : undefined;
-    this._patchMobile({ mode: 'custom', items, footer });
+    const cardMod = this._working.card_mod ? structuredClone(this._working.card_mod) : undefined;
+    this._patchMobile({ mode: 'custom', items, footer, card_mod: cardMod });
     this._confirmingCustomSwitch = false;
   }
 

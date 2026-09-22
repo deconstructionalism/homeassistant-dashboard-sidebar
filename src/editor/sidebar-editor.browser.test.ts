@@ -134,6 +134,32 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(saved?.mobile?.footer?.buttons?.[0]?.icon).to.equal('mdi:cog');
   });
 
+  it('copies the desktop card_mod too, so a custom bar keeps its styling', async () => {
+    const cardMod = { style: '.sb-mache { color: red; }' };
+    const el = await mount({ ...cfg(), card_mod: cardMod, mobile: {} });
+    await tab(el, 'Mobile Bar');
+    let saved: DashboardSidebarConfig | undefined;
+    el.onSave = (c) => {
+      saved = c;
+    };
+    (root(el).querySelector('.tab-notes .tool') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.add-menu-item')].find((b) =>
+        /Switch To Custom Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    (
+      [...root(el).querySelectorAll('.confirm-actions button')].find((b) =>
+        /Copy Desktop Bar/.test(b.textContent ?? ''),
+      ) as HTMLButtonElement
+    ).click();
+    await settle(el);
+    (root(el).querySelector('footer .primary') as HTMLButtonElement).click();
+    expect(saved?.mobile?.card_mod).to.deep.equal(cardMod);
+  });
+
   it('offers a YAML reference with docs links in custom mode only', async () => {
     const mirror = await mount({ ...cfg(), mobile: {} });
     await tab(mirror, 'Mobile Bar');
