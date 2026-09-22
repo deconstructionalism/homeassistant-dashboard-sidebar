@@ -659,7 +659,9 @@ export class DashboardSidebarBar extends LitElement {
     `;
   }
 
-  /** Renders one footer button of the sheet. */
+  /** Renders one footer button of the sheet. Unlike sheet rows, footer
+   * buttons don't close the sheet on tap - they're toggles and popups
+   * (lock, charger, Assist) a person taps more than once per visit. */
   private _renderSheetButton(entry: BarEntry): TemplateResult {
     const el = entry.element as FooterButtonConfig;
     const active = this._navActive(entry);
@@ -670,7 +672,6 @@ export class DashboardSidebarBar extends LitElement {
         } ${el.class ?? ''}"
         aria-label=${this._title(entry) || 'footer button'}
         @click=${() => {
-          this._close();
           this._run(el);
         }}
       >
