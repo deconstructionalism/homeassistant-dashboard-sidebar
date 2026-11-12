@@ -26,7 +26,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `uix` | `Record<string, unknown>` | no | Style config for the whole sidebar, applied by UIX, or card-mod when UIX is not installed. Target the dashboard-sidebar-* classes on the rendered elements. Wins over `card_mod` when both are set. |
 | `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
-## Common fields (every block and footer button)
+## Common fields (every block, footer button and the footer)
 
 CSS targeting hooks shared by every block and footer button.
 
@@ -43,7 +43,7 @@ Set `type: title` to use this block.
 
 A heading block showing templatable text. Hidden while collapsed.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -62,7 +62,7 @@ Set `type: clock` to use this block.
 
 A digital clock block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ Set `type: date` to use this block.
 
 A date block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -102,7 +102,7 @@ Set `type: divider` to use this block.
 
 A horizontal rule block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -115,7 +115,7 @@ Set `type: item` to use this block.
 
 A single tappable row. Standalone in a region, or nested in a category.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ Set `type: category` to use this block.
 
 A collapsible group of items, nested one level deep.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ Set `type: markdown` to use this block.
 
 A markdown block: Home Assistant markdown with Jinja templating.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -172,7 +172,7 @@ Set `type: card` to use this block.
 
 A manual card block: any Lovelace card, authored as YAML.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -183,11 +183,14 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 
 ## Footer
 
-The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set of icon buttons (with overflow into a dots menu), a single manual card, or a markdown block. A card or markdown footer shows no dots menu and is hidden while collapsed.
+The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set of icon buttons (with overflow into a dots menu), a single manual card, or a markdown block. A card or markdown footer shows no dots menu and is hidden while collapsed. Takes the same `class`, `id`, `uix` and `card_mod` hooks as every element, applied to the footer row.
+
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `divider` | `boolean` | no | Whether the footer shows its top divider bar. Default true. |
+| `align` | `Align` | no | Where the button row sits: left (default), center or right. Applies to a button footer, in the sidebar and the mobile bar's sheet; a collapsed sidebar always centers its footer. |
 | `buttons` | `FooterButtonConfig[]` | no | Ordered icon buttons. Mutually exclusive with `card`/`markdown`. |
 | `card` | `LovelaceCardConfig` | no | A manual Lovelace card, replacing the buttons. |
 | `markdown` | `MaybeTemplate` | no | Markdown content with Jinja templating, replacing the buttons. Templatable. |
@@ -200,7 +203,7 @@ The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set 
 
 An icon button in the footer's button bar.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |

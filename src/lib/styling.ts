@@ -10,6 +10,8 @@
  * engine installed are independent of each other.
  */
 
+import type { Align } from './types';
+
 /** The styling engines' custom element names, in preference order. */
 export const STYLING_ENGINES = ['uix-node', 'card-mod'] as const;
 
@@ -140,3 +142,29 @@ export const scopeCss = (css: string, hostSel: string): string | null => {
     .map((r) => r.cssText)
     .join('\n');
 };
+
+/**
+ * The `data-style-loc` marking the footer row, in the sidebar and in the
+ * mobile bar's sheet. The footer is not a selectable element (it has no
+ * `data-loc`), so its own styles are keyed to this instead.
+ */
+export const FOOTER_STYLE_LOC = 'footer';
+
+/** The footer's `align` as the button row's flex `justify-content`. */
+export const FOOTER_JUSTIFY: Record<Align, string> = {
+  left: 'flex-start',
+  center: 'center',
+  right: 'flex-end',
+};
+
+/**
+ * Turns a `class` hook (one or more space-separated names) into classMap
+ * entries, so it can be spread into a built-in class list.
+ */
+export const hookClassMap = (cls: string | undefined): Record<string, boolean> =>
+  Object.fromEntries(
+    (cls ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((name) => [name, true]),
+  );

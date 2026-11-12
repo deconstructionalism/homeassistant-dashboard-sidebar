@@ -21,7 +21,7 @@ export const BLOCK_FIELDS = {
 } as const;
 
 /** Fields accepted on the footer. */
-export const FOOTER_FIELDS = ['divider', 'buttons', 'card', 'markdown', 'markdown_color', 'tap_action', 'hold_action', 'double_tap_action'] as const;
+export const FOOTER_FIELDS = ['divider', 'align', 'buttons', 'card', 'markdown', 'markdown_color', 'tap_action', 'hold_action', 'double_tap_action', 'class', 'id', 'uix', 'card_mod'] as const;
 
 /** Fields accepted on a footer button, including inherited common fields. */
 export const FOOTER_BUTTON_FIELDS = ['icon', 'icon_color', 'title', 'entity', 'tap_action', 'hold_action', 'double_tap_action', 'active_highlight', 'class', 'id', 'uix', 'card_mod'] as const;

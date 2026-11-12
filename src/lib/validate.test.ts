@@ -182,6 +182,41 @@ describe('validateConfig', () => {
     ).toContain('mobile.uix: must be a mapping');
   });
 
+  it('accepts align and the styling hooks on the footer and the mobile footer', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        footer: {
+          align: 'center',
+          class: 'foot',
+          id: 'f1',
+          uix: { style: 'x' },
+          card_mod: { style: 'y' },
+          buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' } }],
+        },
+        mobile: {
+          mode: 'custom',
+          items: [{ type: 'item', title: 'A', tap_action: { action: 'toggle' } }],
+          footer: {
+            align: 'right',
+            uix: { style: 'x' },
+            buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' } }],
+          },
+        },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects a bad footer align or hook', () => {
+    const errs = validateConfig({
+      ...valid(),
+      footer: { align: 'middle', class: 3, uix: 'x', buttons: [] },
+    } as unknown as DashboardSidebarConfig);
+    expect(errs.some((e) => e.startsWith('footer.align'))).toBe(true);
+    expect(errs).toContain('footer.class: must be a string');
+    expect(errs).toContain('footer.uix: must be a mapping');
+  });
+
   it('validates title, clock, and date blocks', () => {
     expect(
       validateConfig({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig),

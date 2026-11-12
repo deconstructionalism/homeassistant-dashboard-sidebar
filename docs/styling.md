@@ -131,23 +131,24 @@ works everywhere `uix:` does, so existing configs keep their styling unchanged.
   under `card_mod:` moves it to `uix:` when you save; styles you don't touch
   stay where they are.
 
-Styles are available at three levels, all edited under **Advanced → Styles
-YAML**:
+Styles are available at four levels, all edited in a **Styles YAML** field:
 
 - **Whole sidebar**: Settings → Advanced. Styles the sidebar's shadow root;
   target the `dashboard-sidebar-*` classes below.
 - **Per element**: each element's Advanced section. **Automatically scoped** to
   that one element, so a bare selector like `.dashboard-sidebar-item-label` only
   affects the element you are editing, not every element in the sidebar.
+- **Footer**: Footer → Footer Settings (`footer.uix`). Scoped to the footer row;
+  see [Footer](footer.md#styling-the-footer).
 - **Mobile bar**: Mobile Bar → Advanced (`mobile.uix`). A mirrored bar with no
   styles of its own uses the whole-sidebar styles.
 
 === "Visual editor"
 
     Open the element (or **Settings** for the whole sidebar), expand
-    **Advanced → Styles YAML**, and write your styles. The field says which
-    engine is applying them, and the targetable classes are listed right under
-    it.
+    **Advanced → Styles YAML**, and write your styles. The field says whether
+    UIX or card-mod is styling them (and, for card-mod, how to switch to UIX),
+    and the targetable classes are listed right under it.
 
 === "YAML"
 
@@ -160,7 +161,7 @@ YAML**:
     ```
 
 If neither UIX nor card-mod is installed, the Styles fields are hidden and
-replaced with a prompt to install one (UIX first).
+replaced with a prompt to install UIX.
 
 Styles that load late are fine: UIX and card-mod are frontend modules that
 can finish loading after the sidebar has drawn, and the sidebar applies its

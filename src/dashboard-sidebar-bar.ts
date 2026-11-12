@@ -1,10 +1,21 @@
 import { html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
 
 import { runAction, type RunnableAction } from './lib/action';
 
 import { EDIT_EVENT } from './lib/const';
-import { applyStyles, styleConfig, stylingEngine, whenStylingEngine } from './lib/styling';
+import {
+  FOOTER_JUSTIFY,
+  FOOTER_STYLE_LOC,
+  applyStyles,
+  hookClassMap,
+  scopeCss,
+  styleConfig,
+  stylingEngine,
+  whenStylingEngine,
+} from './lib/styling';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { barMode, mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
@@ -356,6 +367,42 @@ export class DashboardSidebarBar extends LitElement {
     const style = this._effectiveStyle();
     if (style) {
       applyStyles(this, style, 'dashboard-sidebar-bar');
+    }
+    this._applyFooterStyle();
+  }
+
+  /**
+   * Applies the footer's own style config (`uix`, else `card_mod`) to the
+   * sheet's footer row, scoped to it the same way the sidebar scopes it. A
+   * mirrored bar shows the desktop footer, so it takes the desktop footer's
+   * styles; a custom bar takes `mobile.footer`'s.
+   */
+  private _applyFooterStyle(): void {
+    const node = this.renderRoot.querySelector<HTMLElement>(
+      `[data-style-loc="${FOOTER_STYLE_LOC}"]`,
+    );
+    const cfg = styleConfig(this._effectiveFooter());
+    if (!node || !cfg) {
+      return;
+    }
+    // Recorded on the node itself: the sheet unmounts while closed, and a
+    // fresh node (no record yet) is styled again when it reopens.
+    const sig = JSON.stringify(cfg);
+    if (node.dataset.styledSig === sig) {
+      return;
+    }
+    const css = cfg.style;
+    const scoped =
+      typeof css === 'string' && css.trim() !== ''
+        ? scopeCss(css, `[data-style-loc="${FOOTER_STYLE_LOC}"]`)
+        : null;
+    const applied = applyStyles(
+      node,
+      scoped === null ? cfg : { ...cfg, style: scoped },
+      `dashboard-sidebar-bar:${FOOTER_STYLE_LOC}`,
+    );
+    if (applied !== null) {
+      node.dataset.styledSig = sig;
     }
   }
 
@@ -872,9 +919,18 @@ export class DashboardSidebarBar extends LitElement {
           buttons.length > 0 || content !== nothing
             ? html`
                 <div
-                  class="dashboard-sidebar-bar-sheet-footer ${
-                    this._effectiveFooter()?.divider === false ? 'no-divider' : ''
-                  }"
+                  class=${classMap({
+                    'dashboard-sidebar-bar-sheet-footer': true,
+                    'no-divider': this._effectiveFooter()?.divider === false,
+                    ...hookClassMap(this._effectiveFooter()?.class),
+                  })}
+                  id=${this._effectiveFooter()?.id || nothing}
+                  data-style-loc=${FOOTER_STYLE_LOC}
+                  style=${styleMap(
+                    shownContent === nothing && this._effectiveFooter()?.align
+                      ? { 'justify-content': FOOTER_JUSTIFY[this._effectiveFooter()!.align!] }
+                      : {},
+                  )}
                 >
                   ${
                     shownContent !== nothing

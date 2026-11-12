@@ -13,7 +13,10 @@ import Sortable from 'sortablejs';
 
 import { runAction } from './lib/action';
 import {
+  FOOTER_JUSTIFY,
+  FOOTER_STYLE_LOC,
   applyStyles,
+  hookClassMap,
   scopeCss,
   styleConfig,
   stylingEngine,
@@ -751,29 +754,56 @@ export class DashboardSidebar extends LitElement {
       }
       const engine = applyStyles(
         node,
-        this._scopeElementStyle(cfg, loc),
+        this._scopeElementStyle(cfg, `[data-loc="${loc.replace(/["\\]/g, '\\$&')}"]`),
         `dashboard-sidebar:${loc}`,
       );
       if (engine !== null) {
         this._elementStyleSigs.set(node, sig);
       }
     });
+    this._applyFooterStyle();
+  }
+
+  /**
+   * Applies the footer's own style config (`uix`, else `card_mod`) to the
+   * footer row, scoped to it like any element's. Same once-per-config,
+   * retry-until-applied rules as the per-element styles.
+   */
+  private _applyFooterStyle(): void {
+    const node = (this.renderRoot as ParentNode).querySelector<HTMLElement>(
+      `[data-style-loc="${FOOTER_STYLE_LOC}"]`,
+    );
+    if (!node) {
+      return;
+    }
+    const cfg = styleConfig(this._config?.footer);
+    const sig = cfg ? JSON.stringify(cfg) : '';
+    if (this._elementStyleSigs.get(node) === sig) {
+      return;
+    }
+    if (!cfg) {
+      this._elementStyleSigs.set(node, sig);
+      return;
+    }
+    const scoped = this._scopeElementStyle(cfg, `[data-style-loc="${FOOTER_STYLE_LOC}"]`);
+    if (applyStyles(node, scoped, `dashboard-sidebar:${FOOTER_STYLE_LOC}`) !== null) {
+      this._elementStyleSigs.set(node, sig);
+    }
   }
 
   /**
    * Scopes a per-element style config so its selectors only affect this element
-   * (and its subtree), by rewriting the `style` CSS to key every rule to the
-   * element's unique `data-loc`. A bare selector such as `.dashboard-sidebar-title`
+   * (and its subtree), by rewriting the `style` CSS to key every rule to `sel`,
+   * the element's unique `data-loc` (or the footer's `data-style-loc`). A bare selector such as `.dashboard-sidebar-title`
    * then matches only this element, so styling one title no longer bleeds onto
    * every other title. Empty / non-string styles (the object form) and CSS that
    * fails to parse are passed through unchanged.
    */
-  private _scopeElementStyle(cfg: Record<string, unknown>, loc: string): Record<string, unknown> {
+  private _scopeElementStyle(cfg: Record<string, unknown>, sel: string): Record<string, unknown> {
     const style = cfg.style;
     if (typeof style !== 'string' || style.trim() === '') {
       return cfg;
     }
-    const sel = `[data-loc="${loc.replace(/["\\]/g, '\\$&')}"]`;
     const scoped = scopeCss(style, sel);
     return scoped === null ? cfg : { ...cfg, style: scoped };
   }
@@ -1808,7 +1838,12 @@ export class DashboardSidebar extends LitElement {
       'dashboard-sidebar-footer': true,
       'collapsed-footer': collapsed,
       'no-divider': footer.divider === false,
+      ...hookClassMap(footer.class),
     };
+    // The button row's alignment; a collapsed footer is always centered (CSS).
+    const rowStyle =
+      !collapsed && footer.align ? { 'justify-content': FOOTER_JUSTIFY[footer.align] } : {};
+    const footerId = footer.id || nothing;
 
     if (footer.card !== undefined || footer.markdown !== undefined) {
       const el = collapsed ? undefined : this._cards.get('footer');
@@ -1833,7 +1868,11 @@ export class DashboardSidebar extends LitElement {
         : {};
       const actionable = markdown && this._actionable(mdActions);
       const fill = !markdown && typeof footer.card !== 'string' ? ' card-fill' : '';
-      return html`<div class=${classMap(footerClasses)}>
+      return html`<div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+      >
         <div
           class="content dashboard-sidebar-content${fill}${actionable ? ' clickable' : ''}${this._selClass(loc)}"
           data-loc=${loc}
@@ -1861,7 +1900,7 @@ export class DashboardSidebar extends LitElement {
       const showPopover = (this._footerOpen && anchor) || (pinned && this._pinnedAnchor);
       const popAnchor = this._footerOpen && anchor ? anchor : this._pinnedAnchor;
       return html`
-        <div class=${classMap(footerClasses)}>
+        <div class=${classMap(footerClasses)} id=${footerId} data-style-loc=${FOOTER_STYLE_LOC}>
           ${this._renderDots('row item collapsed-row dashboard-sidebar-item dashboard-sidebar-footer-more')}
           ${showPopover && popAnchor ? this._renderFooterPopover(buttons, popAnchor, 0) : nothing}
         </div>
@@ -1878,7 +1917,13 @@ export class DashboardSidebar extends LitElement {
     const width = (this.preview && this._footerBarWidth) || (this._config?.width ?? 240) - 24;
     const maxFit = Math.max(1, Math.floor((width + 4) / 44)); // 40px button + 4px gap
     if (buttons.length <= maxFit) {
-      return html`<div class=${classMap(footerClasses)} data-container=${container}>
+      return html`<div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+        style=${styleMap(rowStyle)}
+        data-container=${container}
+      >
         ${repeat(
           buttons,
           (btn) => this._keyFor(btn),
@@ -1889,7 +1934,13 @@ export class DashboardSidebar extends LitElement {
     const inline = buttons.slice(0, maxFit - 1);
     const overflow = buttons.slice(maxFit - 1);
     return html`
-      <div class=${classMap(footerClasses)} data-container=${container}>
+      <div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+        style=${styleMap(rowStyle)}
+        data-container=${container}
+      >
         ${repeat(
           inline,
           (btn) => this._keyFor(btn),

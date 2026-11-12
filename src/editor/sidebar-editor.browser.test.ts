@@ -527,17 +527,16 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(cssClass, 'CSS class field removed').to.equal(undefined);
   });
 
-  it('prompts to install UIX (recommended) or card-mod when neither is installed', async () => {
+  it('prompts to install UIX when no styling engine is installed', async () => {
     // No styling engine is registered on this test page.
     const el = await mount(cfg());
     await tab(el, 'Body');
     await clickLoc(el, 'body:0');
     const prompt = root(el).querySelector('.styling-missing');
     expect(prompt).to.exist;
-    expect(prompt?.textContent).to.contain('recommended');
+    expect(prompt?.textContent).to.contain('Install UIX from HACS');
     const links = [...(prompt?.querySelectorAll('a') ?? [])].map((a) => a.href);
-    expect(links[0], 'UIX first').to.contain('Lint-Free-Technology/uix');
-    expect(links[1], 'card-mod second').to.contain('lovelace-card-mod');
+    expect(links).to.deep.equal(['https://github.com/Lint-Free-Technology/uix']);
   });
 
   it('reorders a region through a preview reorder event', async () => {

@@ -311,3 +311,104 @@ describe('<dashboard-sidebar-bar> with UIX installed (no card-mod)', () => {
     expect(getComputedStyle(el).color).to.equal(BLUE);
   });
 });
+
+describe('the footer row styled by its own uix (#3)', () => {
+  beforeEach(() => {
+    RenderingUix.calls = [];
+  });
+
+  it('renders the footer uix on the footer row, scoped to it', async () => {
+    const el = await mount({
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      footer: {
+        buttons: [{ icon: 'mdi:cog', tap_action: TAP }],
+        uix: { style: `.dashboard-sidebar-footer, .dashboard-sidebar-item { color: ${RED}; }` },
+      },
+    });
+    const call = RenderingUix.calls.find((c) => c.type === 'dashboard-sidebar:footer');
+    expect(call, 'footer-level UIX call').to.exist;
+    expect((call!.element as HTMLElement).getAttribute('data-style-loc')).to.equal('footer');
+    const row = el.shadowRoot?.querySelector('.dashboard-sidebar-footer') as HTMLElement;
+    expect(getComputedStyle(row).color).to.equal(RED);
+    // The same selector list names the body item, but the scoping keeps it out.
+    expect(colorAt(el, 'body:0')).to.not.equal(RED);
+  });
+
+  it('renders a footer card_mod through UIX, and uix over card_mod', async () => {
+    const legacy = await mount({
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      footer: {
+        buttons: [{ icon: 'mdi:cog', tap_action: TAP }],
+        card_mod: { style: `.dashboard-sidebar-footer { color: ${BLUE}; }` },
+      },
+    });
+    const row = (el: DashboardSidebar) =>
+      el.shadowRoot?.querySelector('.dashboard-sidebar-footer') as HTMLElement;
+    expect(getComputedStyle(row(legacy)).color).to.equal(BLUE);
+    const both = await mount({
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      footer: {
+        buttons: [{ icon: 'mdi:cog', tap_action: TAP }],
+        uix: { style: `.dashboard-sidebar-footer { color: ${RED}; }` },
+        card_mod: { style: `.dashboard-sidebar-footer { color: ${BLUE}; }` },
+      },
+    });
+    expect(getComputedStyle(row(both)).color).to.equal(RED);
+  });
+
+  it('styles a card footer row too', async () => {
+    (window as unknown as { loadCardHelpers?: () => Promise<unknown> }).loadCardHelpers =
+      async () => ({ createCardElement: () => document.createElement('div') });
+    const el = await mount({
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+      footer: {
+        card: { type: 'markdown', content: 'x' },
+        uix: { style: `.dashboard-sidebar-footer { color: ${RED}; }` },
+      },
+    });
+    const row = el.shadowRoot?.querySelector('.dashboard-sidebar-footer') as HTMLElement;
+    expect(getComputedStyle(row).color).to.equal(RED);
+    delete (window as unknown as { loadCardHelpers?: unknown }).loadCardHelpers;
+  });
+
+  /** Opens the bar's sheet through its overflow slot. */
+  const openSheet = async (el: DashboardSidebarBar): Promise<void> => {
+    (el.shadowRoot?.querySelector('.dashboard-sidebar-bar-slot-overflow') as HTMLElement).click();
+    await el.updateComplete;
+    await aTimeout(0);
+    await el.updateComplete;
+  };
+
+  const sheetFooter = (el: DashboardSidebarBar): HTMLElement =>
+    el.shadowRoot?.querySelector('.dashboard-sidebar-bar-sheet-footer') as HTMLElement;
+
+  it('renders a custom bar footer uix on the sheet footer row', async () => {
+    const el = await mountBar({
+      body: [{ type: 'item', title: 'A', icon: 'mdi:home', tap_action: TAP }],
+      mobile: {
+        mode: 'custom',
+        items: [{ type: 'item', title: 'A', icon: 'mdi:home', tap_action: TAP }],
+        footer: {
+          buttons: [{ icon: 'mdi:cog', tap_action: TAP }],
+          uix: { style: `.dashboard-sidebar-bar-sheet-footer { color: ${RED}; }` },
+        },
+      },
+    });
+    await openSheet(el);
+    expect(RenderingUix.calls.map((c) => c.type)).to.include('dashboard-sidebar-bar:footer');
+    expect(getComputedStyle(sheetFooter(el)).color).to.equal(RED);
+  });
+
+  it('a mirrored bar takes the desktop footer uix', async () => {
+    const el = await mountBar({
+      body: [{ type: 'item', title: 'A', icon: 'mdi:home', tap_action: TAP }],
+      footer: {
+        buttons: [{ icon: 'mdi:cog', tap_action: TAP }],
+        uix: { style: `.dashboard-sidebar-bar-sheet-footer { color: ${BLUE}; }` },
+      },
+      mobile: { mode: 'mirror' },
+    });
+    await openSheet(el);
+    expect(getComputedStyle(sheetFooter(el)).color).to.equal(BLUE);
+  });
+});

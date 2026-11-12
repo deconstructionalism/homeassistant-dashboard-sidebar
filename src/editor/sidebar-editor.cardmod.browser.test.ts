@@ -5,7 +5,7 @@ import type { DashboardSidebarEditor } from './sidebar-editor';
 import './sidebar-editor';
 
 // The visual editor with only card-mod installed: the Styles fields still
-// work, say card-mod applies them and that UIX is recommended, and save under
+// work, say card-mod styles them and how to switch to UIX, and save under
 // `uix:` (which card-mod renders too). Its own page so the engine is card-mod.
 
 const TAP = { action: 'toggle' } as const;
@@ -45,17 +45,17 @@ describe('<dashboard-sidebar-editor> with only card-mod installed', () => {
     customElements.define('card-mod', StubCardMod);
   });
 
-  it('shows the Styles field and says card-mod applies it, with UIX recommended', async () => {
+  it('shows the Styles field, says card-mod styles it, and how to switch to UIX', async () => {
     const el = await mount(cfg());
     await tab(el, 'Settings');
     expect(root(el).querySelector('.styling-missing'), 'no install prompt').to.not.exist;
     const hint = root(el).querySelector('.styling-hint');
-    expect(hint?.textContent).to.contain('Applied by card-mod');
-    expect(hint?.textContent).to.contain('UIX is recommended');
-    expect(hint?.textContent).to.contain('deprecated');
+    const text = (hint?.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).to.contain('Styled by card-mod.');
+    expect(text).to.contain('To switch to UIX, install it from HACS, then remove card-mod');
+    expect(text).to.contain('your styles keep working');
     const links = [...(hint?.querySelectorAll('a') ?? [])].map((a) => a.getAttribute('href'));
-    expect(links).to.include('https://github.com/Lint-Free-Technology/uix');
-    expect(links).to.include('https://github.com/thomasloven/lovelace-card-mod');
+    expect(links).to.deep.equal(['https://github.com/Lint-Free-Technology/uix']);
   });
 
   it('still saves new styles under uix, which card-mod renders too', async () => {

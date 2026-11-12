@@ -256,11 +256,18 @@ export interface FooterButtonConfig extends BlockCommon {
  * The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered
  * set of icon buttons (with overflow into a dots menu), a single manual card,
  * or a markdown block. A card or markdown footer shows no dots menu and is
- * hidden while collapsed.
+ * hidden while collapsed. Takes the same `class`, `id`, `uix` and `card_mod`
+ * hooks as every element, applied to the footer row.
  */
-export interface FooterConfig {
+export interface FooterConfig extends BlockCommon {
   /** Whether the footer shows its top divider bar. Default true. */
   divider?: boolean;
+  /**
+   * Where the button row sits: left (default), center or right. Applies to a
+   * button footer, in the sidebar and the mobile bar's sheet; a collapsed
+   * sidebar always centers its footer.
+   */
+  align?: Align;
   /** Ordered icon buttons. Mutually exclusive with `card`/`markdown`. */
   buttons?: FooterButtonConfig[];
   /** A manual Lovelace card, replacing the buttons. */

@@ -267,11 +267,14 @@ const validateFooter = (footer: unknown, ctx: string, errors: string[]): void =>
   unknownKeys(footer, FOOTER_KEYS, ctx, errors);
   const f = footer as {
     divider?: unknown;
+    align?: unknown;
     buttons?: unknown;
     card?: unknown;
     markdown?: unknown;
   };
   checkBool(f.divider, `${ctx}.divider`, errors);
+  checkAlign(f.align, `${ctx}.align`, errors);
+  checkHooks(footer, ctx, errors);
   const modes = [f.buttons, f.card, f.markdown].filter((v) => v !== undefined).length;
   if (modes > 1) {
     errors.push(`${ctx}: set only one of buttons, card, or markdown`);

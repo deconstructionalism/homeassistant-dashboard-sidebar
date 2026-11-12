@@ -110,8 +110,8 @@ describe('<dashboard-sidebar-editor> with UIX installed', () => {
     expect(root(el).querySelector('.styling-missing'), 'no install prompt').to.not.exist;
     expect(stylesFieldIn(root(el)), 'Styles field').to.exist;
     const hint = root(el).querySelector('.styling-hint');
-    expect(hint?.textContent).to.contain('Applied by UIX');
-    expect(hint?.textContent).to.contain('uix:');
+    expect(hint?.textContent?.trim()).to.match(/^Styled by UIX\./);
+    expect(hint?.textContent).to.not.contain('card-mod');
     expect(root(el).querySelector('.class-ref'), 'targetable classes').to.exist;
   });
 
@@ -170,6 +170,18 @@ describe('<dashboard-sidebar-editor> with UIX installed', () => {
     await typeStyles(el, form, { style: '.dashboard-sidebar-footer-btn { color: red; }' });
     const btn = save(el)?.footer?.buttons?.[0] as { uix?: unknown };
     expect(btn.uix).to.deep.equal({ style: '.dashboard-sidebar-footer-btn { color: red; }' });
+  });
+
+  it('saves the footer row styles under footer.uix', async () => {
+    const el = await mount(cfg());
+    await tab(el, 'Footer');
+    const section = root(el).querySelector('details.footer-settings') as HTMLElement;
+    expect(section, 'Footer Settings').to.exist;
+    expect(section.querySelector('.class-ref'), 'footer classes listed').to.exist;
+    await typeStyles(el, section, { style: '.dashboard-sidebar-footer { gap: 12px; }' });
+    expect(save(el)?.footer?.uix).to.deep.equal({
+      style: '.dashboard-sidebar-footer { gap: 12px; }',
+    });
   });
 
   it('previews the sidebar-level uix in the region tabs', async () => {

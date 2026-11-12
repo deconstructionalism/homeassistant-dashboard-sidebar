@@ -81,7 +81,7 @@ export const fieldOpts = (
 };
 
 /** Alignment choices shared by the text and card blocks (from the schema). */
-const ALIGN_OPTIONS = [...ALIGNS];
+export const ALIGN_OPTIONS = [...ALIGNS];
 
 /** Tap-action kinds offered by the action editor, with Title Case labels. */
 const ACTION_OPTIONS: SelectOption[] = [
@@ -1100,11 +1100,8 @@ const navHighlightField = (
   );
 };
 
-/** UIX's repository, linked from the Styles fields as the recommended engine. */
+/** UIX's repository, linked from the Styles fields. */
 const UIX_URL = 'https://github.com/Lint-Free-Technology/uix';
-
-/** card-mod's repository, linked from the Styles fields as the fallback engine. */
-const CARD_MOD_URL = 'https://github.com/thomasloven/lovelace-card-mod';
 
 /** Targetable `dashboard-sidebar-*` selectors for each element type. */
 const ELEMENT_CLASSES: Record<string, Array<{ sel: string; desc: string }>> = {
@@ -1128,6 +1125,11 @@ const ELEMENT_CLASSES: Record<string, Array<{ sel: string; desc: string }>> = {
   ],
   markdown: [{ sel: '.dashboard-sidebar-markdown', desc: 'The text (markdown) block' }],
   card: [{ sel: '.dashboard-sidebar-content', desc: 'The manual card wrapper' }],
+  footer: [
+    { sel: '.dashboard-sidebar-footer', desc: 'The footer row' },
+    { sel: '.dashboard-sidebar-footer-btn', desc: 'A footer button' },
+    { sel: '.dashboard-sidebar-footer-more', desc: 'The overflow (more) button' },
+  ],
   'footer-button': [
     { sel: '.dashboard-sidebar-footer-btn', desc: 'The footer button' },
     { sel: '.dashboard-sidebar-footer-icon', desc: 'The footer button icon' },
@@ -1188,32 +1190,26 @@ export const stylesField = (
   hint?: string,
 ): TemplateResult => {
   const uix = html`<a href=${UIX_URL} target="_blank" rel="noopener noreferrer">UIX</a>`;
-  const cardMod = html`<a href=${CARD_MOD_URL} target="_blank" rel="noopener noreferrer"
-    >card-mod</a
-  >`;
   const engine = stylingEngine();
   if (engine === null) {
     return html`<div class="field styling-missing">
       <span>Styles YAML</span>
-      <small class="field-desc">
-        Install ${uix} (recommended) or ${cardMod} from HACS to customize styles with CSS.
-      </small>
+      <small class="field-desc">Install ${uix} from HACS to style with CSS.</small>
     </div>`;
   }
   const value = styleConfig(holder);
   const err = stylesError(value);
   const via =
     engine === 'uix-node'
-      ? html`Applied by ${uix}.`
-      : html`Applied by ${cardMod}. ${uix} is recommended; card-mod support will be deprecated.`;
+      ? html`Styled by ${uix}.`
+      : html`Styled by card-mod. To switch to ${uix}, install it from HACS, then remove card-mod;
+        your styles keep working.`;
   return html`
     ${yamlField('Styles YAML', value, (v) =>
       patch({ uix: v as Record<string, unknown> | undefined, card_mod: undefined }),
     )}
     ${err ? html`<span class="field-error">${err}</span>` : nothing}
-    <small class="field-desc styling-hint">
-      Customize styles with CSS, saved under <code>uix:</code>. ${via} ${hint ?? ''}
-    </small>
+    <small class="field-desc styling-hint">${via} ${hint ?? ''}</small>
   `;
 };
 

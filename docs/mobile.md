@@ -118,14 +118,17 @@ renders inside the sheet between the folded slots and the footer.
 ## The sheet footer
 
 `mobile.footer` takes the **same shape as the desktop [footer](footer.md)**: a
-button strip, a card, or markdown, with the same `divider` and markdown
-options.
+button strip, a card, or markdown, with the same `divider`, `align`, markdown
+options, and styling hooks (`uix`, `class`, `id`). It is the custom bar's own:
+the desktop footer's settings, its alignment included, don't carry over, which
+the editor's Footer tab points out when the bar is custom.
 
 ```yaml
 mobile:
   mode: custom
   footer:
     divider: true
+    align: center          # left (default), center, or right
     buttons:
       - icon: mdi:cog
         tap_action:
