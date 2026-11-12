@@ -165,6 +165,23 @@ describe('the dashboard slide (#4)', () => {
     expect(settlingAtToggle, 'the collapse landed while settling (no slide)').to.equal(true);
   });
 
+  it('stops sliding at once when animate is turned off in place, without a rebuild', async () => {
+    fake = fakeFrontend({ body }, userHass('u1'));
+    ensureSidebar();
+    await settle();
+    const sidebar = wrapper(fake)!.querySelector('dashboard-sidebar');
+    expect(getComputedStyle(host(fake)).transitionDuration).to.equal('0.25s');
+    // Saving from the editor swaps the Lovelace config; the loop picks it up.
+    fake.hui.lovelace!.config = { dashboard_sidebar: { body, animate: false } };
+    ensureSidebar();
+    expect(wrapper(fake)!.querySelector('dashboard-sidebar'), 'same element').to.equal(sidebar);
+    expect(getComputedStyle(host(fake)).transitionDuration).to.equal('0s');
+    // and back on
+    fake.hui.lovelace!.config = { dashboard_sidebar: { body } };
+    ensureSidebar();
+    expect(getComputedStyle(host(fake)).transitionDuration).to.equal('0.25s');
+  });
+
   it('never slides with animate: false', async () => {
     fake = fakeFrontend({ body, animate: false }, userHass('u1'));
     ensureSidebar();

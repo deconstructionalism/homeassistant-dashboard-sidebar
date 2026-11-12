@@ -492,6 +492,12 @@ export const ensureSidebar = (): void => {
       if (config && sameStructure && element) {
         element.setConfig(config);
         bar?.setConfig(config);
+        // The layout CSS carries settings that change in place too (the
+        // slide, for animate), so it is rewritten along with the element.
+        const style = shadow.getElementById(STYLE_ID);
+        if (style) {
+          style.textContent = wrapperCss(config);
+        }
         wrapper.dataset.cfg = JSON.stringify(config);
       } else {
         teardown(shadow);
