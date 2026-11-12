@@ -24,7 +24,7 @@ which would leave the sidebar with no visible edge against your dashboard.
 Each falls back to the general card and text tokens, so a theme that defines
 none of the sidebar-specific ones still renders correctly. To paint the panel
 with the nav rail's color after all, set
-`--dashboard-sidebar-background: var(--sidebar-background-color)` in the sidebar's Card Mod.
+`--dashboard-sidebar-background: var(--sidebar-background-color)` in the sidebar's styles (`uix:`).
 A theme that flattens
 its cards (`ha-card-box-shadow: none`) flattens the sidebar's popovers too; they
 keep a border so they still read as a separate surface.
@@ -32,7 +32,7 @@ keep a border so they still read as a separate surface.
 ### Theme variables
 
 Every color, radius, and shadow resolves through a `--dashboard-sidebar-*` variable. Set one
-from [Card Mod](#card-mod) (or from a theme) and every element that uses it
+from [UIX or card-mod](#uix-and-card-mod) (or from a theme) and every element that uses it
 changes at once, without hunting for selectors:
 
 | Variable | Applies to |
@@ -50,7 +50,7 @@ changes at once, without hunting for selectors:
 
 ```yaml
 dashboard_sidebar:
-  card_mod:
+  uix:
     style: |
       :host {
         --dashboard-sidebar-accent-color: #ff9800;
@@ -101,43 +101,76 @@ The whole sidebar takes any CSS `background`, including gradients.
       background: linear-gradient(180deg, #1b2735, #090a0f)
     ```
 
-## card-mod
+## UIX and card-mod
 
-For full CSS control, Dashboard Sidebar integrates with the
-[card-mod](https://github.com/thomasloven/lovelace-card-mod) integration (install
-it via HACS). Card Mod is available at two levels, both edited under **Advanced →
-Card Mod YAML**:
+For full CSS control, Dashboard Sidebar hands your styles to a styling
+engine. It supports two, in this order:
+
+1. **[UIX](https://github.com/Lint-Free-Technology/uix)** (recommended). The
+   successor to card-mod, from card-mod's own maintainer. This project supports
+   UIX first.
+2. **[card-mod](https://github.com/thomasloven/lovelace-card-mod)**. Still
+   supported as a fallback when UIX is not installed. card-mod support **will
+   be deprecated** in a future release, so new setups should use UIX.
+
+Install either one through HACS. When both are installed, UIX does the
+styling. If you are moving from card-mod to UIX, UIX's own migration steps say
+to uninstall card-mod; the sidebar keeps working through that switch.
+
+### `uix:` or `card_mod:`
+
+Write styles under the **`uix:`** key. The older **`card_mod:`** key still
+works everywhere `uix:` does, so existing configs keep their styling unchanged.
+
+- Either engine renders either key: a `card_mod:` config is styled by UIX when
+  UIX is installed, and a `uix:` config is styled by card-mod when only
+  card-mod is installed.
+- If an element has both keys, **`uix:` wins** and `card_mod:` is ignored, the
+  same rule UIX applies to cards.
+- The visual editor always saves under `uix:`. Editing a style that is still
+  under `card_mod:` moves it to `uix:` when you save; styles you don't touch
+  stay where they are.
+
+Styles are available at three levels, all edited under **Advanced → Styles
+YAML**:
 
 - **Whole sidebar**: Settings → Advanced. Styles the sidebar's shadow root;
   target the `dashboard-sidebar-*` classes below.
 - **Per element**: each element's Advanced section. **Automatically scoped** to
   that one element, so a bare selector like `.dashboard-sidebar-item-label` only
   affects the element you are editing, not every element in the sidebar.
+- **Mobile bar**: Mobile Bar → Advanced (`mobile.uix`). A mirrored bar with no
+  styles of its own uses the whole-sidebar styles.
 
 === "Visual editor"
 
     Open the element (or **Settings** for the whole sidebar), expand
-    **Advanced → Card Mod YAML**, and write your styles. The targetable classes
-    are listed right under the field.
+    **Advanced → Styles YAML**, and write your styles. The field says which
+    engine is applying them, and the targetable classes are listed right under
+    it.
 
 === "YAML"
 
     ```yaml
     dashboard_sidebar:
-      card_mod:
+      uix:
         style: |
           .dashboard-sidebar-item-label { font-weight: 600; }
           :host { border-right: 2px solid var(--primary-color); }
     ```
 
-If card-mod is not installed, the Card Mod fields are hidden and replaced with a
-prompt to install it.
+If neither UIX nor card-mod is installed, the Styles fields are hidden and
+replaced with a prompt to install one (UIX first).
+
+Styles that load late are fine: UIX and card-mod are frontend modules that
+can finish loading after the sidebar has drawn, and the sidebar applies its
+styles as soon as one of them is ready.
 
 ## CSS class
 
 Give an element a `class` as a stable hook to target it from the sidebar-level
-Card Mod. This is a **YAML-only** field (the visual editor styles elements
-through per-element Card Mod instead):
+styles. This is a **YAML-only** field (the visual editor styles elements
+through per-element Styles instead):
 
 ```yaml
 body:
@@ -145,7 +178,7 @@ body:
     title: Home
     class: nav-home
     tap_action: { action: navigate, navigation_path: /lovelace/home }
-card_mod:
+uix:
   style: |
     .nav-home { text-transform: uppercase; }
 ```
@@ -153,7 +186,7 @@ card_mod:
 ## Targetable classes
 
 Every rendered element carries a stable class, listed in the editor under each
-Card Mod field. Common ones:
+Styles field. Common ones:
 
 | Class | Element |
 | --- | --- |

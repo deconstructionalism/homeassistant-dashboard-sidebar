@@ -12,7 +12,13 @@ import { styleMap } from 'lit/directives/style-map.js';
 import Sortable from 'sortablejs';
 
 import { runAction } from './lib/action';
-import { applyCardMod, scopeCss } from './lib/card-mod';
+import {
+  applyStyles,
+  scopeCss,
+  styleConfig,
+  stylingEngine,
+  whenStylingEngine,
+} from './lib/styling';
 import {
   EDIT_EVENT,
   PREVIEW_REORDER_EVENT,
@@ -190,11 +196,17 @@ export class DashboardSidebar extends LitElement {
   /** Whether a markdown-compaction retry is already scheduled. */
   private _compactMarkdownScheduled = false;
 
-  /** Whether the whole-sidebar card-mod styles have already been applied. */
-  private _cardModApplied = false;
+  /** Whether the whole-sidebar styles have already been applied. */
+  private _stylesApplied = false;
 
-  /** Per-element card-mod config signatures, to avoid redundant re-applies. */
-  private readonly _elementCardModSigs = new WeakMap<HTMLElement, string>();
+  /**
+   * Per-element style config signatures, recorded only once a styling engine
+   * has applied them, to avoid redundant re-applies.
+   */
+  private _elementStyleSigs = new WeakMap<HTMLElement, string>();
+
+  /** Whether a re-apply is already waiting on a styling engine to load. */
+  private _awaitingStylingEngine = false;
 
   /** Pending hold-gesture timer, and whether a hold has already fired. */
   private _holdTimer?: number;
@@ -343,7 +355,7 @@ export class DashboardSidebar extends LitElement {
     // skips the whole-sidebar validation that would otherwise gate rendering.
     this._errors = this.preview ? [] : validateConfig(config);
     this._config = config;
-    this._cardModApplied = false;
+    this._stylesApplied = false;
     if (this._errors.length > 0) {
       console.warn(`[dashboard-sidebar] config errors:\n- ${this._errors.join('\n- ')}`);
       return;
@@ -446,6 +458,26 @@ export class DashboardSidebar extends LitElement {
     if (this._config && this._errors.length === 0) {
       this._templates.collect(this._config);
     }
+    this._awaitStylingEngine();
+  }
+
+  /**
+   * When no styling engine is installed yet, re-applies every style once UIX
+   * or card-mod finishes loading. Both are frontend modules that can register
+   * after the sidebar's first render; without this, styles set before the
+   * engine arrived would never be applied.
+   */
+  private _awaitStylingEngine(): void {
+    if (stylingEngine() !== null || this._awaitingStylingEngine) {
+      return;
+    }
+    this._awaitingStylingEngine = true;
+    void whenStylingEngine().then(() => {
+      this._awaitingStylingEngine = false;
+      this._stylesApplied = false;
+      this._elementStyleSigs = new WeakMap();
+      this.requestUpdate();
+    });
   }
 
   /**
@@ -471,7 +503,7 @@ export class DashboardSidebar extends LitElement {
   /**
    * Reacts to reactive-property changes: fires the collapse toggle event first
    * so the wrapper resizes, forwards hass to templates and cards, then applies
-   * card-mod.
+   * the configured styles.
    */
   protected updated(changed: PropertyValues): void {
     if (changed.has('_collapsed')) {
@@ -489,7 +521,7 @@ export class DashboardSidebar extends LitElement {
         el.hass = this.hass;
       });
     }
-    this._applyCardMod();
+    this._applyStyles();
     this._wirePreviewSort();
     this._observeFooter();
     this._updatePinnedAnchor();
@@ -683,49 +715,60 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * Applies the configured card-mod styles once per config, when the card-mod
-   * integration is installed. Retries on later updates until it succeeds.
+   * Applies the whole-sidebar style config (`uix`, else `card_mod`) once per
+   * config, through UIX or card-mod. Retries on later updates until a styling
+   * engine is installed and succeeds.
    */
-  private _applyCardMod(): void {
-    const cfg = this._config?.card_mod;
-    if (cfg && !this._cardModApplied && this._errors.length === 0) {
-      this._cardModApplied = applyCardMod(this, cfg);
+  private _applyStyles(): void {
+    const cfg = styleConfig(this._config);
+    if (cfg && !this._stylesApplied && this._errors.length === 0) {
+      this._stylesApplied = applyStyles(this, cfg) !== null;
     }
-    this._applyElementCardMods();
+    this._applyElementStyles();
   }
 
   /**
-   * Applies each element's own `card_mod` to its rendered root, keyed by the
-   * element's location so card-mod keeps a separate instance per element. Only
-   * re-applies when an element's config changes (tracked per node).
+   * Applies each element's own style config to its rendered root, keyed by the
+   * element's location so the engine keeps a separate instance per element.
+   * Only re-applies when an element's config changes (tracked per node), and a
+   * config only counts as applied once an engine actually applied it, so an
+   * element styled before UIX or card-mod loaded is styled once it does.
    */
-  private _applyElementCardMods(): void {
+  private _applyElementStyles(): void {
     if (this._errors.length > 0) {
       return;
     }
     (this.renderRoot as ParentNode).querySelectorAll<HTMLElement>('[data-loc]').forEach((node) => {
       const loc = node.getAttribute('data-loc') ?? '';
-      const cfg = this._cardModAt(loc);
+      const cfg = this._styleAt(loc);
       const sig = cfg ? JSON.stringify(cfg) : '';
-      if (this._elementCardModSigs.get(node) === sig) {
+      if (this._elementStyleSigs.get(node) === sig) {
         return;
       }
-      this._elementCardModSigs.set(node, sig);
-      if (cfg) {
-        applyCardMod(node, this._scopeElementCardMod(cfg, loc), `dashboard-sidebar:${loc}`);
+      if (!cfg) {
+        this._elementStyleSigs.set(node, sig);
+        return;
+      }
+      const engine = applyStyles(
+        node,
+        this._scopeElementStyle(cfg, loc),
+        `dashboard-sidebar:${loc}`,
+      );
+      if (engine !== null) {
+        this._elementStyleSigs.set(node, sig);
       }
     });
   }
 
   /**
-   * Scopes a per-element `card_mod` so its selectors only affect this element
+   * Scopes a per-element style config so its selectors only affect this element
    * (and its subtree), by rewriting the `style` CSS to key every rule to the
    * element's unique `data-loc`. A bare selector such as `.dashboard-sidebar-title`
    * then matches only this element, so styling one title no longer bleeds onto
    * every other title. Empty / non-string styles (the object form) and CSS that
    * fails to parse are passed through unchanged.
    */
-  private _scopeElementCardMod(cfg: Record<string, unknown>, loc: string): Record<string, unknown> {
+  private _scopeElementStyle(cfg: Record<string, unknown>, loc: string): Record<string, unknown> {
     const style = cfg.style;
     if (typeof style !== 'string' || style.trim() === '') {
       return cfg;
@@ -736,17 +779,17 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * Resolves the `card_mod` config for an element location (`body:1`,
-   * `body:1.0`, `footer:btn:0`), or undefined when none is set.
+   * Resolves the style config (`uix`, else `card_mod`) for an element location
+   * (`body:1`, `body:1.0`, `footer:btn:0`), or undefined when none is set.
    */
-  private _cardModAt(loc: string): Record<string, unknown> | undefined {
+  private _styleAt(loc: string): Record<string, unknown> | undefined {
     const cfg = this._config;
     if (!cfg) {
       return undefined;
     }
     const btn = /^footer:btn:(\d+)$/.exec(loc);
     if (btn) {
-      return cfg.footer?.buttons?.[Number(btn[1])]?.card_mod;
+      return styleConfig(cfg.footer?.buttons?.[Number(btn[1])]);
     }
     const [region, rest] = loc.split(':');
     if ((region !== 'header' && region !== 'body') || rest === undefined) {
@@ -758,9 +801,9 @@ export class DashboardSidebar extends LitElement {
       return undefined;
     }
     if (itemIndex !== undefined) {
-      return block.type === 'category' ? block.items?.[Number(itemIndex)]?.card_mod : undefined;
+      return block.type === 'category' ? styleConfig(block.items?.[Number(itemIndex)]) : undefined;
     }
-    return block.card_mod;
+    return styleConfig(block);
   }
 
   /**

@@ -79,7 +79,7 @@ checks. Editor screenshots are committed by a human after eyeballing them
   extracted render helpers (`editor-menus.ts` also holds the `MenusController`);
   `editor-styles.ts` is the CSS.
 - **`src/lib/`** — `types.ts` (schema source), `validate.ts`, `templates.ts`
-  (`TemplateManager`), `card-mod.ts`, `format.ts`, `action.ts`, `const.ts`, and
+  (`TemplateManager`), `styling.ts` (UIX first, card-mod fallback), `format.ts`, `action.ts`, `const.ts`, and
   the generated `schema.generated.ts`.
 - **`src/styles/`** — the card's CSS-in-JS modules.
 - **`scripts/`** — `gen-schema.js`, `gen-config-docs.js`, and

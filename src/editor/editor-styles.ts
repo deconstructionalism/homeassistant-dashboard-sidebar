@@ -922,12 +922,12 @@ export const editorStyles = css`
     color: var(--primary-color, #03a9f4);
   }
 
-  /* The card-mod install prompt shown when the integration is absent. */
-  .card-mod-missing .field-desc {
+  /* The install prompt shown when neither UIX nor card-mod is installed. */
+  .styling-missing .field-desc {
     opacity: 0.8;
   }
 
-  /* Collapsed reference of targetable CSS classes under the Card Mod field. */
+  /* Collapsed reference of targetable CSS classes under the Styles field. */
   .class-ref-list {
     display: flex;
     flex-direction: column;

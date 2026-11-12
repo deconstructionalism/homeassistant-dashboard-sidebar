@@ -48,7 +48,7 @@ vertical **⋯** menu (in both expanded and collapsed views).
     ```
 
 Each button supports the same [actions](actions.md), an `icon_color` template,
-and an **Advanced** section (`card_mod`). Collapsed, the whole row becomes a
+and an **Advanced** section (`uix` styles). Collapsed, the whole row becomes a
 single **⋯** menu.
 
 ## Card

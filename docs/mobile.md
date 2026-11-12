@@ -146,11 +146,11 @@ mobile:
   position: bottom     # top | bottom; which edge the bar docks to
   labels: false        # show element titles under the bar icons
   background: ''       # any CSS background; defaults to the sidebar's
-  card_mod: {}         # card-mod config for the bar itself
+  uix: {}              # styles for the bar itself (UIX, or card-mod)
 ```
 
 These apply in both modes. Every part of the bar carries a
-`dashboard-sidebar-bar-*` class for [card-mod](styling.md#card-mod) targeting,
+`dashboard-sidebar-bar-*` class for [UIX or card-mod](styling.md#uix-and-card-mod) targeting,
 and elements keep their own `class` and `id` hooks.
 
 The full field list is in the [config reference](reference.md#mobileconfig).

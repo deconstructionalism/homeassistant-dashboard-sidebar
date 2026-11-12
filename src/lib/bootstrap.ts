@@ -236,7 +236,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
              height: 100%;
              transition: width 0.25s ease;
              /* Floating over the view, the sidebar needs an edge of its own.
-                Read through a variable so card-mod can drop or restyle it. */
+                Read through a variable so UIX or card-mod can drop or restyle it. */
              box-shadow: var(--dashboard-sidebar-overlay-shadow, 0 0 12px rgb(0 0 0 / 25%));
            }
            #${WRAPPER_ID}.collapsed #${HOST_ID} > dashboard-sidebar {

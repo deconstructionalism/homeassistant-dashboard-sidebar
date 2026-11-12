@@ -4,7 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { runAction, type RunnableAction } from './lib/action';
 
 import { EDIT_EVENT } from './lib/const';
-import { applyCardMod } from './lib/card-mod';
+import { applyStyles, styleConfig, stylingEngine, whenStylingEngine } from './lib/styling';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { barMode, mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
@@ -44,7 +44,7 @@ const MIN_SLOT_WIDTH = 64;
  * accordion categories and the desktop footer pinned across its bottom
  * (icon buttons, or a card/markdown footer built via the card helpers);
  * category slots on the bar open a small upward flyout. Chrome carries
- * dashboard-sidebar-bar-* classes so card-mod and themes can target every
+ * dashboard-sidebar-bar-* classes so UIX, card-mod and themes can target every
  * part.
  */
 @customElement('dashboard-sidebar-bar')
@@ -217,21 +217,22 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /**
-   * The card-mod config that styles the bar itself. `mobile.card_mod`
-   * always wins when set, so a bar can carry its own extra styling in
-   * either mode; unset and mirroring, it falls back to the desktop
-   * sidebar's own card_mod, since a mirrored bar's elements reuse the
+   * The style config that styles the bar itself (`uix`, else `card_mod`, at
+   * each level). The bar's own style always wins when set, so a bar can carry
+   * its own extra styling in either mode; unset and mirroring, it falls back to
+   * the desktop sidebar's style, since a mirrored bar's elements reuse the
    * desktop's classes (a footer button's `sb-mache`, say) and otherwise
    * silently rendered unstyled.
    */
-  private _effectiveCardMod(): Record<string, unknown> | undefined {
+  private _effectiveStyle(): Record<string, unknown> | undefined {
     if (!this._config) {
       return undefined;
     }
-    if (this._config.mobile?.card_mod) {
-      return this._config.mobile.card_mod;
+    const own = styleConfig(this._config.mobile);
+    if (own) {
+      return own;
     }
-    return barMode(this._config) === 'mirror' ? this._config.card_mod : undefined;
+    return barMode(this._config) === 'mirror' ? styleConfig(this._config) : undefined;
   }
 
   /** Whether the effective footer is a card or markdown footer. */
@@ -323,6 +324,11 @@ export class DashboardSidebarBar extends LitElement {
     this._resize.observe(this);
     this._measure();
     this._restartTimer();
+    // Styles set before UIX or card-mod finished loading are applied once one
+    // arrives (updated() re-applies on every render).
+    if (stylingEngine() === null) {
+      void whenStylingEngine().then(() => this.requestUpdate());
+    }
   }
 
   /** Unsubscribes on disconnect. */
@@ -345,11 +351,11 @@ export class DashboardSidebarBar extends LitElement {
     }
   }
 
-  /** Applies the bar-level card-mod after render. */
+  /** Applies the bar-level styles after render. */
   protected updated(): void {
-    const cardMod = this._effectiveCardMod();
-    if (cardMod) {
-      applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
+    const style = this._effectiveStyle();
+    if (style) {
+      applyStyles(this, style, 'dashboard-sidebar-bar');
     }
   }
 

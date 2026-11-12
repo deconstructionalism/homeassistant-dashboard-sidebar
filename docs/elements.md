@@ -136,7 +136,7 @@ A tappable row. Standalone in a region, or nested in a category.
       tap_action:
         action: toggle
       # hold_action, double_tap_action (see Actions)
-      # Advanced: abbr (collapsed glyph when no icon), card_mod
+      # Advanced: abbr (collapsed glyph when no icon), uix (styles)
     ```
 
 See **[Actions](actions.md)** for tap/hold/double-tap and the active-page
@@ -210,7 +210,8 @@ chrome. Validated live against Home Assistant's card registry. (`type: card`.)
       card:
         type: gauge
         entity: sensor.cpu
-        # card_mod: { style: 'ha-card { padding: 8px }' }   # size/style via the card itself
+        # uix: { style: 'ha-card { padding: 8px }' }   # size/style via the card itself
+        #   (that's UIX reading the card's own config; with card-mod, use card_mod: here)
     ```
 
 ## Editing an element as YAML

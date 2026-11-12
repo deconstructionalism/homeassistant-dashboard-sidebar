@@ -124,6 +124,64 @@ describe('validateConfig', () => {
     ).toContain('body[0].card_mod: must be a mapping');
   });
 
+  it('accepts uix on the sidebar, elements, category items, footer buttons and the bar', () => {
+    expect(
+      validateConfig({
+        uix: { style: ':host { color: red; }' },
+        body: [
+          {
+            type: 'item',
+            title: 'i',
+            tap_action: { action: 'toggle' },
+            uix: { style: '.x { color: blue; }' },
+          },
+          {
+            type: 'category',
+            title: 'c',
+            items: [{ title: 'k', tap_action: { action: 'toggle' }, uix: { style: 'x' } }],
+          },
+        ],
+        footer: {
+          buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' }, uix: { style: 'x' } }],
+        },
+        mobile: { mode: 'mirror', uix: { style: 'x' } },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('accepts uix and card_mod together (uix wins at render time)', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        uix: { style: 'a' },
+        card_mod: { style: 'b' },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects a non-mapping uix wherever it appears', () => {
+    expect(
+      validateConfig({ ...valid(), uix: 'nope' } as unknown as DashboardSidebarConfig),
+    ).toContain('uix: must be a mapping');
+    expect(
+      validateConfig({
+        body: [{ type: 'item', title: 'i', tap_action: { action: 'toggle' }, uix: ['x'] }],
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('body[0].uix: must be a mapping');
+    expect(
+      validateConfig({
+        ...valid(),
+        footer: { buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' }, uix: 3 }] },
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('footer.buttons[0].uix: must be a mapping');
+    expect(
+      validateConfig({
+        ...valid(),
+        mobile: { mode: 'mirror', uix: 'nope' },
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('mobile.uix: must be a mapping');
+  });
+
   it('validates title, clock, and date blocks', () => {
     expect(
       validateConfig({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig),

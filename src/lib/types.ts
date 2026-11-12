@@ -31,14 +31,20 @@ export type ClockHourFormat = '12h' | '24h';
 export interface BlockCommon {
   /**
    * Extra CSS class(es) added to the rendered root, alongside the built-in
-   * dashboard-sidebar-* classes, so card-mod can target this one element.
+   * dashboard-sidebar-* classes, so UIX or card-mod can target this one element.
    */
   class?: string;
-  /** CSS id set on the rendered root, so card-mod can target this one element. */
+  /** CSS id set on the rendered root, so UIX or card-mod can target this one element. */
   id?: string;
   /**
-   * Per-element card-mod config (a `{ style, class, ... }` object), applied to
-   * this element's rendered root via the card-mod integration when installed.
+   * Per-element style config (a `{ style, class, ... }` object), applied to this
+   * element's rendered root by UIX, or card-mod when UIX is not installed. Wins
+   * over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
    */
   card_mod?: Record<string, unknown>;
 }
@@ -318,7 +324,15 @@ export interface MobileConfig {
    * `background`, and through it to the theme card background.
    */
   background?: string;
-  /** Passed to the card-mod integration to style the bar. */
+  /**
+   * Style config for the bar, applied by UIX, or card-mod when UIX is not
+   * installed. Wins over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
+   */
   card_mod?: Record<string, unknown>;
 }
 
@@ -361,8 +375,14 @@ export interface DashboardSidebarConfig {
   /** The mobile bar configuration. */
   mobile?: MobileConfig;
   /**
-   * Passed to the card-mod integration (when installed) to style the sidebar.
-   * Target the dashboard-sidebar-* classes on the rendered elements.
+   * Style config for the whole sidebar, applied by UIX, or card-mod when UIX is
+   * not installed. Target the dashboard-sidebar-* classes on the rendered
+   * elements. Wins over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
    */
   card_mod?: Record<string, unknown>;
 }

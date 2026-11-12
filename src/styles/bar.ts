@@ -2,7 +2,7 @@ import { css } from 'lit';
 
 /**
  * Styles for the mobile bar. Chrome carries dashboard-sidebar-bar-* classes
- * so card-mod and themes can target every part, mirroring the sidebar's
+ * so UIX, card-mod and themes can target every part, mirroring the sidebar's
  * conventions. The bar is fixed to the bottom edge and pads for the iOS
  * home-indicator safe area.
  */

@@ -42,12 +42,11 @@ import {
   actionSections,
   blockFields,
   blockTypeLabel,
-  cardModField,
   checkboxField,
-  cardModInstalled,
   codeField,
   colorField,
   colorTemplateField,
+  stylesField,
   elementClassRef,
   entityDatalist,
   footerButtonFields,
@@ -60,6 +59,7 @@ import {
   type ValidationCtx,
   validateWidth,
 } from './block-form';
+import { stylingInstalled } from '../lib/styling';
 
 /**
  * The expanded preview frame is capped to this many pixels, and to this
@@ -107,7 +107,7 @@ const TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
   { sel: '.dashboard-sidebar-tooltip', desc: 'Collapsed hover tooltip' },
 ];
 
-/** The stable bar classes card-mod / themes can target, for the Mobile tab. */
+/** The stable bar classes UIX, card-mod and themes can target, for the Mobile tab. */
 const DOCS_REFERENCE_URL =
   'https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/reference/';
 
@@ -129,7 +129,8 @@ const MOBILE_YAML_REF: Array<{ key: string; desc: string }> = [
   { key: 'position:', desc: 'top or bottom (default bottom)' },
   { key: 'labels:', desc: 'true to show titles under the bar icons' },
   { key: 'background:', desc: "any CSS background (defaults to the sidebar's)" },
-  { key: 'card_mod:', desc: 'card-mod config for the bar' },
+  { key: 'uix:', desc: 'UIX style config for the bar (card-mod renders it too)' },
+  { key: 'card_mod:', desc: "the same under card-mod's key; prefer uix:" },
 ];
 
 const BAR_TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
@@ -1503,6 +1504,7 @@ export class DashboardSidebarEditor extends LitElement {
       footer: c.footer,
       width: c.width,
       background: c.background,
+      uix: c.uix,
       card_mod: c.card_mod,
     };
     return html`
@@ -1592,8 +1594,8 @@ export class DashboardSidebarEditor extends LitElement {
                       (v) => this._patchConfig({ background: v || undefined }),
                       'Any valid CSS background, including gradients (e.g. linear-gradient(...)).',
                     )}
-                    ${cardModField(c.card_mod, (v) => this._patchConfig({ card_mod: v }))}
-                    ${cardModInstalled() ? this._cardModClassRef() : nothing}
+                    ${stylesField(c, (p) => this._patchConfig(p))}
+                    ${stylingInstalled() ? this._stylesClassRef() : nothing}
                   </details>
                 `
           }
@@ -1666,12 +1668,14 @@ export class DashboardSidebarEditor extends LitElement {
     // there are no references, so the elements are cloned outright.
     const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, mode: 'mirror' } });
     const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
-    // A custom bar derives nothing, so the desktop footer and card_mod have
-    // to come across whole or the switch silently loses them. The footer
-    // copies in every shape it takes: a button strip, a card, or markdown.
+    // A custom bar derives nothing, so the desktop footer and styles (uix and
+    // card_mod alike) have to come across whole or the switch silently loses
+    // them. The footer copies in every shape it takes: a button strip, a card,
+    // or markdown.
     const footer = this._working.footer ? structuredClone(this._working.footer) : undefined;
+    const uix = this._working.uix ? structuredClone(this._working.uix) : undefined;
     const cardMod = this._working.card_mod ? structuredClone(this._working.card_mod) : undefined;
-    this._patchMobile({ mode: 'custom', items, footer, card_mod: cardMod });
+    this._patchMobile({ mode: 'custom', items, footer, uix, card_mod: cardMod });
     this._confirmingCustomSwitch = false;
   }
 
@@ -1772,8 +1776,8 @@ export class DashboardSidebarEditor extends LitElement {
           (v) => this._patchMobile({ background: v || undefined }),
           'Any valid CSS background. Defaults to the sidebar background.',
         )}
-        ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
-        ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
+        ${stylesField(m, (p) => this._patchMobile(p))}
+        ${stylingInstalled() ? this._stylesClassRef(BAR_TARGETABLE_CLASSES) : nothing}
       </details>
     `;
   }
@@ -1970,7 +1974,7 @@ export class DashboardSidebarEditor extends LitElement {
    * (and `:host`) that Card Mod / external CSS can target, each with a short
    * description of the element it selects.
    */
-  private _cardModClassRef(classes = TARGETABLE_CLASSES): TemplateResult {
+  private _stylesClassRef(classes = TARGETABLE_CLASSES): TemplateResult {
     return html`<details class="advanced class-ref">
       <summary>Targetable CSS classes</summary>
       <div class="class-ref-list">
@@ -2269,11 +2273,12 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderRegionPreview(region: Region): TemplateResult {
     const blocks = this._working[region] ?? [];
-    // Carry the sidebar-level card_mod through, so an element styled there (a
+    // Carry the sidebar-level styles through, so an element styled there (a
     // title's letter-spacing, say) previews the same in the tab where it is
     // edited as it does in the whole-sidebar preview on Settings.
     return html`${this._previewEl(region, {
       [region]: blocks,
+      uix: this._working.uix,
       card_mod: this._working.card_mod,
     })}`;
   }
@@ -2901,7 +2906,7 @@ export class DashboardSidebarEditor extends LitElement {
             (v) => this._patchBlock(sel.region, sel.index, { card: v }),
             () => [],
           )}
-          ${this._cardStatus()} ${cardModInstalled() ? elementClassRef('card') : nothing}
+          ${this._cardStatus()} ${stylingInstalled() ? elementClassRef('card') : nothing}
           <div class="form-actions">
             ${this._renderAddMenu(this._typeItems(sel.region), 'Add Element After', true)}
             ${deleteBtn}

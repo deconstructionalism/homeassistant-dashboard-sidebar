@@ -11,7 +11,7 @@ import { css } from 'lit';
  * styles that rail styles this one the same way; each falls back to the
  * general card/text tokens and finally to the built-in value, so a theme that
  * defines neither renders exactly as before. Overriding a `--dashboard-sidebar-*` variable
- * from card-mod restyles every element that uses it at once.
+ * from UIX (or card-mod) restyles every element that uses it at once.
  */
 export const baseStyles = css`
   :host {

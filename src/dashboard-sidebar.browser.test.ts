@@ -876,7 +876,7 @@ describe('<dashboard-sidebar> card-mod delegation', () => {
 
   it('the scoped style really isolates one element from its siblings', async () => {
     // Prove the rewritten CSS colors only the matching data-loc element.
-    const { scopeCss } = await import('./lib/card-mod');
+    const { scopeCss } = await import('./lib/styling');
     const scoped = scopeCss(
       '.dashboard-sidebar-title { color: rgb(255, 0, 0); }',
       '[data-loc="header:0"]',

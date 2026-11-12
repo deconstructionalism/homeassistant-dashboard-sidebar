@@ -44,9 +44,10 @@ docked to the bottom of the display.
   Assistant state.
 - 🎨 **Theme aware.** Colors, corners, shadows, and type follow the active theme,
   reading the same variables as HA's own nav sidebar.
-- 🖌️ **card-mod support.** Per-element colors, any CSS background, and
-  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the
-  sidebar and element level.
+- 🖌️ **UIX styling.** Per-element colors, any CSS background, and
+  [UIX](https://github.com/Lint-Free-Technology/uix) at both the sidebar and
+  element level. card-mod works too, as a fallback, until its support is
+  deprecated.
   ([styling](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/styling/))
 - 🖱️ **Visual editor.** Five tabs with a live preview, drag to reorder, an icon
   picker, a Test Action button, and a YAML escape hatch on every tab and element.

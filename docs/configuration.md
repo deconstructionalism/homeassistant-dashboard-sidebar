@@ -32,7 +32,7 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **On Mobile**: whether narrow screens get the sidebar, the
       [mobile bar](mobile.md), or nothing.
     - **Background**: any CSS background, including gradients.
-    - The whole-sidebar [Card Mod](styling.md#card-mod).
+    - The whole-sidebar [Styles](styling.md#uix-and-card-mod) (UIX or card-mod).
 
     ![The Settings tab, with sidebar-wide fields on the left and a live preview of the whole sidebar on the right.](assets/editor/settings.png)
 
@@ -66,7 +66,8 @@ the [Config Reference](reference.md) (generated from the source, always current)
 | `header` | list | - | Blocks pinned to the top. |
 | `body` | list | - | Blocks in the scrolling region. |
 | `footer` | mapping | - | The bottom bar (see [Footer](footer.md)). |
-| `card_mod` | mapping | - | card-mod styling for the whole sidebar (see [Styling](styling.md)). |
+| `uix` | mapping | - | Styles for the whole sidebar, applied by UIX (or card-mod) (see [Styling](styling.md#uix-and-card-mod)). |
+| `card_mod` | mapping | - | The same as `uix` under card-mod's key; still works, will be deprecated. |
 
 ## Push or overlay
 

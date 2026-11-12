@@ -3,6 +3,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 
 import { runAction } from '../lib/action';
 import { formatClock, formatDate } from '../lib/format';
+import { styleConfig, stylingEngine, stylingInstalled, type StyleHolder } from '../lib/styling';
 import { ALIGNS } from '../lib/schema.generated';
 import type { BlockType, SidebarBlock } from '../lib/types';
 
@@ -986,6 +987,7 @@ export const footerButtonFields = (
     entity?: string;
     class?: string;
     id?: string;
+    uix?: Record<string, unknown>;
     card_mod?: Record<string, unknown>;
     tap_action?: { action?: string };
     active_highlight?: boolean;
@@ -1006,9 +1008,8 @@ export const footerButtonFields = (
     ${actionSections(btn as unknown as Record<string, unknown>, patch, ctx, hass)}
     <details class="advanced">
       <summary>Advanced</summary>
-      ${navHighlightField(btn, patch)}
-      ${cardModField(btn.card_mod, (v) => patch({ card_mod: v }), CARD_MOD_ELEMENT_HINT)}
-      ${cardModInstalled() ? elementClassRef('footer-button') : nothing}
+      ${navHighlightField(btn, patch)} ${stylesField(btn, patch, STYLES_ELEMENT_HINT)}
+      ${stylingInstalled() ? elementClassRef('footer-button') : nothing}
     </details>
   `;
 };
@@ -1041,7 +1042,7 @@ const clockDateAdvanced = (
 };
 
 /**
- * Renders the CSS class (and, for items/categories, abbr) hook plus the card-mod
+ * Renders the CSS class (and, for items/categories, abbr) hook plus the Styles
  * field under a native collapsible Advanced section. `extra` is placed above the
  * hooks (e.g. the clock/date Timezone and Custom Format fields).
  */
@@ -1051,6 +1052,7 @@ const advancedFields = (
     class?: string;
     abbr?: string;
     icon?: unknown;
+    uix?: Record<string, unknown>;
     card_mod?: Record<string, unknown>;
     tap_action?: { action?: string };
     active_highlight?: boolean;
@@ -1073,8 +1075,8 @@ const advancedFields = (
           )
         : nothing
     }
-    ${cardModField(block.card_mod, (v) => patch({ card_mod: v }), CARD_MOD_ELEMENT_HINT)}
-    ${cardModInstalled() ? elementClassRef(block.type ?? 'item') : nothing}
+    ${stylesField(block, patch, STYLES_ELEMENT_HINT)}
+    ${stylingInstalled() ? elementClassRef(block.type ?? 'item') : nothing}
   </details>`;
 };
 
@@ -1098,7 +1100,10 @@ const navHighlightField = (
   );
 };
 
-/** The card-mod integration's repository, linked from the Card Mod fields. */
+/** UIX's repository, linked from the Styles fields as the recommended engine. */
+const UIX_URL = 'https://github.com/Lint-Free-Technology/uix';
+
+/** card-mod's repository, linked from the Styles fields as the fallback engine. */
 const CARD_MOD_URL = 'https://github.com/thomasloven/lovelace-card-mod';
 
 /** Targetable `dashboard-sidebar-*` selectors for each element type. */
@@ -1149,60 +1154,65 @@ export const elementClassRef = (type: string): TemplateResult => {
   </details>`;
 };
 
-/** Note shown on a per-element Card Mod, whose styles are scoped to that element. */
-const CARD_MOD_ELEMENT_HINT =
+/** Note shown on a per-element Styles field, whose styles are scoped to that element. */
+const STYLES_ELEMENT_HINT =
   'Scoped to this element. Target it directly with its class (e.g. .dashboard-sidebar-title) or :scope.';
 
 /**
- * Whether the card-mod integration is installed (its custom element is defined).
- * The CSS-class hook and the targetable-class reference only matter with
- * card-mod: the sidebar renders in shadow DOM, so nothing but card-mod (or an
- * equivalent shadow-piercing styler) can target those classes. When it is
- * absent we hide both and let the Card Mod field's install prompt stand alone.
+ * Validates a style config value: it must be a mapping (`{ style: … }`), which
+ * is the shape UIX and card-mod expect. Returns an error message, or null.
  */
-export const cardModInstalled = (): boolean => !!customElements.get('card-mod');
-
-/**
- * Validates a card-mod value: it must be a mapping (`{ style: … }`), which is
- * the shape the integration expects. Returns an error message, or null.
- */
-const cardModError = (value: unknown): string | null => {
+const stylesError = (value: unknown): string | null => {
   if (value === undefined) {
     return null;
   }
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return 'Card Mod must be a mapping, e.g. "style: |".';
+    return 'Styles must be a mapping, e.g. "style: |".';
   }
   return null;
 };
 
 /**
- * Renders the Card Mod YAML field: a `{ style, … }` object passed to the
- * card-mod integration to style this element (or the sidebar). When card-mod is
- * not installed the field is hidden and replaced with a prompt to install it,
- * since the config would otherwise silently do nothing. `hint` adds an extra
- * note (e.g. the per-element scope warning).
+ * Renders the Styles YAML field: a `{ style, … }` object that UIX (or card-mod,
+ * when UIX is not installed) renders to style this element or the sidebar.
+ * It shows the holder's `uix`, or its `card_mod` when that is all it has, and
+ * always saves under `uix`, dropping `card_mod`: either engine renders either
+ * key, so editing moves a config onto the supported key without changing how
+ * it looks. When neither engine is installed the field is replaced with a
+ * prompt to install one, since the config would otherwise silently do nothing.
+ * `hint` adds an extra note (e.g. the per-element scope warning).
  */
-export const cardModField = (
-  value: Record<string, unknown> | undefined,
-  onChange: (value: Record<string, unknown> | undefined) => void,
+export const stylesField = (
+  holder: StyleHolder,
+  patch: (partial: Record<string, unknown>) => void,
   hint?: string,
 ): TemplateResult => {
-  const link = html`<a href=${CARD_MOD_URL} target="_blank" rel="noopener noreferrer">card-mod</a>`;
-  if (!customElements.get('card-mod')) {
-    return html`<div class="field card-mod-missing">
-      <span>Card Mod YAML</span>
+  const uix = html`<a href=${UIX_URL} target="_blank" rel="noopener noreferrer">UIX</a>`;
+  const cardMod = html`<a href=${CARD_MOD_URL} target="_blank" rel="noopener noreferrer"
+    >card-mod</a
+  >`;
+  const engine = stylingEngine();
+  if (engine === null) {
+    return html`<div class="field styling-missing">
+      <span>Styles YAML</span>
       <small class="field-desc">
-        Install ${link} (available in HACS) to customize styles with CSS.
+        Install ${uix} (recommended) or ${cardMod} from HACS to customize styles with CSS.
       </small>
     </div>`;
   }
-  const err = cardModError(value);
+  const value = styleConfig(holder);
+  const err = stylesError(value);
+  const via =
+    engine === 'uix-node'
+      ? html`Applied by ${uix}.`
+      : html`Applied by ${cardMod}. ${uix} is recommended; card-mod support will be deprecated.`;
   return html`
-    ${yamlField('Card Mod YAML', value, (v) => onChange(v as Record<string, unknown>))}
+    ${yamlField('Styles YAML', value, (v) =>
+      patch({ uix: v as Record<string, unknown> | undefined, card_mod: undefined }),
+    )}
     ${err ? html`<span class="field-error">${err}</span>` : nothing}
-    <small class="field-desc card-mod-hint">
-      Customize styles with CSS via ${link}. ${hint ?? ''}
+    <small class="field-desc styling-hint">
+      Customize styles with CSS, saved under <code>uix:</code>. ${via} ${hint ?? ''}
     </small>
   `;
 };

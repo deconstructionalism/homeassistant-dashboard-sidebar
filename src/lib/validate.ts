@@ -102,14 +102,15 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
 };
 
 /**
- * Validates the optional card-mod hooks (`class`, `id`, and `card_mod`).
+ * Validates the optional styling hooks (`class`, `id`, `uix`, and `card_mod`).
  * `id` is a pure CSS-targeting hook: nothing reads it back, and it is
  * neither required nor checked for uniqueness.
  */
 const checkHooks = (block: unknown, ctx: string, errors: string[]): void => {
-  const b = block as { class?: unknown; id?: unknown; card_mod?: unknown };
+  const b = block as { class?: unknown; id?: unknown; uix?: unknown; card_mod?: unknown };
   checkString(b.class, `${ctx}.class`, errors);
   checkString(b.id, `${ctx}.id`, errors);
+  checkMapping(b.uix, `${ctx}.uix`, errors);
   checkMapping(b.card_mod, `${ctx}.card_mod`, errors);
 };
 
@@ -355,6 +356,7 @@ const validateMobile = (config: DashboardSidebarConfig, errors: string[]): void 
     errors.push('mobile.position: must be "top" or "bottom"');
   }
   checkString(mobile.background, 'mobile.background', errors);
+  checkMapping(mobile.uix, 'mobile.uix', errors);
   checkMapping(mobile.card_mod, 'mobile.card_mod', errors);
 
   if (explicit && mobile.items !== undefined) {
@@ -467,6 +469,7 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   if (c.hide_on_desktop !== undefined) {
     errors.push('hide_on_desktop: replaced by `on_desktop: hidden`');
   }
+  checkMapping(c.uix, 'uix', errors);
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);
   validateRegion(config.body, 'body', errors);

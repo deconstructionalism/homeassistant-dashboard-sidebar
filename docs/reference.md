@@ -23,7 +23,8 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
 | `footer` | `FooterConfig` | no | The bottom bar configuration. |
 | `mobile` | `MobileConfig` | no | The mobile bar configuration. |
-| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration (when installed) to style the sidebar. Target the dashboard-sidebar-* classes on the rendered elements. |
+| `uix` | `Record<string, unknown>` | no | Style config for the whole sidebar, applied by UIX, or card-mod when UIX is not installed. Target the dashboard-sidebar-* classes on the rendered elements. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
 ## Common fields (every block and footer button)
 
@@ -31,9 +32,10 @@ CSS targeting hooks shared by every block and footer button.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so card-mod can target this one element. |
-| `id` | `string` | no | CSS id set on the rendered root, so card-mod can target this one element. |
-| `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config (a `{ style, class, ... }` object), applied to this element's rendered root via the card-mod integration when installed. |
+| `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so UIX or card-mod can target this one element. |
+| `id` | `string` | no | CSS id set on the rendered root, so UIX or card-mod can target this one element. |
+| `uix` | `Record<string, unknown>` | no | Per-element style config (a `{ style, class, ... }` object), applied to this element's rendered root by UIX, or card-mod when UIX is not installed. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
 ## Title block
 
@@ -224,7 +226,8 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
-| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
+| `uix` | `Record<string, unknown>` | no | Style config for the bar, applied by UIX, or card-mod when UIX is not installed. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
 ## Field types
 
