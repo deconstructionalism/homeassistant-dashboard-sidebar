@@ -7,6 +7,7 @@ import {
   MOBILE_FIELDS,
   MOBILE_MODES,
 } from './schema.generated';
+import { CONDITION_TYPES } from './visibility';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
 /** Accepted alignment values, as a set for lookups. */
@@ -99,6 +100,84 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
   ) {
     errors.push(`${ctx}: must be a mapping`);
   }
+};
+
+/** The visibility condition types, for validation. */
+const CONDITION_SET = new Set<string>(CONDITION_TYPES);
+
+/**
+ * Validates a visibility condition list: each entry a mapping with a known
+ * `condition` type and the fields that type needs, recursing into `and`,
+ * `or` and `not`.
+ */
+const validateVisibility = (value: unknown, ctx: string, errors: string[]): void => {
+  if (value === undefined) {
+    return;
+  }
+  if (!Array.isArray(value)) {
+    errors.push(`${ctx}: must be a list of conditions`);
+    return;
+  }
+  value.forEach((raw, i) => {
+    const at = `${ctx}[${i}]`;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      errors.push(`${at}: must be a mapping`);
+      return;
+    }
+    const c = raw as Record<string, unknown>;
+    if (typeof c.condition !== 'string' || !CONDITION_SET.has(c.condition)) {
+      errors.push(`${at}.condition: must be one of ${CONDITION_TYPES.join(', ')}`);
+      return;
+    }
+    switch (c.condition) {
+      case 'user':
+        if (!Array.isArray(c.users) || !c.users.every((u) => typeof u === 'string')) {
+          errors.push(`${at}.users: must be a list of user ids`);
+        }
+        break;
+      case 'screen':
+        if (typeof c.media_query !== 'string' || c.media_query.trim() === '') {
+          errors.push(`${at}.media_query: needs a CSS media query`);
+        }
+        break;
+      case 'state':
+      case 'numeric_state': {
+        if (typeof c.entity !== 'string' || c.entity === '') {
+          errors.push(`${at}.entity: needs an entity id`);
+        }
+        if (c.condition === 'state') {
+          for (const key of ['state', 'state_not'] as const) {
+            const v = c[key];
+            if (
+              v !== undefined &&
+              typeof v !== 'string' &&
+              !(Array.isArray(v) && v.every((x) => typeof x === 'string'))
+            ) {
+              errors.push(`${at}.${key}: must be a state or a list of states`);
+            }
+          }
+          if (c.state === undefined && c.state_not === undefined) {
+            errors.push(`${at}: needs state or state_not`);
+          }
+        } else {
+          for (const key of ['above', 'below'] as const) {
+            if (c[key] !== undefined && typeof c[key] !== 'number') {
+              errors.push(`${at}.${key}: must be a number`);
+            }
+          }
+          if (c.above === undefined && c.below === undefined) {
+            errors.push(`${at}: needs above or below`);
+          }
+        }
+        break;
+      }
+      default:
+        validateVisibility(c.conditions, `${at}.conditions`, errors);
+        if (c.conditions === undefined) {
+          errors.push(`${at}.conditions: needs a list of conditions`);
+        }
+    }
+  });
 };
 
 /**
@@ -472,6 +551,8 @@ export const validateConfig = (config: DashboardSidebarConfig): string[] => {
   if (c.hide_on_desktop !== undefined) {
     errors.push('hide_on_desktop: replaced by `on_desktop: hidden`');
   }
+  checkBool(c.animate, 'animate', errors);
+  validateVisibility(c.visibility, 'visibility', errors);
   checkMapping(c.uix, 'uix', errors);
   checkMapping(c.card_mod, 'card_mod', errors);
   validateRegion(config.header, 'header', errors);

@@ -294,4 +294,22 @@ export const baseStyles = css`
   .tooltip.above {
     transform: none;
   }
+
+  /* animate: false turns every sidebar animation off, and so does the
+     system's reduce-motion setting. */
+  :host([data-no-animate]) *,
+  :host([data-no-animate]) *::before,
+  :host([data-no-animate]) *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
 `;

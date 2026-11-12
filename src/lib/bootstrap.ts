@@ -6,6 +6,7 @@ import {
   TOGGLE_EVENT,
 } from './const';
 import { desktopMode, mobileMode } from './mobile';
+import { conditionsMet, visibilityContext } from './visibility';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -175,6 +176,17 @@ const deleteConfig = (huiRoot: { lovelace?: any }): void => {
 };
 
 /**
+ * Whether the sidebar should be on the page: its `visibility` conditions all
+ * hold for the current user, screen and states. While the dashboard is being
+ * edited it always shows, so a sidebar hidden from you can still be edited.
+ */
+export const sidebarVisible = (
+  config: DashboardSidebarConfig,
+  hass: unknown,
+  editMode: boolean,
+): boolean => editMode || conditionsMet(config.visibility, visibilityContext(hass));
+
+/**
  * A key that changes only when the host layout (side or width) must be rebuilt,
  * so pure content edits can update the element in place instead.
  */
@@ -199,7 +211,9 @@ const structureKey = (config: DashboardSidebarConfig): string => {
  * positioned against it, so the view keeps the full width and the sidebar
  * floats over it.
  */
-const wrapperCss = (config: DashboardSidebarConfig): string => {
+export const wrapperCss = (config: DashboardSidebarConfig): string => {
+  // The dashboard narrowing beside the sidebar as it collapses and expands.
+  const slide = config.animate === false ? 'none' : 'width 0.25s ease';
   const expanded = config.width ?? DEFAULT_WIDTH;
   const collapsed = DEFAULT_COLLAPSED_WIDTH;
   // Clamp to the viewport so a mistyped width can never overflow the page.
@@ -224,7 +238,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
       margin-top: var(--dashboard-sidebar-header, 0px);
       height: calc(100vh - var(--dashboard-sidebar-header, 0px));
       z-index: 5;
-      transition: width 0.25s ease;
+      transition: ${slide};
     }
     ${
       overlay
@@ -234,7 +248,7 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
              ${right ? 'right: 0;' : 'left: 0;'}
              width: ${width};
              height: 100%;
-             transition: width 0.25s ease;
+             transition: ${slide};
              /* Floating over the view, the sidebar needs an edge of its own.
                 Read through a variable so UIX or card-mod can drop or restyle it. */
              box-shadow: var(--dashboard-sidebar-overlay-shadow, 0 0 12px rgb(0 0 0 / 25%));
@@ -249,6 +263,19 @@ const wrapperCss = (config: DashboardSidebarConfig): string => {
     #${WRAPPER_ID} > #view {
       flex: 1 1 0;
       min-width: 0;
+    }
+    /* No slide while the sidebar first settles into its starting state (a
+       remembered collapse would otherwise animate on every page load), nor
+       for anyone who asked their system for less motion. */
+    #${WRAPPER_ID}[data-settling] #${HOST_ID},
+    #${WRAPPER_ID}[data-settling] #${HOST_ID} > dashboard-sidebar {
+      transition: none !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #${HOST_ID},
+      #${HOST_ID} > dashboard-sidebar {
+        transition: none !important;
+      }
     }
     ${
       desktopMode(config) === 'hidden'
@@ -311,6 +338,8 @@ const buildSidebar = (): void => {
 
   const wrapper = document.createElement('div');
   wrapper.id = WRAPPER_ID;
+  // Held until the first render (and its collapse toggle) has landed.
+  wrapper.dataset.settling = '';
   wrapper.dataset.cfg = JSON.stringify(config);
   wrapper.dataset.struct = structureKey(config);
   view.parentNode.insertBefore(wrapper, view);
@@ -344,6 +373,12 @@ const buildSidebar = (): void => {
     const collapsed = Boolean((ev as CustomEvent).detail?.collapsed);
     wrapper.classList.toggle('collapsed', collapsed);
   });
+
+  // Let the first render and its collapse toggle land with no slide, then
+  // allow animation from the next frame on.
+  void element.updateComplete.then(() =>
+    requestAnimationFrame(() => requestAnimationFrame(() => delete wrapper.dataset.settling)),
+  );
 };
 
 /**
@@ -417,7 +452,7 @@ const openEditor = (huiRoot: { shadowRoot: ShadowRoot; lovelace?: any }): void =
  * keeps hass and edit mode fresh, and manages the add-sidebar affordance.
  * A content-only change updates the element in place to avoid flicker.
  */
-const ensureSidebar = (): void => {
+export const ensureSidebar = (): void => {
   try {
     const huiRoot = getHuiRoot();
     if (!huiRoot) {
@@ -427,10 +462,17 @@ const ensureSidebar = (): void => {
     const editMode = isEditMode(huiRoot);
     const config = readConfig(huiRoot);
     const wrapper = shadow.getElementById(WRAPPER_ID);
+    const visible = config !== null && sidebarVisible(config, getHass(), editMode);
 
+    if (wrapper && config && !visible) {
+      teardown(shadow);
+      return;
+    }
     if (!wrapper) {
       if (config) {
-        buildSidebar();
+        if (visible) {
+          buildSidebar();
+        }
       } else if (editMode) {
         ensureAddButton(huiRoot);
       } else {
@@ -489,6 +531,17 @@ export const startSidebar = (): void => {
     const huiRoot = getHuiRoot();
     if (huiRoot) {
       openEditor(huiRoot);
+    }
+  });
+  // A screen condition should follow a resize at once, not on the next poll.
+  let resizeQueued = false;
+  window.addEventListener('resize', () => {
+    if (!resizeQueued) {
+      resizeQueued = true;
+      requestAnimationFrame(() => {
+        resizeQueued = false;
+        ensureSidebar();
+      });
     }
   });
   window.setInterval(ensureSidebar, 1000);

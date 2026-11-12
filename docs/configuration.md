@@ -23,6 +23,8 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **Start Collapsed**: load collapsed to the icon strip.
     - **Overlay Dashboard Content**: float the sidebar over the dashboard
       instead of pushing the content aside.
+    - **Animate**: slide when collapsing and expanding. On by default; turn it
+      off for kiosks and slow tablets.
 
     Under **Settings → Advanced**:
 
@@ -31,6 +33,8 @@ the [Config Reference](reference.md) (generated from the source, always current)
     - **On Desktop**: whether the sidebar shows on wide screens, or nothing does.
     - **On Mobile**: whether narrow screens get the sidebar, the
       [mobile bar](mobile.md), or nothing.
+    - **Visibility**: show the sidebar only to some users, on some screen sizes,
+      or while an entity is in some state (see [Who sees it](#who-sees-it)).
     - **Background**: any CSS background, including gradients.
     - The whole-sidebar [Styles](styling.md#uix-and-card-mod) (UIX or card-mod).
 
@@ -44,6 +48,7 @@ the [Config Reference](reference.md) (generated from the source, always current)
       width: 300
       start_collapsed: false
       overlay: false
+      animate: true
       on_desktop: sidebar
       on_mobile: bar
       breakpoint: 768
@@ -59,6 +64,8 @@ the [Config Reference](reference.md) (generated from the source, always current)
 | `width` | number (px) | `240` | Expanded width. |
 | `start_collapsed` | boolean | `false` | Load collapsed to the icon strip. |
 | `overlay` | boolean | `false` | Float over the dashboard instead of pushing the content aside. |
+| `animate` | boolean | `true` | Slide when collapsing and expanding. See [Animation](#animation). |
+| `visibility` | list | - | Show only when these conditions hold. See [Who sees it](#who-sees-it). |
 | `on_desktop` | `sidebar` \| `hidden` | `sidebar` | What renders on wide (desktop) viewports. |
 | `on_mobile` | `sidebar` \| `bar` \| `hidden` | `sidebar` | What renders on narrow (mobile) viewports. Defaults to `bar` when a `mobile` section exists. |
 | `breakpoint` | number (px) | `768` | Viewport width at and below which "mobile" applies. |
@@ -103,6 +110,65 @@ The editor's **Preview** has its own collapse toggle so you can check the icon
 strip while building:
 
 ![The editor previewing the sidebar in its collapsed icon-strip state.](assets/editor/collapsed.png)
+
+## Animation
+
+Collapsing and expanding slide the sidebar, and in push mode the dashboard
+narrows or widens beside it. The sidebar always appears in its starting state
+when a page loads, collapsed or not, without sliding into it.
+
+Set `animate: false` (or turn off **Animate** in Settings) to drop every
+sidebar animation: the slide, the chevron, and the mobile bar's menu. This
+helps kiosk browsers and slow tablets, where an animation can stutter or
+stall. The system's reduce-motion setting turns the animations off too.
+
+```yaml
+dashboard_sidebar:
+  animate: false
+```
+
+## Who sees it
+
+`visibility` shows the sidebar only when **every** condition in the list holds.
+It uses the same conditions as a card's **Visibility** tab in Home Assistant,
+so the YAML is interchangeable:
+
+| Condition | Shows when |
+| --- | --- |
+| `user` | the signed-in user is one of `users` (user ids, from Settings › People › Users) |
+| `screen` | the `media_query` matches, e.g. `(min-width: 1024px)` |
+| `state` | `entity` is in `state` (one or a list), and not in `state_not` |
+| `numeric_state` | `entity` is above `above` and/or below `below` |
+| `and` / `or` / `not` | all / any / none of its `conditions` hold |
+
+When the conditions don't hold, the sidebar (and its [mobile bar](mobile.md))
+is left out entirely and the dashboard takes the full width. Screen and state
+conditions are followed live, as the window resizes or the entity changes.
+While the dashboard is being **edited**, the sidebar always shows, so one hidden
+from you can still be changed.
+
+=== "Visual editor"
+
+    Under **Settings → Advanced → Visibility**, add conditions the same way as on
+    a card's Visibility tab.
+
+=== "YAML"
+
+    ```yaml
+    dashboard_sidebar:
+      visibility:
+        # only for these users, and only on wide screens
+        - condition: user
+          users:
+            - 8b1f4c9e2d7a4e6f9c3b5a1d0e2f4a6b
+        - condition: screen
+          media_query: '(min-width: 1024px)'
+    ```
+
+User ids rather than names keep working when someone is renamed. In the visual
+editor you pick users by name and it stores the ids for you. For YAML, the id is
+shown when you open the user under **Settings › People › Users** (with advanced
+mode on in your profile).
 
 ## Regions
 

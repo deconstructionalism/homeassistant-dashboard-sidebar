@@ -1,4 +1,5 @@
 import type { ActionConfig, LovelaceCardConfig } from 'custom-card-helpers';
+import type { VisibilityCondition } from './visibility';
 
 /**
  * A string that may contain a Jinja template. When it does it is resolved at
@@ -381,6 +382,19 @@ export interface DashboardSidebarConfig {
   footer?: FooterConfig;
   /** The mobile bar configuration. */
   mobile?: MobileConfig;
+  /**
+   * Show the sidebar (and its mobile bar) only when every condition holds, in
+   * the shapes Home Assistant's card Visibility tab uses: `user`, `screen`,
+   * `state`, `numeric_state`, and `and` / `or` / `not` to combine them. While
+   * the dashboard is being edited it always shows, so it can still be edited.
+   */
+  visibility?: VisibilityCondition[];
+  /**
+   * Animate the sidebar collapsing and expanding (and the dashboard narrowing
+   * beside it). Default true; false turns every sidebar animation off. The
+   * system's reduce-motion setting turns them off too.
+   */
+  animate?: boolean;
   /**
    * Style config for the whole sidebar, applied by UIX, or card-mod when UIX is
    * not installed. Target the dashboard-sidebar-* classes on the rendered

@@ -565,4 +565,13 @@ export const barStyles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* animate: false turns the bar's animations off too (the sheet then opens
+     and closes at once). Reduce motion swaps the slide for a fade above. */
+  :host([data-no-animate]) *,
+  :host([data-no-animate]) *::before,
+  :host([data-no-animate]) *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 `;

@@ -15,6 +15,7 @@ import type {
   Region,
   SidebarBlock,
 } from '../lib/types';
+import type { VisibilityCondition } from '../lib/visibility';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -48,6 +49,7 @@ import {
   colorField,
   colorTemplateField,
   stylesField,
+  yamlField,
   ALIGN_OPTIONS,
   elementClassRef,
   entityDatalist,
@@ -1572,6 +1574,13 @@ export class DashboardSidebarEditor extends LitElement {
                     (v) => this._patchConfig({ overlay: v || undefined }),
                     'Float the sidebar over the dashboard instead of pushing the content aside.',
                   )}
+                  ${checkboxField(
+                    'Animate',
+                    c.animate ?? true,
+                    // Store undefined (not true) when on, so the key is dropped.
+                    (v) => this._patchConfig({ animate: v ? undefined : false }),
+                    'Slide when collapsing and expanding. Turn off for kiosks and slow tablets.',
+                  )}
                   <details class="advanced">
                     <summary>Advanced</summary>
                     ${intField(
@@ -1605,6 +1614,7 @@ export class DashboardSidebarEditor extends LitElement {
                           'What renders on narrow screens. The Mobile tab configures the bar.',
                       },
                     )}
+                    ${this._visibilityField(c.visibility)}
                     ${colorField(
                       'Background CSS',
                       c.background,
@@ -2443,6 +2453,37 @@ export class DashboardSidebarEditor extends LitElement {
         )}
       </div>
     `;
+  }
+
+  /**
+   * The sidebar's Visibility: Home Assistant's own conditions editor (the one
+   * a card's Visibility tab uses) when the frontend has it loaded, otherwise
+   * the conditions as YAML. An empty list is stored as no key at all.
+   */
+  private _visibilityField(conditions: VisibilityCondition[] | undefined): TemplateResult {
+    const set = (v: unknown): void =>
+      this._patchConfig({
+        visibility: Array.isArray(v) && v.length > 0 ? (v as VisibilityCondition[]) : undefined,
+      });
+    const desc = html`<small class="field-desc visibility-hint">
+      Show the sidebar only when these all hold (user, screen size, entity states), as on a card's
+      Visibility tab. While the dashboard is being edited it always shows.
+    </small>`;
+    if (customElements.get('ha-card-conditions-editor')) {
+      return html`<div class="field visibility-field">
+        <span>Visibility</span>
+        <ha-card-conditions-editor
+          .hass=${this.hass}
+          .conditions=${conditions ?? []}
+          @value-changed=${(e: CustomEvent<{ value: unknown }>) => {
+            e.stopPropagation();
+            set(e.detail.value);
+          }}
+        ></ha-card-conditions-editor>
+        ${desc}
+      </div>`;
+    }
+    return html`${yamlField('Visibility YAML', conditions, set)} ${desc}`;
   }
 
   /**

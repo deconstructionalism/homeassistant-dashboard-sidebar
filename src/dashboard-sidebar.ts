@@ -354,6 +354,7 @@ export class DashboardSidebar extends LitElement {
    * Invalid configs are kept only as an error list for the panel.
    */
   public setConfig(config: DashboardSidebarConfig): void {
+    this.toggleAttribute('data-no-animate', config.animate === false);
     // A preview renders a single region (e.g. a lone footer) best-effort, so it
     // skips the whole-sidebar validation that would otherwise gate rendering.
     this._errors = this.preview ? [] : validateConfig(config);

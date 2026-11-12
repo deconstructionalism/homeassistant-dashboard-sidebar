@@ -217,6 +217,65 @@ describe('validateConfig', () => {
     expect(errs).toContain('footer.uix: must be a mapping');
   });
 
+  it('accepts a visibility list in Home Assistant condition shapes, and animate', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        animate: false,
+        visibility: [
+          { condition: 'user', users: ['abc123'] },
+          { condition: 'screen', media_query: '(min-width: 1024px)' },
+          { condition: 'state', entity: 'input_boolean.kiosk', state: 'off' },
+          { condition: 'state', entity: 'light.x', state_not: ['on', 'unavailable'] },
+          { condition: 'numeric_state', entity: 'sensor.t', above: 5 },
+          {
+            condition: 'or',
+            conditions: [
+              { condition: 'user', users: ['a'] },
+              { condition: 'not', conditions: [{ condition: 'screen', media_query: '(x)' }] },
+            ],
+          },
+        ],
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects malformed visibility conditions with a pointed message', () => {
+    const errs = (visibility: unknown) =>
+      validateConfig({ ...valid(), visibility } as unknown as DashboardSidebarConfig);
+    expect(errs({ condition: 'user' })).toContain('visibility: must be a list of conditions');
+    expect(errs(['x'])).toContain('visibility[0]: must be a mapping');
+    expect(
+      errs([{ condition: 'location' }]).some((e) => e.startsWith('visibility[0].condition')),
+    ).toBe(true);
+    expect(errs([{ condition: 'user', users: 'abc' }])).toContain(
+      'visibility[0].users: must be a list of user ids',
+    );
+    expect(errs([{ condition: 'screen' }])).toContain(
+      'visibility[0].media_query: needs a CSS media query',
+    );
+    expect(errs([{ condition: 'state', entity: 'light.x' }])).toContain(
+      'visibility[0]: needs state or state_not',
+    );
+    expect(errs([{ condition: 'numeric_state', entity: 'sensor.t', above: '5' }])).toContain(
+      'visibility[0].above: must be a number',
+    );
+    expect(errs([{ condition: 'and', conditions: [{ condition: 'screen' }] }])).toContain(
+      'visibility[0].conditions[0].media_query: needs a CSS media query',
+    );
+    expect(errs([{ condition: 'not' }])).toContain(
+      'visibility[0].conditions: needs a list of conditions',
+    );
+  });
+
+  it('rejects a non-boolean animate', () => {
+    expect(
+      validateConfig({ ...valid(), animate: 'no' } as unknown as DashboardSidebarConfig).some((e) =>
+        e.startsWith('animate'),
+      ),
+    ).toBe(true);
+  });
+
   it('validates title, clock, and date blocks', () => {
     expect(
       validateConfig({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig),

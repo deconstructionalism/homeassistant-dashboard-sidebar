@@ -948,3 +948,28 @@ describe('per-block class and id hooks', () => {
     expect(btn?.classList.contains('dashboard-sidebar-footer-btn')).to.equal(true);
   });
 });
+
+describe('<dashboard-sidebar> animate (#4)', () => {
+  /** The collapse toggle's chevron, which rotates (animates) by default. */
+  const chevron = (el: DashboardSidebar): HTMLElement =>
+    root(el).querySelector('.toggle ha-icon') as HTMLElement;
+
+  it('animates by default', async () => {
+    const el = await mount({ body: [{ type: 'item', title: 'A', tap_action: TAP }] });
+    expect(el.hasAttribute('data-no-animate')).to.equal(false);
+    expect(getComputedStyle(chevron(el)).transitionDuration).to.equal('0.2s');
+  });
+
+  it('turns every animation off with animate: false, and back on', async () => {
+    const el = await mount({
+      animate: false,
+      body: [{ type: 'item', title: 'A', tap_action: TAP }],
+    });
+    expect(el.hasAttribute('data-no-animate')).to.equal(true);
+    expect(getComputedStyle(chevron(el)).transitionDuration).to.equal('0s');
+    el.setConfig({ body: [{ type: 'item', title: 'A', tap_action: TAP }] });
+    await el.updateComplete;
+    expect(el.hasAttribute('data-no-animate')).to.equal(false);
+    expect(getComputedStyle(chevron(el)).transitionDuration).to.equal('0.2s');
+  });
+});

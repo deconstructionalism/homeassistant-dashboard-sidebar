@@ -190,6 +190,7 @@ export class DashboardSidebarBar extends LitElement {
    */
   public setConfig(config: DashboardSidebarConfig): void {
     this._config = config;
+    this.toggleAttribute('data-no-animate', config.animate === false);
     this._resolved = resolveBar(config);
     this.setAttribute('data-position', config.mobile?.position ?? 'bottom');
     // Collect templates from the resolved elements by presenting them to the

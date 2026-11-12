@@ -391,3 +391,24 @@ describe('<dashboard-sidebar-bar> card-mod delegation', () => {
     expect(StubBarCardMod.calls.length).to.equal(0);
   });
 });
+
+describe('<dashboard-sidebar-bar> animate (#4)', () => {
+  it('turns the sheet slide off with animate: false', async () => {
+    const el = await mount({ ...base(), animate: false, mobile: {} });
+    expect(el.hasAttribute('data-no-animate')).to.equal(true);
+    (root(el).querySelector('.dashboard-sidebar-bar-slot-overflow') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const sheet = root(el).querySelector('.dashboard-sidebar-bar-sheet') as HTMLElement;
+    expect(sheet, 'sheet open').to.exist;
+    expect(getComputedStyle(sheet).transitionDuration).to.equal('0s');
+  });
+
+  it('slides the sheet by default', async () => {
+    const el = await mount({ ...base(), mobile: {} });
+    expect(el.hasAttribute('data-no-animate')).to.equal(false);
+    (root(el).querySelector('.dashboard-sidebar-bar-slot-overflow') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const sheet = root(el).querySelector('.dashboard-sidebar-bar-sheet') as HTMLElement;
+    expect(getComputedStyle(sheet).transitionDuration).to.not.equal('0s');
+  });
+});

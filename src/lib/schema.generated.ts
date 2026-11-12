@@ -3,7 +3,7 @@
 // The schema-check CI step fails if this file is stale.
 
 /** Fields accepted on the top-level `dashboard_sidebar` config. */
-export const TOP_FIELDS = ['position', 'width', 'start_collapsed', 'overlay', 'on_desktop', 'on_mobile', 'breakpoint', 'background', 'header', 'body', 'footer', 'mobile', 'uix', 'card_mod'] as const;
+export const TOP_FIELDS = ['position', 'width', 'start_collapsed', 'overlay', 'on_desktop', 'on_mobile', 'breakpoint', 'background', 'header', 'body', 'footer', 'mobile', 'visibility', 'animate', 'uix', 'card_mod'] as const;
 
 /** Fields shared by every block and footer button. */
 export const COMMON_FIELDS = ['class', 'id', 'uix', 'card_mod'] as const;
