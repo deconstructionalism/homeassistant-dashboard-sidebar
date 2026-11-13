@@ -25,6 +25,8 @@ npm run check        # the full gate: lint + format + drift checks + unit tests 
 | `npm run test:browser` | web-test-runner, real Chromium — rendering |
 | `npm run schema:gen` / `npm run docs:config` | regenerate the generated files (see below) |
 | `npm run docs:shots` | regenerate the editor screenshots for the docs |
+| `npm run bench` | time how fast visibility follows each kind of change (see `bench/README.md`) |
+| `npm run ha:conditions [tag]` | fetch Home Assistant's condition code for the parity tests (see Tests) |
 | `mkdocs serve` | preview the docs site (needs `pip install mkdocs-material`) |
 
 ### Tooling
@@ -92,6 +94,43 @@ checks. Editor screenshots are committed by a human after eyeballing them
   `CSSStyleSheet` must be a `.browser.test.ts`.
 - Group a module's tests in the file named after that module (e.g. every
   `validateConfig` suite lives in `lib/validate.test.ts`).
+
+### Visibility: snapshots and parity with Home Assistant
+
+Visibility has to behave exactly like a card's Visibility tab, so it is tested
+three ways, all from one table of cases (`src/lib/visibility.cases.ts`: a fixed
+house, a fixed moment, every permutation of each condition's fields, and
+and / or / not combinations):
+
+- **Linting snapshots** (`lib/visibility.lint.test.ts`, vitest): what the
+  validator says about each case, the browser's result, what is sent to Home
+  Assistant, and the outcome once it answers. Stored in
+  `lib/__snapshots__/`. After a deliberate change, review the diff and update
+  with `npx vitest run -u src/lib/visibility.lint.test.ts`.
+- **UI snapshots** (`editor/visibility-tab.snapshot.browser.test.ts`): the
+  Visibility tab for each case, as text: every row (type, summary, live
+  status) and every row's form (values, states, errors, hints, buttons). Stored
+  in `editor/__snapshots__/`; Chromium and WebKit must both match. Update with
+  `npx web-test-runner src/editor/visibility-tab.snapshot.browser.test.ts --update-snapshots`.
+- **Parity** (`lib/visibility.parity.test.ts`, vitest): runs every case
+  through our engine and through Home Assistant's own frontend code, and fails
+  on any difference: each browser check, the first guess before the server
+  answers, the `subscribe_condition` payloads, and the combined result.
+
+  Home Assistant's code (Apache-2.0) is not committed. The test fetches it on
+  demand into `test/ha-frontend/` (git-ignored), pinned by
+  `test/ha-frontend.lock.json` to an exact commit with a SHA-256 hash for
+  every file. A file that doesn't match its hash is refused and the test
+  fails; a bad cached copy is replaced by a verified one. Offline with no
+  cached copy, the parity tests are skipped with a warning (the snapshot
+  suites still run). `npm run ha:conditions` fetches and checks the pinned
+  files by hand.
+
+  To move to a new Home Assistant release:
+  `npm run ha:conditions -- --update <tag>` resolves the tag to its commit
+  and pins the new hashes; commit the lock file change, run the tests, port
+  any differences into `lib/visibility.ts`, and update the release named in
+  its header.
 
 ## Conventions
 
