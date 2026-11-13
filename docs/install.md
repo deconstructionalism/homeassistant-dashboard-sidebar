@@ -7,19 +7,27 @@ Community Store), a one-time add-on you set up separately. If you do not have
 HACS yet, follow its **[installation guide](https://hacs.xyz/docs/use/)** first,
 then come back here.
 
+## Requirements
+
+- Home Assistant **2024.1** or newer.
+- Home Assistant **2026.10** or newer for the [visibility](configuration.md#who-sees-it)
+  conditions only Home Assistant can answer (template, sun, zone, device). On
+  older versions they are left out and everything else works.
+
 ## Install via HACS
 
 Dashboard Sidebar is a dashboard **card** (a small piece of frontend code), so
 HACS installs it as a *Dashboard* item rather than a normal integration. HACS
 downloads it and makes it load on every dashboard.
 
+Dashboard Sidebar is in the HACS default store, so there is nothing to add first.
+
 1. Open **HACS** from the Home Assistant sidebar.
-2. Click the **⋮** menu (top right) and choose **Custom repositories**.
-3. Paste `https://github.com/deconstructionalism/homeassistant-dashboard-sidebar` in the
-   **Repository** field, pick **Dashboard** as the type, and click **Add**.
-4. Search HACS for **Dashboard Sidebar**, open it, and click **Download**.
-5. **Hard-refresh** your browser so the new code loads: **Ctrl+Shift+R**
+2. Search for **Dashboard Sidebar**, open it, and click **Download**.
+3. **Hard-refresh** your browser so the new code loads: **Ctrl+Shift+R**
    (**Cmd+Shift+R** on a Mac).
+
+HACS offers new versions as updates, like any other download.
 
 !!! note "Not using HACS?"
     Download `dashboard-sidebar-card.js` from the latest

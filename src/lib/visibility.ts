@@ -68,8 +68,8 @@ export interface VisibilityHass {
   states?: Record<string, StateObj | undefined>;
   /** The user's profile locale; `time_zone: 'server'` uses the server's zone. */
   locale?: { time_zone?: string };
-  /** The server config, for its time zone. */
-  config?: { time_zone?: string };
+  /** The server config: its time zone and Home Assistant version. */
+  config?: { time_zone?: string; version?: string };
   /** The entity registry. */
   entities?: Record<
     string,
@@ -802,6 +802,7 @@ const locallyAnswerable = (c: VisibilityCondition, hass: VisibilityHass): boolea
 export const evaluateLocally = (
   conditions: VisibilityCondition[],
   hass: VisibilityHass,
+  options: { olderHomeAssistant?: boolean } = {},
 ): boolean | undefined => {
   const node = (c: VisibilityCondition): boolean | undefined => {
     if ('enabled' in c && typeof c.enabled !== 'boolean') {
@@ -823,9 +824,49 @@ export const evaluateLocally = (
     if (!isServerCondition(c) || locallyAnswerable(c, hass)) {
       return safeCheck(c, hass);
     }
+    // Without subscribe_condition, Lovelace state checks are answered in the
+    // browser, as Home Assistant's frontend did before it sent them to core.
+    if (options.olderHomeAssistant && !('entity_id' in c) && isStateCheck(c)) {
+      return safeCheck(c, hass);
+    }
     return undefined;
   };
   return andOf(conditions.filter((c) => !isDisabled(c)).map(node));
+};
+
+/** A Lovelace state or numeric_state check (including the legacy shape). */
+const isStateCheck = (c: VisibilityCondition): boolean =>
+  c.condition === undefined || c.condition === 'state' || c.condition === 'numeric_state';
+
+/** The first Home Assistant release where any user gets live `subscribe_condition` results. */
+export const MIN_SERVER_CONDITIONS = '2026.10';
+
+/**
+ * Whether this Home Assistant gives live `subscribe_condition` results to
+ * every user: false before 2026.10 (no command before 2026.6, admins only and
+ * no re-check on state changes until 2026.10), undefined if its version can't
+ * be read (then it is tried, and a refusal switches to the fallback).
+ */
+export const serverConditionsSupported = (hass: VisibilityHass): boolean | undefined => {
+  const m = /^(\d{4})\.(\d{1,2})\b/.exec(hass.config?.version ?? '');
+  if (!m) return undefined;
+  const [y, mo] = MIN_SERVER_CONDITIONS.split('.').map(Number);
+  return Number(m[1]) * 100 + Number(m[2]) >= y * 100 + mo;
+};
+
+/** Connections whose Home Assistant refused subscribe_condition: not asked again. */
+const refused = new WeakSet<object>();
+
+/** Said once per page: why some conditions are not being checked. */
+let warnedOlder = false;
+const warnOlder = (why: string): void => {
+  if (warnedOlder) return;
+  warnedOlder = true;
+  console.warn(
+    `[dashboard-sidebar] ${why}: template, sun, zone, device and other conditions only Home ` +
+      `Assistant can answer are ignored (state checks still work). Full visibility needs ` +
+      `Home Assistant ${MIN_SERVER_CONDITIONS} or newer.`,
+  );
 };
 
 /**
@@ -928,9 +969,16 @@ export class VisibilityEvaluator {
   public definitive: boolean | undefined;
   /** The decided result, or the browser's first guess while waiting (may be undefined). */
   public result: boolean | undefined;
+  /**
+   * Set when this Home Assistant can't answer conditions (older than 2026.10,
+   * or it refused): state checks run in the browser, and anything only Home
+   * Assistant can answer is left out, so the sidebar shows rather than hides.
+   */
+  public olderHomeAssistant = false;
 
   private _signature?: string;
   private _connection?: VisibilityHass['connection'];
+  private _supported?: boolean;
   private _split?: SplitTree;
   private _all: VisibilityCondition[] = [];
   private _conditions: VisibilityCondition[] = [];
@@ -965,7 +1013,13 @@ export class VisibilityEvaluator {
   ): boolean | undefined {
     this._hass = hass;
     const signature = JSON.stringify(conditions ?? []);
-    if (signature !== this._signature || hass.connection !== this._connection) {
+    const supported = serverConditionsSupported(hass);
+    if (
+      signature !== this._signature ||
+      hass.connection !== this._connection ||
+      supported !== this._supported
+    ) {
+      this._supported = supported;
       this._resubscribe(conditions ?? [], hass, signature);
     }
     // Screen matches count too, since a resize can land before the browser
@@ -1017,8 +1071,17 @@ export class VisibilityEvaluator {
     this._all = leaves(conditions);
     this._results = {};
     this._errors = {};
+    this.olderHomeAssistant = false;
     const generation = this._generation;
-    for (const sub of this._split.server) {
+    if (this._split.server.length > 0) {
+      if (serverConditionsSupported(hass) === false) {
+        this.olderHomeAssistant = true;
+        warnOlder(`Home Assistant ${hass.config?.version} can't check conditions live`);
+      } else if (hass.connection && refused.has(hass.connection)) {
+        this.olderHomeAssistant = true;
+      }
+    }
+    for (const sub of this.olderHomeAssistant ? [] : this._split.server) {
       if (!hass.connection) {
         continue; // no answer can come: stays unknown, and the first guess stands
       }
@@ -1036,10 +1099,18 @@ export class VisibilityEvaluator {
         },
         { type: 'subscribe_condition', condition: sub.condition },
       );
-      promise.catch(() => {
+      promise.catch((err: unknown) => {
         if (generation !== this._generation) return;
-        this._results[sub.id] = false;
-        this._errors[sub.id] = true;
+        const code = (err as { code?: string } | undefined)?.code;
+        if (code === 'unknown_command' || code === 'unauthorized') {
+          // an older Home Assistant (or one that only lets admins subscribe)
+          this.olderHomeAssistant = true;
+          if (hass.connection) refused.add(hass.connection);
+          warnOlder(`Home Assistant refused subscribe_condition (${code})`);
+        } else {
+          this._results[sub.id] = false;
+          this._errors[sub.id] = true;
+        }
         this._recompute(true);
       });
       this._unsubs.push(promise);
@@ -1078,7 +1149,12 @@ export class VisibilityEvaluator {
   /** Re-evaluates, notifying the owner if the result changed and asked to. */
   private _recompute(notify: boolean): void {
     let definitive: boolean | undefined;
-    if (this._split && this._hass) {
+    if (this.olderHomeAssistant && this._hass) {
+      // What the browser can answer decides; anything it can't is left out
+      // (shown), since a navigation sidebar shouldn't vanish over it.
+      definitive =
+        evaluateLocally(this._conditions, this._hass, { olderHomeAssistant: true }) ?? true;
+    } else if (this._split && this._hass) {
       // An error from the server hides it all, rather than being a false a
       // `not` would turn into true.
       definitive = Object.values(this._errors).some(Boolean)

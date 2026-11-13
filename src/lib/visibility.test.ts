@@ -7,6 +7,7 @@ import {
   isServerCondition,
   isValidTimeString,
   msToNextBoundary,
+  serverConditionsSupported,
   resolveTarget,
   splitTree,
   type ServerMessage,
@@ -537,5 +538,94 @@ describe('VisibilityEvaluator', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     e.dispose();
     vi.useRealTimers();
+  });
+});
+
+describe('an older Home Assistant (no live subscribe_condition for everyone)', () => {
+  it('reads the version: 2026.10 and later are supported', () => {
+    const v = (version?: string) => serverConditionsSupported(hass({ config: { version } }));
+    expect(v('2026.10.0')).toBe(true);
+    expect(v('2026.10.0b1')).toBe(true);
+    expect(v('2026.11.1')).toBe(true);
+    expect(v('2027.1.0')).toBe(true);
+    expect(v('2026.9.3')).toBe(false);
+    expect(v('2026.6.0')).toBe(false);
+    expect(v('2025.12.4')).toBe(false);
+    expect(v(undefined)).toBe(undefined);
+    expect(v('dev')).toBe(undefined);
+  });
+
+  /** A connection that records subscriptions and can refuse them. */
+  const refusing = (code?: string) => {
+    const calls: unknown[] = [];
+    return {
+      calls,
+      connection: {
+        subscribeMessage: (_cb: unknown, msg: unknown) => {
+          calls.push(msg);
+          return code
+            ? Promise.reject({ code, message: code })
+            : new Promise<() => unknown>(() => undefined);
+        },
+      },
+    };
+  };
+  const flush = async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  };
+  const TEMPLATE = { condition: 'template', value_template: '{{ x }}' };
+  const KITCHEN_ON = { condition: 'state', entity: 'light.kitchen', state: 'on' };
+  const KITCHEN_OFF = { condition: 'state', entity: 'light.kitchen', state: 'off' };
+
+  beforeEach(() => vi.spyOn(console, 'warn').mockImplementation(() => undefined));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('below 2026.10, subscribes to nothing and checks state in the browser', () => {
+    const { calls, connection } = refusing();
+    const e = new VisibilityEvaluator(() => undefined);
+    const old = hass({ config: { version: '2026.9.3' }, connection });
+    expect(e.observe([KITCHEN_ON], old)).toBe(true);
+    expect(e.observe([KITCHEN_OFF], old)).toBe(false);
+    expect(calls).toHaveLength(0);
+    expect(e.olderHomeAssistant).toBe(true);
+  });
+
+  it('leaves out what only Home Assistant can answer, so the sidebar shows', () => {
+    const { connection } = refusing();
+    const old = hass({ config: { version: '2026.6.0' }, connection });
+    const e = new VisibilityEvaluator(() => undefined);
+    expect(e.observe([TEMPLATE], old)).toBe(true);
+    expect(e.observe([{ condition: 'not', conditions: [TEMPLATE] }], old)).toBe(true);
+    // what the browser can answer still decides
+    expect(e.observe([TEMPLATE, { condition: 'user', users: ['u9'] }], old)).toBe(false);
+    expect(e.observe([{ condition: 'or', conditions: [TEMPLATE, KITCHEN_OFF] }], old)).toBe(true);
+  });
+
+  it.each(['unknown_command', 'unauthorized'])(
+    'falls back when Home Assistant refuses with %s (an older or admin-only one)',
+    async (code) => {
+      const { calls, connection } = refusing(code);
+      const onChange = vi.fn();
+      const e = new VisibilityEvaluator(onChange);
+      expect(e.observe([TEMPLATE, KITCHEN_ON], hass({ connection })), 'waiting').toBe(undefined);
+      await flush();
+      expect(e.olderHomeAssistant).toBe(true);
+      expect(e.result).toBe(true);
+      expect(onChange).toHaveBeenCalled();
+      // a later change goes straight to the fallback, without asking again
+      expect(e.observe([TEMPLATE, KITCHEN_OFF], hass({ connection })), 'state still decides').toBe(
+        false,
+      );
+      expect(calls).toHaveLength(1);
+    },
+  );
+
+  it('still hides on a real error from Home Assistant', async () => {
+    const { connection } = refusing('home_assistant_error');
+    const e = new VisibilityEvaluator(() => undefined);
+    e.observe([TEMPLATE], hass({ connection }));
+    await flush();
+    expect(e.olderHomeAssistant).toBe(false);
+    expect(e.result).toBe(false);
   });
 });

@@ -57,9 +57,9 @@ docked to the bottom of the display.
 
 ## Installation
 
-Install through **[HACS](https://hacs.xyz)**: add this repository as a custom
-repository (category **Dashboard**), install it, then open a dashboard in edit
-mode and use the **+ Sidebar** button. Full steps, including YAML-mode
+Install through **[HACS](https://hacs.xyz)**: it's in the default store, so
+search HACS for **Dashboard Sidebar** and download it. Then open a dashboard in
+edit mode and use the **+ Sidebar** button. Full steps, including YAML-mode
 dashboards, are in the
 **[installation guide](https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/install/)**.
 

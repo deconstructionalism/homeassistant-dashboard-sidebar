@@ -510,6 +510,23 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(root(el).querySelector('.vis-live'), 'no overall label').to.equal(null);
   });
 
+  it('on Home Assistant before 2026.10, marks rows it cannot check and still checks state', async () => {
+    const el = await mountTab(
+      cfg({
+        visibility: [
+          { condition: 'state', entity: 'light.kitchen', state: 'on' },
+          { condition: 'template', value_template: '{{ x }}' },
+        ],
+      }),
+    );
+    el.hass = { ...HASS, config: { version: '2026.9.3' } } as never;
+    await el.updateComplete;
+    const status = rows(el).map((r) => r.querySelector('.vis-status') as HTMLElement);
+    expect(status[0].className, 'state checked in the browser').to.contain('yes');
+    expect(status[1].className).to.contain('older');
+    expect(status[1].getAttribute('title')).to.contain('Needs Home Assistant 2026.10 or newer');
+  });
+
   it('marks a condition that still needs something on its row, not as errors in the form', async () => {
     const el = await mountTab(cfg());
     await addType(el, 'State');
