@@ -113,7 +113,7 @@ const clickText = async (
 const addType = async (
   el: DashboardSidebarEditor,
   type: string,
-  trigger = '＋ Add Condition',
+  trigger = 'Add Condition',
 ): Promise<void> => {
   await clickText(el, trigger);
   await clickText(el, type, root(el).querySelector('.add-menu') as HTMLElement);
@@ -170,19 +170,24 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(root(el).querySelector('ha-card-conditions-editor, .visibility-field')).to.equal(null);
   });
 
-  it('starts empty with our dashed add button and a short note', async () => {
+  it('starts empty with our solid add button and a short note', async () => {
     const el = await mountTab(cfg());
     expect(root(el).querySelector('.tab-note')?.textContent?.trim()).to.equal(
       'Show the sidebar only when all of these hold. While editing, it always shows.',
     );
     const add = root(el).querySelector('.empty-state button.add') as HTMLElement;
-    expect(add.textContent?.trim()).to.equal('＋ Add Condition');
-    expect(add.classList.contains('solid'), 'dashed, like Add Element').to.equal(false);
+    expect(add.textContent?.trim()).to.equal('Add Condition');
+    expect(add.classList.contains('solid'), 'solid, like Add Element and Add Button').to.equal(
+      true,
+    );
+    for (const b of root(el).querySelectorAll('.vis-add-row button')) {
+      expect(b.classList.contains('solid')).to.equal(true);
+    }
   });
 
   it('offers every Home Assistant condition type, grouped', async () => {
     const el = await mountTab(cfg());
-    await clickText(el, '＋ Add Condition');
+    await clickText(el, 'Add Condition');
     const menu = root(el).querySelector('.add-menu')!;
     expect([...menu.querySelectorAll('.add-menu-header')].length).to.equal(5);
     expect(

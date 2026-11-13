@@ -522,7 +522,7 @@ export class VisibilityTab implements ReactiveController {
         ${notes}
         <div class="empty-state">
           <p class="empty-msg">No conditions, so everyone sees the sidebar.</p>
-          ${this._addButton([], 0, '＋ Add Condition')}
+          ${this._addButton([], 0, 'Add Condition', true)}
         </div>
         ${this._renderMenu()}
       `;
@@ -551,7 +551,9 @@ export class VisibilityTab implements ReactiveController {
           </div>
           <div class="pv-frame vis-tree" role="tree">
             ${this._renderRows(list, [])}
-            <div class="vis-add-row">${this._addButton([], list.length, '＋ Add Condition')}</div>
+            <div class="vis-add-row">
+              ${this._addButton([], list.length, 'Add Condition', true)}
+            </div>
           </div>
         </div>
       </div>
@@ -607,7 +609,7 @@ export class VisibilityTab implements ReactiveController {
             ? html`<div class="vis-children">
                 ${this._renderRows(childrenOf(c), path)}
                 <div class="vis-add-row">
-                  ${this._addButton(path, childrenOf(c).length, '＋ Add Condition')}
+                  ${this._addButton(path, childrenOf(c).length, 'Add Condition', true)}
                 </div>
               </div>`
             : nothing
