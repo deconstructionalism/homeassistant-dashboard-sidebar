@@ -19,8 +19,8 @@ import {
 
 /**
  * Fetch (or reuse) Home Assistant's code, checked against the pin in
- * test/ha-frontend.lock.json. A mismatch fails this file; being offline with
- * no cached copy skips it, with a warning.
+ * test/ha-frontend.lock.json. A mismatch fails this file. Offline with no
+ * cached copy skips it, with a warning, except in CI (CI set), where it fails.
  */
 const fetcher = await import(
   /* @vite-ignore */ new URL('../../scripts/fetch-ha-conditions.mjs', import.meta.url).href
@@ -31,7 +31,8 @@ try {
   const lock = await fetcher.ensureHaFrontend();
   pinned = `${lock.tag} (${String(lock.commit).slice(0, 12)})`;
 } catch (err) {
-  if (!(err instanceof fetcher.OfflineError)) throw err;
+  // In CI a skip would pass without testing parity, so there it fails instead.
+  if (!(err instanceof fetcher.OfflineError) || process.env.CI) throw err;
   available = false;
   pinned = 'SKIPPED: offline, and no cached copy of the pinned code';
   process.stderr.write(

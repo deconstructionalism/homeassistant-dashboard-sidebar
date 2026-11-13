@@ -123,7 +123,8 @@ and / or / not combinations):
   every file. A file that doesn't match its hash is refused and the test
   fails; a bad cached copy is replaced by a verified one. Offline with no
   cached copy, the parity tests are skipped with a warning (the snapshot
-  suites still run). `npm run ha:conditions` fetches and checks the pinned
+  suites still run), except in CI, where that fails the run. CI caches the
+  fetched files per pin and checks their hashes on every run. `npm run ha:conditions` fetches and checks the pinned
   files by hand.
 
   To move to a new Home Assistant release:
