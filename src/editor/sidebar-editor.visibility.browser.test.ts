@@ -349,6 +349,30 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(el.visibilityConditions[0]).to.not.have.property('before');
   });
 
+  it('calls a window that crosses midnight overnight, and flags an empty one on Before', async () => {
+    const el = await mountTab(
+      cfg({ visibility: [{ condition: 'time', after: '22:00', before: '06:00' }] }),
+    );
+    rows(el)[0].click();
+    await el.updateComplete;
+    expect(rows(el)[0].querySelector('.vis-summary')?.textContent).to.equal(
+      'After 22:00, before 06:00 (overnight)',
+    );
+    expect(field(el, 'Before').querySelector('.field-desc')?.textContent?.trim()).to.equal(
+      'Overnight: from 22:00 until 06:00 the next day.',
+    );
+    expect(field(el, 'Before').classList.contains('invalid')).to.equal(false);
+    const hour = field(el, 'Before').querySelector('select.vis-time-hour') as HTMLSelectElement;
+    hour.value = '22';
+    hour.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(field(el, 'Before').classList.contains('invalid')).to.equal(true);
+    expect(field(el, 'Before').querySelector('.field-error')?.textContent?.trim()).to.equal(
+      'Must differ from After.',
+    );
+    expect(rows(el)[0].querySelector('.vis-summary')?.textContent).to.not.contain('overnight');
+  });
+
   it('flags a time from YAML that is not one', async () => {
     const el = await mountTab(cfg({ visibility: [{ condition: 'time', after: '25:00' }] }));
     rows(el)[0].click();

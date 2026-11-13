@@ -185,7 +185,8 @@ const summary = (
           .map((d) => titleCase(d))
           .join(', '),
       ].filter(Boolean);
-      return parts.length ? titleCase(parts.join(', ')) : 'Any time';
+      const overnight = timeWindow(c) === 'overnight' ? ' (overnight)' : '';
+      return parts.length ? `${titleCase(parts.join(', '))}${overnight}` : 'Any time';
     }
     case 'location': {
       const bits = [...asList(c.locations).map((l) => (l === 'home' ? 'Home' : l))];
@@ -245,6 +246,21 @@ export const timeParts = (value: unknown): [string, string, string] | undefined 
   return [h.padStart(2, '0'), m.padStart(2, '0'), sec === undefined ? '' : sec.padStart(2, '0')];
 };
 
+/**
+ * How a time condition's After and Before relate: a window that crosses
+ * midnight (Before earlier than After), an empty one (the same time), or
+ * neither (a normal window, or only one end set).
+ */
+export const timeWindow = (c: VisibilityCondition): 'overnight' | 'empty' | undefined => {
+  const a = timeParts(c.after);
+  const b = timeParts(c.before);
+  if (!a || !b) return undefined;
+  const secs = ([h, m, sec]: [string, string, string]): number =>
+    Number(h) * 3600 + Number(m) * 60 + Number(sec || 0);
+  if (secs(a) === secs(b)) return 'empty';
+  return secs(b) < secs(a) ? 'overnight' : undefined;
+};
+
 /** 00 to n-1, zero-padded. */
 const range = (n: number): string[] =>
   Array.from({ length: n }, (_, i) => String(i).padStart(2, '0'));
@@ -262,9 +278,12 @@ const timeField = (
   value: unknown,
   onChange: (value: string | undefined) => void,
   description?: string,
+  error?: string,
 ): TemplateResult => {
   const parts = timeParts(value);
-  const invalid = value !== undefined && value !== '' && parts === undefined;
+  const notATime = value !== undefined && value !== '' && parts === undefined;
+  const message = notATime ? `${String(value)} is not a time; pick one.` : error;
+  const invalid = message !== undefined;
   const [h, m, sec] = parts ?? ['', '', ''];
   const commit = (nh: string, nm: string, ns: string): void => {
     if (!nh) {
@@ -303,11 +322,7 @@ const timeField = (
       <span class="vis-time-sep">:</span>
       ${select('second', h ? sec : '', MINUTES, '--', (v) => commit(h, m, v), !h)}
     </div>
-    ${
-      invalid
-        ? html`<span class="field-error">${String(value)} is not a time; pick one.</span>`
-        : nothing
-    }
+    ${message ? html`<span class="field-error">${message}</span>` : nothing}
     ${description ? html`<small class="field-desc">${description}</small>` : nothing}
   </div>`;
 };
@@ -1016,7 +1031,15 @@ export class VisibilityTab implements ReactiveController {
       case 'time':
         return html`
           ${timeField('After', c.after, (v) => patch({ after: v }), 'From this time on. Empty means from midnight.')}
-          ${timeField('Before', c.before, (v) => patch({ before: v }), 'Until this time. Earlier than After crosses midnight.')}
+          ${timeField(
+            'Before',
+            c.before,
+            (v) => patch({ before: v }),
+            timeWindow(c) === 'overnight'
+              ? `Overnight: from ${String(c.after)} until ${String(c.before)} the next day.`
+              : 'Until this time. Earlier than After crosses midnight.',
+            timeWindow(c) === 'empty' ? 'Must differ from After.' : undefined,
+          )}
           ${choicesField(
             'Days',
             WEEKDAYS.map(([value, label]) => ({ value, label })),
