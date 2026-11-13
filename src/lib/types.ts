@@ -383,10 +383,11 @@ export interface DashboardSidebarConfig {
   /** The mobile bar configuration. */
   mobile?: MobileConfig;
   /**
-   * Show the sidebar (and its mobile bar) only when every condition holds, in
-   * the shapes Home Assistant's card Visibility tab uses: `user`, `screen`,
-   * `state`, `numeric_state`, and `and` / `or` / `not` to combine them. While
-   * the dashboard is being edited it always shows, so it can still be edited.
+   * Show the sidebar (and its mobile bar) only when every condition holds.
+   * Any condition a card's Visibility tab takes works here, with the same
+   * results: `user`, `screen`, `time`, `location`, `state`, `numeric_state`,
+   * `template`, `sun`, `zone`, `device`, and `and` / `or` / `not`. While the
+   * dashboard is being edited it always shows, so it can still be edited.
    */
   visibility?: VisibilityCondition[];
   /**

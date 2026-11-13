@@ -6,7 +6,7 @@ import {
   TOGGLE_EVENT,
 } from './const';
 import { desktopMode, mobileMode } from './mobile';
-import { conditionsMet, visibilityContext } from './visibility';
+import { VisibilityEvaluator } from './visibility';
 import type { DashboardSidebarConfig } from './types';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -176,15 +176,27 @@ const deleteConfig = (huiRoot: { lovelace?: any }): void => {
 };
 
 /**
- * Whether the sidebar should be on the page: its `visibility` conditions all
- * hold for the current user, screen and states. While the dashboard is being
- * edited it always shows, so a sidebar hidden from you can still be edited.
+ * Whether the sidebar should be on the page, given what its `visibility`
+ * conditions came to. While the dashboard is being edited it always shows,
+ * so a sidebar hidden from you can still be edited (its edit button is the
+ * way into the editor). While a server result is still out, it stays as it
+ * is, so it never flashes in or out on load.
  */
 export const sidebarVisible = (
-  config: DashboardSidebarConfig,
-  hass: unknown,
+  result: boolean | undefined,
   editMode: boolean,
-): boolean => editMode || conditionsMet(config.visibility, visibilityContext(hass));
+  mounted: boolean,
+): boolean => editMode || (result === undefined ? mounted : result);
+
+/** Live visibility for the current dashboard's sidebar; wakes the loop on its own changes. */
+const visibility = new VisibilityEvaluator(() => scheduleEnsure());
+
+/** Marks the sidebar and bar as hidden from you, for the edit-mode badge. */
+const markHidden = (wrapper: Element, hidden: boolean): void => {
+  for (const el of wrapper.querySelectorAll('dashboard-sidebar, dashboard-sidebar-bar')) {
+    (el as DashboardSidebar | DashboardSidebarBar).hiddenByVisibility = hidden;
+  }
+};
 
 /**
  * A key that changes only when the host layout (side or width) must be rebuilt,
@@ -462,7 +474,14 @@ export const ensureSidebar = (): void => {
     const editMode = isEditMode(huiRoot);
     const config = readConfig(huiRoot);
     const wrapper = shadow.getElementById(WRAPPER_ID);
-    const visible = config !== null && sidebarVisible(config, getHass(), editMode);
+    let result: boolean | undefined;
+    if (config) {
+      result = visibility.observe(config.visibility, getHass() ?? {});
+    } else {
+      visibility.dispose();
+    }
+    const visible = config !== null && sidebarVisible(result, editMode, wrapper !== null);
+    const hiddenFromYou = editMode && result === false;
 
     if (wrapper && config && !visible) {
       teardown(shadow);
@@ -478,6 +497,10 @@ export const ensureSidebar = (): void => {
       } else {
         removeAddButton(shadow);
       }
+      const built = shadow.getElementById(WRAPPER_ID);
+      if (built) {
+        markHidden(built, hiddenFromYou);
+      }
       return;
     }
 
@@ -490,8 +513,12 @@ export const ensureSidebar = (): void => {
         config && element && wrapper.dataset.struct === structureKey(config),
       );
       if (config && sameStructure && element) {
+        element.editMode = editMode;
         element.setConfig(config);
-        bar?.setConfig(config);
+        if (bar) {
+          bar.editMode = editMode;
+          bar.setConfig(config);
+        }
         // The layout CSS carries settings that change in place too (the
         // slide, for animate), so it is rewritten along with the element.
         const style = shadow.getElementById(STYLE_ID);
@@ -502,6 +529,10 @@ export const ensureSidebar = (): void => {
       } else {
         teardown(shadow);
         buildSidebar();
+      }
+      const current = shadow.getElementById(WRAPPER_ID);
+      if (current) {
+        markHidden(current, hiddenFromYou);
       }
       return;
     }
@@ -522,24 +553,132 @@ export const ensureSidebar = (): void => {
       // reference assignment until something actually changed.
       element.hass = getHass();
     }
+    markHidden(wrapper, hiddenFromYou);
   } catch {
     // frontend not ready yet; the next tick retries
   }
 };
 
+/** Set while a check is queued, so a burst of changes runs it once. */
+let ensureQueued = false;
+
 /**
- * Starts the sidebar: builds now, on every navigation, on a slow poll, and
- * persists in-place edits the element reports.
+ * Queues one {@link ensureSidebar} for the end of the current task, so every
+ * change source (hass, the dashboard, media queries, the clock, server
+ * pushes) is handled at once and a burst of them costs one check.
+ */
+const scheduleEnsure = (): void => {
+  if (ensureQueued) {
+    return;
+  }
+  ensureQueued = true;
+  queueMicrotask(() => {
+    ensureQueued = false;
+    ensureSidebar();
+  });
+};
+
+/** How often to check when Home Assistant cannot tell us about changes. */
+const FALLBACK_POLL_MS = 30000;
+
+/** Whether <home-assistant> hands us each new hass (provideHass). */
+let hassRelayed = false;
+
+/** hui-roots already reporting their updates to us. */
+const watchedRoots = new WeakSet<Element>();
+
+/**
+ * Hooks the current hui-root, so a change of dashboard, view, edit mode or
+ * config (all of which re-render it) runs a check. Uses Lit's public
+ * controller API; a hui-root is replaced when the dashboard changes, so each
+ * new one is hooked as it is found.
+ */
+const watchRoot = (): boolean => {
+  const huiRoot = getHuiRoot() as
+    (Element & { addController?: (c: { hostUpdated: () => void }) => void }) | null;
+  if (!huiRoot || typeof huiRoot.addController !== 'function') {
+    return false;
+  }
+  if (!watchedRoots.has(huiRoot)) {
+    watchedRoots.add(huiRoot);
+    // hui-root also re-renders on every hass change, which the hass relay
+    // already covers; only a new lovelace object (a config save, an
+    // edit-mode toggle) needs a check from here.
+    let seen: unknown = (huiRoot as { lovelace?: unknown }).lovelace;
+    huiRoot.addController({
+      hostUpdated: () => {
+        const lovelace = (huiRoot as { lovelace?: unknown }).lovelace;
+        if (lovelace !== seen || !hassRelayed) {
+          seen = lovelace;
+          scheduleEnsure();
+        }
+      },
+    });
+  }
+  return true;
+};
+
+/**
+ * Looks for a new hui-root for a little while after load or navigation,
+ * since the panel renders it a moment later. Stops as soon as it is found.
+ */
+const findRootSoon = (): void => {
+  let tries = 0;
+  const look = (): void => {
+    if (watchRoot()) {
+      scheduleEnsure();
+      return;
+    }
+    if (++tries < 100) {
+      setTimeout(look, 100);
+    }
+  };
+  look();
+};
+
+/**
+ * Asks <home-assistant> for every new hass object (its long-standing
+ * provideHass hook, the one its own panels use). Registered once, on a
+ * plain relay object that lives for the page, since providers cannot be
+ * removed. Returns false if this Home Assistant has no such hook.
+ */
+const relayHass = (): boolean => {
+  const root = document.querySelector('home-assistant') as
+    (Element & { provideHass?: (el: unknown) => void }) | null;
+  if (!root || typeof root.provideHass !== 'function') {
+    return false;
+  }
+  const relay = {};
+  Object.defineProperty(relay, 'hass', {
+    set: () => {
+      watchRoot();
+      scheduleEnsure();
+    },
+  });
+  root.provideHass(relay);
+  hassRelayed = true;
+  return true;
+};
+
+/**
+ * Starts the sidebar. Nothing is polled: it checks when Home Assistant hands
+ * over a new hass, when the dashboard re-renders (view, edit mode, config),
+ * on navigation, on resize, and when visibility changes on its own (a media
+ * query, the clock, a server push). If this Home Assistant has no
+ * provideHass hook, it falls back to a slow poll and says so once.
  */
 export const startSidebar = (): void => {
-  window.addEventListener('location-changed', () => ensureSidebar());
+  window.addEventListener('location-changed', () => {
+    scheduleEnsure();
+    findRootSoon();
+  });
   window.addEventListener(EDIT_EVENT, () => {
     const huiRoot = getHuiRoot();
     if (huiRoot) {
       openEditor(huiRoot);
     }
   });
-  // A screen condition should follow a resize at once, not on the next poll.
+  // The header height (and so the sidebar's offset) follows the window size.
   let resizeQueued = false;
   window.addEventListener('resize', () => {
     if (!resizeQueued) {
@@ -550,6 +689,24 @@ export const startSidebar = (): void => {
       });
     }
   });
-  window.setInterval(ensureSidebar, 1000);
+  const hook = (tries = 0): void => {
+    if (relayHass()) {
+      return;
+    }
+    if (document.querySelector('home-assistant') || tries > 50) {
+      console.warn(
+        '[dashboard-sidebar] Home Assistant did not offer provideHass; ' +
+          `checking every ${FALLBACK_POLL_MS / 1000}s instead`,
+      );
+      window.setInterval(() => {
+        watchRoot();
+        ensureSidebar();
+      }, FALLBACK_POLL_MS);
+      return;
+    }
+    setTimeout(() => hook(tries + 1), 100);
+  };
+  hook();
+  findRootSoon();
   ensureSidebar();
 };

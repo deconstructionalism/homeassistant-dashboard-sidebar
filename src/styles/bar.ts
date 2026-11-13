@@ -150,6 +150,32 @@ export const barStyles = css`
     --mdc-icon-size: 16px;
   }
 
+  /* Editing a bar its visibility hides from you: dimmed, with an eye-off
+     badge on the edit button (which stays fully usable). */
+  :host([hidden-by-visibility]) .dashboard-sidebar-bar-slots {
+    opacity: 0.45;
+  }
+
+  .hidden-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--warning-color, #ffa600);
+    color: var(--text-primary-color, #fff);
+  }
+
+  .hidden-badge ha-icon {
+    --mdc-icon-size: 10px;
+
+    color: inherit;
+  }
+
   :host([data-position='top']) .dashboard-sidebar-bar-edit {
     top: auto;
     bottom: -36px;

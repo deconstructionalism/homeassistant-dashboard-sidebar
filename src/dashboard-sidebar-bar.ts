@@ -75,6 +75,10 @@ export class DashboardSidebarBar extends LitElement {
   @property({ attribute: false })
   public editMode = false;
 
+  /** Set while editing a bar its visibility conditions hide from you (dimmed, badged pencil). */
+  @property({ type: Boolean, reflect: true, attribute: 'hidden-by-visibility' })
+  public hiddenByVisibility = false;
+
   /** Forces the sheet open, so the editor preview can show its contents. */
   @property({ attribute: false })
   public previewSheetOpen = false;
@@ -986,7 +990,7 @@ export class DashboardSidebarBar extends LitElement {
           this.editMode && !this.preview
             ? html`<button
                 class="dashboard-sidebar-bar-edit"
-                title="Edit sidebar"
+                title=${this.hiddenByVisibility ? 'Edit sidebar. Its visibility conditions hide it from you outside edit mode.' : 'Edit sidebar'}
                 @click=${() => {
                   this.dispatchEvent(
                     new CustomEvent(EDIT_EVENT, { bubbles: true, composed: true }),
@@ -994,6 +998,11 @@ export class DashboardSidebarBar extends LitElement {
                 }}
               >
                 <ha-icon icon="mdi:pencil"></ha-icon>
+                ${
+                  this.hiddenByVisibility
+                    ? html`<span class="hidden-badge"><ha-icon icon="mdi:eye-off"></ha-icon></span>`
+                    : nothing
+                }
               </button>`
             : nothing
         }

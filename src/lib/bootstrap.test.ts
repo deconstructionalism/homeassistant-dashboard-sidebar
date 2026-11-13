@@ -87,32 +87,18 @@ describe('wrapperCss (the dashboard layout around the sidebar)', () => {
 });
 
 describe('sidebarVisible', () => {
-  const body = [{ type: 'item' as const, title: 'A', tap_action: { action: 'none' as const } }];
-  const hass = { user: { id: 'u1' }, states: { 'input_boolean.kiosk': { state: 'on' } } };
-
-  it('shows with no visibility conditions', () => {
-    expect(sidebarVisible({ body }, hass, false)).toBe(true);
+  it('follows the result of the conditions', () => {
+    expect(sidebarVisible(true, false, false)).toBe(true);
+    expect(sidebarVisible(false, false, true)).toBe(false);
   });
 
-  it('follows the conditions for the current user and states', () => {
-    expect(
-      sidebarVisible({ body, visibility: [{ condition: 'user', users: ['u1'] }] }, hass, false),
-    ).toBe(true);
-    expect(
-      sidebarVisible({ body, visibility: [{ condition: 'user', users: ['u2'] }] }, hass, false),
-    ).toBe(false);
-    expect(
-      sidebarVisible(
-        { body, visibility: [{ condition: 'state', entity: 'input_boolean.kiosk', state: 'off' }] },
-        hass,
-        false,
-      ),
-    ).toBe(false);
+  it('stays as it is while a server result is still out', () => {
+    expect(sidebarVisible(undefined, false, true)).toBe(true);
+    expect(sidebarVisible(undefined, false, false)).toBe(false);
   });
 
   it('always shows while the dashboard is being edited', () => {
-    expect(
-      sidebarVisible({ body, visibility: [{ condition: 'user', users: ['u2'] }] }, hass, true),
-    ).toBe(true);
+    expect(sidebarVisible(false, true, false)).toBe(true);
+    expect(sidebarVisible(undefined, true, false)).toBe(true);
   });
 });

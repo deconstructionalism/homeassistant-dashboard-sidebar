@@ -28,6 +28,7 @@
     "docs:config:check": "node scripts/gen-config-docs.js --check",
     "docs:shots": "node scripts/screenshots/shoot.mjs",
     "docs:shots:check": "node scripts/screenshots/shoot.mjs --check",
+    "bench": "web-test-runner --config bench/wtr-bench.config.mjs",
     "check": "npm run lint && npm run format && npm run schema:check && npm run docs:config:check && npm run test:unit && npm run build"
   },
   "dependencies": {

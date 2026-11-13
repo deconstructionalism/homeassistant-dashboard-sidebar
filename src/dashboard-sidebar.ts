@@ -98,6 +98,13 @@ export class DashboardSidebar extends LitElement {
   @property({ attribute: false }) public editMode = false;
 
   /**
+   * Set while editing a sidebar its visibility conditions hide from you: it
+   * shows dimmed, with an eye-off badge on the edit button.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'hidden-by-visibility' })
+  public hiddenByVisibility = false;
+
+  /**
    * Whether this is an inert, chrome-less preview of a single block, embedded in
    * the editor. Suppresses the toggle/edit controls, the collapse state, and all
    * interaction, while keeping the real template, clock, card, and icon render.
@@ -1317,10 +1324,17 @@ export class DashboardSidebar extends LitElement {
                   this.editMode
                     ? html`<button
                         class="edit-btn dashboard-sidebar-edit"
-                        title="Edit sidebar"
+                        title=${this.hiddenByVisibility ? 'Edit sidebar. Its visibility conditions hide it from you outside edit mode.' : 'Edit sidebar'}
                         @click=${this._openEditor}
                       >
                         <ha-icon icon="mdi:pencil"></ha-icon>
+                        ${
+                          this.hiddenByVisibility
+                            ? html`<span class="hidden-badge"
+                                ><ha-icon icon="mdi:eye-off"></ha-icon
+                              ></span>`
+                            : nothing
+                        }
                       </button>`
                     : nothing
                 }`

@@ -23,7 +23,7 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
 | `footer` | `FooterConfig` | no | The bottom bar configuration. |
 | `mobile` | `MobileConfig` | no | The mobile bar configuration. |
-| `visibility` | `VisibilityCondition[]` | no | Show the sidebar (and its mobile bar) only when every condition holds, in the shapes Home Assistant's card Visibility tab uses: `user`, `screen`, `state`, `numeric_state`, and `and` / `or` / `not` to combine them. While the dashboard is being edited it always shows, so it can still be edited. |
+| `visibility` | `VisibilityCondition[]` | no | Show the sidebar (and its mobile bar) only when every condition holds. Any condition a card's Visibility tab takes works here, with the same results: `user`, `screen`, `time`, `location`, `state`, `numeric_state`, `template`, `sun`, `zone`, `device`, and `and` / `or` / `not`. While the dashboard is being edited it always shows, so it can still be edited. |
 | `animate` | `boolean` | no | Animate the sidebar collapsing and expanding (and the dashboard narrowing beside it). Default true; false turns every sidebar animation off. The system's reduce-motion setting turns them off too. |
 | `uix` | `Record<string, unknown>` | no | Style config for the whole sidebar, applied by UIX, or card-mod when UIX is not installed. Target the dashboard-sidebar-* classes on the rendered elements. Wins over `card_mod` when both are set. |
 | `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |

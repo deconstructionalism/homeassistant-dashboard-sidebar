@@ -7,7 +7,7 @@ import {
   MOBILE_FIELDS,
   MOBILE_MODES,
 } from './schema.generated';
-import { CONDITION_TYPES } from './visibility';
+import { hasTarget, isValidTimeString } from './visibility';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
 /** Accepted alignment values, as a set for lookups. */
@@ -102,82 +102,185 @@ const checkMapping = (value: unknown, ctx: string, errors: string[]): void => {
   }
 };
 
-/** The visibility condition types, for validation. */
-const CONDITION_SET = new Set<string>(CONDITION_TYPES);
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+const isStr = (v: unknown): v is string => typeof v === 'string' && v !== '';
+const isStrList = (v: unknown): boolean =>
+  isStr(v) || (Array.isArray(v) && v.length > 0 && v.every(isStr));
 
 /**
- * Validates a visibility condition list: each entry a mapping with a known
- * `condition` type and the fields that type needs, recursing into `and`,
- * `or` and `not`.
+ * Validates a visibility condition list with Home Assistant's own rules
+ * (its validate-condition.ts), so anything a card's Visibility tab accepts is
+ * accepted here: every Lovelace type checked field by field, the core types
+ * (template, sun, zone, device, `entity_id` state checks) for the fields they
+ * need, and anything else left to Home Assistant, as it does.
  */
-const validateVisibility = (value: unknown, ctx: string, errors: string[]): void => {
+const validateVisibility = (
+  value: unknown,
+  ctx: string,
+  errors: string[],
+  nested = false,
+): void => {
   if (value === undefined) {
     return;
   }
-  if (!Array.isArray(value)) {
+  // a group's conditions may be one condition; the top-level list may not
+  if (!nested && !Array.isArray(value)) {
     errors.push(`${ctx}: must be a list of conditions`);
     return;
   }
-  value.forEach((raw, i) => {
-    const at = `${ctx}[${i}]`;
+  const list = Array.isArray(value) ? value : [value];
+  list.forEach((raw, i) => {
+    const at = Array.isArray(value) ? `${ctx}[${i}]` : ctx;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       errors.push(`${at}: must be a mapping`);
       return;
     }
     const c = raw as Record<string, unknown>;
-    if (typeof c.condition !== 'string' || !CONDITION_SET.has(c.condition)) {
-      errors.push(`${at}.condition: must be one of ${CONDITION_TYPES.join(', ')}`);
+    const need = (ok: boolean, msg: string): void => {
+      if (!ok) errors.push(`${at}${msg}`);
+    };
+    if (c.enabled !== undefined) {
+      need(
+        typeof c.enabled === 'boolean' || isStr(c.enabled),
+        '.enabled: must be true, false or a template',
+      );
+    }
+    if (c.condition === undefined) {
+      // the legacy { entity, state } shape
+      need(isStr(c.entity), '.entity: needs an entity id');
+      need(c.state != null || c.state_not != null, ': needs state or state_not');
+      return;
+    }
+    if (!isStr(c.condition)) {
+      errors.push(`${at}.condition: must be a condition type`);
       return;
     }
     switch (c.condition) {
       case 'user':
-        if (!Array.isArray(c.users) || !c.users.every((u) => typeof u === 'string')) {
-          errors.push(`${at}.users: must be a list of user ids`);
-        }
+        need(Array.isArray(c.users) && c.users.every(isStr), '.users: must be a list of user ids');
         break;
       case 'screen':
-        if (typeof c.media_query !== 'string' || c.media_query.trim() === '') {
-          errors.push(`${at}.media_query: needs a CSS media query`);
-        }
+        need(isStr(c.media_query), '.media_query: needs a CSS media query');
+        break;
+      case 'view_columns':
+        need(c.min != null || c.max != null, ': needs min or max');
+        break;
+      case 'time': {
+        const hasAfter = c.after != null && c.after !== '';
+        const hasBefore = c.before != null && c.before !== '';
+        const days =
+          c.weekdays === undefined ? [] : Array.isArray(c.weekdays) ? c.weekdays : [c.weekdays];
+        need(hasAfter || hasBefore || days.length > 0, ': needs after, before or weekdays');
+        need(
+          !hasAfter || isValidTimeString(c.after),
+          '.after: must be a time like 08:00 or 08:00:00',
+        );
+        need(
+          !hasBefore || isValidTimeString(c.before),
+          '.before: must be a time like 08:00 or 08:00:00',
+        );
+        need(!hasAfter || !hasBefore || c.after !== c.before, ': after and before must differ');
+        need(
+          days.every((d) => WEEKDAYS.includes(d as string)),
+          `.weekdays: must be from ${WEEKDAYS.join(', ')}`,
+        );
+        break;
+      }
+      case 'location':
+        need(
+          c.target === undefined || hasTarget(c.target),
+          '.target: needs a zone, area, floor, label or device',
+        );
+        need(c.away === undefined || typeof c.away === 'boolean', '.away: must be true or false');
+        need(
+          c.match_mode === undefined ||
+            c.match_mode === 'any_zone' ||
+            c.match_mode === 'active_zone',
+          '.match_mode: must be any_zone or active_zone',
+        );
+        need(
+          c.locations === undefined || (c.target === undefined && c.match_mode === undefined),
+          ': use either locations or target, not both',
+        );
+        need(
+          c.locations != null || c.target != null || c.away === true,
+          ': needs locations, target or away',
+        );
         break;
       case 'state':
       case 'numeric_state': {
-        if (typeof c.entity !== 'string' || c.entity === '') {
-          errors.push(`${at}.entity: needs an entity id`);
+        const core = 'entity_id' in c;
+        if (core) {
+          need(isStrList(c.entity_id), '.entity_id: needs an entity id');
+        } else {
+          need(isStr(c.entity), '.entity: needs an entity id');
         }
         if (c.condition === 'state') {
           for (const key of ['state', 'state_not'] as const) {
             const v = c[key];
-            if (
-              v !== undefined &&
-              typeof v !== 'string' &&
-              !(Array.isArray(v) && v.every((x) => typeof x === 'string'))
-            ) {
-              errors.push(`${at}.${key}: must be a state or a list of states`);
-            }
+            need(
+              v === undefined ||
+                ['string', 'number', 'boolean'].includes(typeof v) ||
+                (Array.isArray(v) &&
+                  v.every((x) => ['string', 'number', 'boolean'].includes(typeof x))),
+              `.${key}: must be a state or a list of states`,
+            );
           }
-          if (c.state === undefined && c.state_not === undefined) {
-            errors.push(`${at}: needs state or state_not`);
-          }
+          need(c.state != null || c.state_not != null, ': needs state or state_not');
         } else {
           for (const key of ['above', 'below'] as const) {
-            if (c[key] !== undefined && typeof c[key] !== 'number') {
-              errors.push(`${at}.${key}: must be a number`);
-            }
+            need(
+              c[key] === undefined || typeof c[key] === 'number' || isStr(c[key]),
+              `.${key}: must be a number or an entity id`,
+            );
           }
-          if (c.above === undefined && c.below === undefined) {
-            errors.push(`${at}: needs above or below`);
-          }
+          need(c.above != null || c.below != null, ': needs above or below');
         }
         break;
       }
-      default:
-        validateVisibility(c.conditions, `${at}.conditions`, errors);
-        if (c.conditions === undefined) {
-          errors.push(`${at}.conditions: needs a list of conditions`);
+      case 'template':
+        need(isStr(c.value_template), '.value_template: needs a template');
+        break;
+      case 'sun':
+        need(c.after != null || c.before != null, ': needs after or before');
+        for (const key of ['after', 'before'] as const) {
+          need(
+            c[key] === undefined || c[key] === 'sunrise' || c[key] === 'sunset',
+            `.${key}: must be sunrise or sunset`,
+          );
         }
+        break;
+      case 'zone':
+        need(isStrList(c.entity_id), '.entity_id: needs a person or device tracker');
+        need(isStrList(c.zone), '.zone: needs a zone');
+        break;
+      case 'device':
+        need(isStr(c.device_id), '.device_id: needs a device');
+        need(isStr(c.domain), '.domain: needs the device integration');
+        need(isStr(c.type), '.type: needs a condition type');
+        break;
+      case 'and':
+      case 'or':
+      case 'not':
+        if (c.conditions == null) {
+          errors.push(`${at}.conditions: needs a list of conditions`);
+        } else {
+          validateVisibility(c.conditions, `${at}.conditions`, errors, true);
+        }
+        break;
+      default:
+        // an integration's condition: Home Assistant validates it
+        break;
     }
   });
+};
+
+/** The problems with a visibility list, as the Visibility tab shows them. */
+export const visibilityErrors = (value: unknown): string[] => {
+  const errors: string[] = [];
+  validateVisibility(value, 'visibility', errors);
+  return errors;
 };
 
 /**
