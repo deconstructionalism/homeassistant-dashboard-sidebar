@@ -163,6 +163,14 @@ Until Home Assistant has answered, the browser's first guess stands where it
 can tell, as on a card; where it can't, the sidebar stays as it is, so it never
 flashes in or out as a page loads.
 
+!!! note "Home Assistant 2026.10 or newer"
+    Home Assistant answers its conditions live for every user from **2026.10**.
+    On older versions (or when it refuses, for example 2026.6 to 2026.9 for a
+    user who isn't an admin), the sidebar checks `state` and `numeric_state` in
+    the browser and leaves out the conditions only Home Assistant can answer:
+    they don't hide the sidebar. The Visibility tab marks those rows, and the
+    browser console says so once.
+
 While the dashboard is being **edited**, the sidebar always shows, so one hidden
 from you can still be changed. It shows dimmed, with an eye-off badge on its
 edit button, so you can tell it's hidden from you the rest of the time.
