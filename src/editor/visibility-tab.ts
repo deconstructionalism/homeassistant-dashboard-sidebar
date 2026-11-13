@@ -238,22 +238,24 @@ const summary = (
   }
 };
 
-/** A typed time padded to HH:MM or HH:MM:SS, e.g. 9:5 to 09:05; anything else as typed. */
-export const normalizeTime = (raw: string): string => {
-  const t = raw.trim();
-  const m = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/.exec(t);
-  if (!m) return t;
-  return [m[1], m[2], m[3]]
-    .filter((p) => p !== undefined)
-    .map((p) => p.padStart(2, '0'))
-    .join(':');
+/** The hour, minute and second of a time string, or undefined if it isn't one. */
+export const timeParts = (value: unknown): [string, string, string] | undefined => {
+  if (!isValidTimeString(value)) return undefined;
+  const [h, m, sec] = (value as string).split(':');
+  return [h.padStart(2, '0'), m.padStart(2, '0'), sec === undefined ? '' : sec.padStart(2, '0')];
 };
 
+/** 00 to n-1, zero-padded. */
+const range = (n: number): string[] =>
+  Array.from({ length: n }, (_, i) => String(i).padStart(2, '0'));
+const HOURS = range(24);
+const MINUTES = range(60);
+
 /**
- * A labelled time field: a plain text input in the editor's own style (not
- * the browser's time picker), committed when you leave it, so a half-typed
- * time never clears the saved one. A time that isn't valid is kept as typed
- * and flagged on the condition's row.
+ * A labelled time picker in the editor's own style: hour, minute and
+ * (optional) second dropdowns, with no browser time picker involved. A blank
+ * hour clears the time. A value that isn't a time (from YAML) is shown with
+ * an error until a time is picked.
  */
 const timeField = (
   label: string,
@@ -261,21 +263,53 @@ const timeField = (
   onChange: (value: string | undefined) => void,
   description?: string,
 ): TemplateResult => {
-  const invalid = typeof value === 'string' && value !== '' && !isValidTimeString(value);
-  return html`<label class="field ${invalid ? 'invalid' : ''}">
+  const parts = timeParts(value);
+  const invalid = value !== undefined && value !== '' && parts === undefined;
+  const [h, m, sec] = parts ?? ['', '', ''];
+  const commit = (nh: string, nm: string, ns: string): void => {
+    if (!nh) {
+      onChange(undefined);
+      return;
+    }
+    onChange([nh, nm || '00', ...(ns ? [ns] : [])].join(':'));
+  };
+  const select = (
+    part: string,
+    current: string,
+    options: string[],
+    blank: string,
+    set: (v: string) => void,
+    disabled = false,
+  ): TemplateResult =>
+    html`<select
+      class="vis-time-${part}"
+      aria-label="${label} ${part}"
+      ?disabled=${disabled}
+      @change=${(e: Event) => {
+        const el = e.target as HTMLSelectElement;
+        el.blur();
+        set(el.value);
+      }}
+    >
+      <option value="" ?selected=${current === ''}>${blank}</option>
+      ${options.map((o) => html`<option value=${o} ?selected=${o === current}>${o}</option>`)}
+    </select>`;
+  return html`<div class="field ${invalid ? 'invalid' : ''}">
     <span>${label}</span>
-    <input
-      type="text"
-      inputmode="numeric"
-      autocomplete="off"
-      spellcheck="false"
-      placeholder="HH:MM"
-      .value=${typeof value === 'string' ? value : ''}
-      @change=${(e: Event) => onChange(normalizeTime((e.target as HTMLInputElement).value) || undefined)}
-    />
-    ${invalid ? html`<span class="field-error">Use HH:MM or HH:MM:SS, like 22:00.</span>` : nothing}
+    <div class="vis-time">
+      ${select('hour', h, HOURS, '--', (v) => commit(v, m, sec))}
+      <span class="vis-time-sep">:</span>
+      ${select('minute', h ? m : '', MINUTES, '--', (v) => commit(h, v, sec), !h)}
+      <span class="vis-time-sep">:</span>
+      ${select('second', h ? sec : '', MINUTES, '--', (v) => commit(h, m, v), !h)}
+    </div>
+    ${
+      invalid
+        ? html`<span class="field-error">${String(value)} is not a time; pick one.</span>`
+        : nothing
+    }
     ${description ? html`<small class="field-desc">${description}</small>` : nothing}
-  </label>`;
+  </div>`;
 };
 
 /** A group of checkboxes under one label, for multi-choice fields. */

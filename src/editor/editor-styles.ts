@@ -1595,6 +1595,26 @@ export const editorStyles = css`
     min-height: 12px;
   }
 
+  /* Time picker: hour : minute : second dropdowns, sized to their values. */
+  .vis-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .field .vis-time select {
+    width: auto;
+    min-width: 72px;
+  }
+
+  .vis-time-sep {
+    opacity: 0.6;
+  }
+
+  .field.invalid .vis-time select {
+    border-color: var(--error-color, #db4437);
+  }
+
   .vis-choices {
     display: flex;
     flex-wrap: wrap;

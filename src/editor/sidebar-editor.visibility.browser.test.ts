@@ -300,39 +300,63 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
   it('sets a time window and days', async () => {
     const el = await mountTab(cfg());
     await addType(el, 'Time');
-    await typeInto(el, 'After', '22:00:00');
-    await typeInto(el, 'Before', '06:00:00');
+    const pick = async (label: string, p: string, v: string) => {
+      const sel = field(el, label).querySelector(`select.vis-time-${p}`) as HTMLSelectElement;
+      sel.value = v;
+      sel.dispatchEvent(new Event('change'));
+      await el.updateComplete;
+    };
+    await pick('After', 'hour', '22');
+    await pick('Before', 'hour', '06');
     await tick(el, 'Days', 'Fri');
     await tick(el, 'Days', 'Mon');
     expect(save(el)?.visibility?.[0]).to.deep.equal({
       condition: 'time',
-      after: '22:00:00',
-      before: '06:00:00',
+      after: '22:00',
+      before: '06:00',
       weekdays: ['mon', 'fri'],
     });
   });
 
-  it('takes times as plain text fields in our style, committed on leaving the field', async () => {
+  it('picks times with our own hour, minute and second dropdowns', async () => {
     const el = await mountTab(cfg({ visibility: [{ condition: 'time', after: '08:00' }] }));
     rows(el)[0].click();
     await el.updateComplete;
-    const after = field(el, 'After').querySelector('input') as HTMLInputElement;
-    expect(after.type, 'no native time picker').to.equal('text');
-    expect(after.value).to.equal('08:00');
-    // half-typed: nothing saved yet, the old time stays
-    after.value = '9:';
-    after.dispatchEvent(new Event('input'));
+    const part = (label: string, p: string) =>
+      field(el, label).querySelector(`select.vis-time-${p}`) as HTMLSelectElement;
+    expect(field(el, 'After').querySelector('input'), 'no browser time picker').to.equal(null);
+    expect([
+      part('After', 'hour').value,
+      part('After', 'minute').value,
+      part('After', 'second').value,
+    ]).to.deep.equal(['08', '00', '']);
+    const pick = async (s: HTMLSelectElement, v: string) => {
+      s.value = v;
+      s.dispatchEvent(new Event('change'));
+      await el.updateComplete;
+    };
+    await pick(part('After', 'hour'), '22');
+    await pick(part('After', 'minute'), '30');
+    expect(el.visibilityConditions[0].after).to.equal('22:30');
+    await pick(part('After', 'second'), '15');
+    expect(el.visibilityConditions[0].after).to.equal('22:30:15');
+    // Before starts blank: minute and second wait for an hour, which defaults the minute
+    expect(part('Before', 'minute').disabled).to.equal(true);
+    await pick(part('Before', 'hour'), '06');
+    expect(el.visibilityConditions[0].before).to.equal('06:00');
+    // a blank hour clears it
+    await pick(part('Before', 'hour'), '');
+    expect(el.visibilityConditions[0]).to.not.have.property('before');
+  });
+
+  it('flags a time from YAML that is not one', async () => {
+    const el = await mountTab(cfg({ visibility: [{ condition: 'time', after: '25:00' }] }));
+    rows(el)[0].click();
     await el.updateComplete;
-    expect(el.visibilityConditions[0].after).to.equal('08:00');
-    // committed and padded
-    after.value = '9:5';
-    after.dispatchEvent(new Event('change'));
-    await el.updateComplete;
-    expect(el.visibilityConditions[0].after).to.equal('09:05');
-    // not a time: kept as typed, flagged on the field
-    await typeInto(el, 'Before', '25:00');
-    expect(field(el, 'Before').classList.contains('invalid')).to.equal(true);
-    expect(field(el, 'Before').querySelector('.field-error')?.textContent).to.contain('HH:MM');
+    expect(field(el, 'After').classList.contains('invalid')).to.equal(true);
+    expect(field(el, 'After').querySelector('.field-error')?.textContent).to.contain(
+      '25:00 is not a time',
+    );
   });
 
   it('checks a location by place or by zones', async () => {
