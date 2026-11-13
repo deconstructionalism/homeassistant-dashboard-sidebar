@@ -71,10 +71,17 @@ const regionCount = (el: DashboardSidebarEditor, region: string): number => {
 };
 
 describe('<dashboard-sidebar-editor>', () => {
-  it('renders the five tabs', async () => {
+  it('renders the six tabs', async () => {
     const el = await mount(cfg());
     const labels = [...root(el).querySelectorAll('.tab')].map((b) => b.textContent?.trim());
-    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
+    expect(labels).to.deep.equal([
+      'Settings',
+      'Visibility',
+      'Header',
+      'Body',
+      'Footer',
+      'Mobile Bar',
+    ]);
   });
 
   it('shows the settings form in mirror mode and a YAML editor in custom mode', async () => {

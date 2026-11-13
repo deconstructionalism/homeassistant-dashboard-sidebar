@@ -1486,4 +1486,142 @@ export const editorStyles = css`
     padding-left: 26px;
     opacity: 0.85;
   }
+
+  /* Visibility tab: the condition list stands where a preview would, a fixed
+     column of rows; groups indent their children under a guide line, the
+     way categories do in the preview. */
+  .vis-pane {
+    flex: 0 0 min(340px, 45%);
+  }
+
+  .vis-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .vis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .vis-row:hover {
+    background: var(--secondary-background-color, rgb(0 0 0 / 6%));
+  }
+
+  .vis-row:focus-visible,
+  .vis-row.selected {
+    box-shadow: inset 0 0 0 2px var(--primary-color, #03a9f4);
+  }
+
+  .vis-row.off .vis-text,
+  .vis-row.off .vis-icon {
+    opacity: 0.45;
+  }
+
+  .vis-icon {
+    --mdc-icon-size: 20px;
+
+    flex: 0 0 auto;
+    opacity: 0.75;
+  }
+
+  .vis-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .vis-type {
+    font-size: 0.75rem;
+    opacity: 0.6;
+  }
+
+  .vis-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vis-status {
+    --mdc-icon-size: 18px;
+
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+  }
+
+  .vis-status.yes {
+    color: var(--success-color, #43a047);
+  }
+
+  .vis-status.no,
+  .vis-status.off,
+  .vis-status.server {
+    opacity: 0.5;
+  }
+
+  .vis-children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-left: 19px;
+    padding-left: 8px;
+    border-left: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  .vis-add-row {
+    padding: 2px 4px 4px;
+  }
+
+  .vis-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+  }
+
+  .vis-live ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  .vis-live.yes {
+    color: var(--success-color, #43a047);
+  }
+
+  .vis-live.no,
+  .vis-live.wait {
+    opacity: 0.7;
+  }
+
+  .vis-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 2px 0;
+  }
+
+  .vis-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .vis-errors {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  @media (width < 640px) {
+    .vis-pane {
+      flex: 0 0 auto;
+    }
+  }
 `;

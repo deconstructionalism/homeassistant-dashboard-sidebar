@@ -16,6 +16,7 @@ import type {
   SidebarBlock,
 } from '../lib/types';
 import type { VisibilityCondition } from '../lib/visibility';
+import { VisibilityTab } from './visibility-tab';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -49,7 +50,6 @@ import {
   colorField,
   colorTemplateField,
   stylesField,
-  yamlField,
   ALIGN_OPTIONS,
   elementClassRef,
   entityDatalist,
@@ -195,8 +195,12 @@ const ALL_TYPES: BlockType[] = [
 ];
 
 /** The modal tabs, in order. The `body` region is labelled "Body". */
-const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer' | 'mobile'; label: string }> = [
+/** The modal's tabs. */
+type EditorTab = 'settings' | 'visibility' | 'header' | 'body' | 'footer' | 'mobile';
+
+const TABS: Array<{ id: EditorTab; label: string }> = [
   { id: 'settings', label: 'Settings' },
+  { id: 'visibility', label: 'Visibility' },
   { id: 'header', label: 'Header' },
   { id: 'body', label: 'Body' },
   { id: 'footer', label: 'Footer' },
@@ -251,7 +255,7 @@ export class DashboardSidebarEditor extends LitElement {
   @property({ attribute: false }) public onDelete?: () => void;
 
   /** The active tab. */
-  @state() private _tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile' = 'settings';
+  @state() private _tab: EditorTab = 'settings';
 
   /** Stable id of the element selected for editing in the preview, or null. */
   @state() private _selected: string | null = null;
@@ -276,6 +280,28 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Popup-menu open/close state: add, element overflow, and tab options. */
   private _menus = new MenusController(this);
+
+  /** The Visibility tab, which keeps its own selection and menus. */
+  private _visibility = new VisibilityTab(this);
+
+  /** The working copy's visibility conditions, for the Visibility tab. */
+  public get visibilityConditions(): VisibilityCondition[] {
+    return this._working.visibility ?? [];
+  }
+
+  /** Sets the working copy's conditions; none removes the key. */
+  public setVisibilityConditions(list: VisibilityCondition[]): void {
+    this._patchConfig({ visibility: list.length > 0 ? list : undefined });
+  }
+
+  /** The editor's YAML editor, for the Visibility tab. */
+  public yamlEditor(
+    value: unknown,
+    onChange: (value: unknown) => void,
+    validate: (parsed: unknown) => string[],
+  ): TemplateResult {
+    return this._yamlEditor(value, onChange, validate);
+  }
 
   /** Id of the element being edited as YAML, or null when editing with the UI. */
   @state() private _yamlEditId: string | null = null;
@@ -371,6 +397,7 @@ export class DashboardSidebarEditor extends LitElement {
       this._initialJson = JSON.stringify(this._working);
       this._fieldErrors = {};
       this._selected = null;
+      this._visibility.reset();
       this._confirmingClose = false;
       this._collapsedTabs = new Set();
       this._previewCollapsedCats = new Set();
@@ -1326,11 +1353,12 @@ export class DashboardSidebarEditor extends LitElement {
    * Switches tabs, remembering the current tab's selection and restoring the
    * target tab's, and closing any open menus.
    */
-  private _switchTab(tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile'): void {
+  private _switchTab(tab: EditorTab): void {
     if (this._tab === 'header' || this._tab === 'body' || this._tab === 'footer') {
       this._tabSelection[this._tab] = this._selected;
     }
     this._tab = tab;
+    this._yamlError = null;
     this._selected =
       tab === 'header' || tab === 'body' || tab === 'footer'
         ? (this._tabSelection[tab] ?? null)
@@ -1496,6 +1524,8 @@ export class DashboardSidebarEditor extends LitElement {
     switch (this._tab) {
       case 'settings':
         return this._renderSettings();
+      case 'visibility':
+        return this._visibility.render();
       case 'header':
         return this._renderSplit('header');
       case 'body':
@@ -1614,7 +1644,6 @@ export class DashboardSidebarEditor extends LitElement {
                           'What renders on narrow screens. The Mobile tab configures the bar.',
                       },
                     )}
-                    ${this._visibilityField(c.visibility)}
                     ${colorField(
                       'Background CSS',
                       c.background,
@@ -2453,37 +2482,6 @@ export class DashboardSidebarEditor extends LitElement {
         )}
       </div>
     `;
-  }
-
-  /**
-   * The sidebar's Visibility: Home Assistant's own conditions editor (the one
-   * a card's Visibility tab uses) when the frontend has it loaded, otherwise
-   * the conditions as YAML. An empty list is stored as no key at all.
-   */
-  private _visibilityField(conditions: VisibilityCondition[] | undefined): TemplateResult {
-    const set = (v: unknown): void =>
-      this._patchConfig({
-        visibility: Array.isArray(v) && v.length > 0 ? (v as VisibilityCondition[]) : undefined,
-      });
-    const desc = html`<small class="field-desc visibility-hint">
-      Show the sidebar only when these all hold (user, screen size, entity states), as on a card's
-      Visibility tab. While the dashboard is being edited it always shows.
-    </small>`;
-    if (customElements.get('ha-card-conditions-editor')) {
-      return html`<div class="field visibility-field">
-        <span>Visibility</span>
-        <ha-card-conditions-editor
-          .hass=${this.hass}
-          .conditions=${conditions ?? []}
-          @value-changed=${(e: CustomEvent<{ value: unknown }>) => {
-            e.stopPropagation();
-            set(e.detail.value);
-          }}
-        ></ha-card-conditions-editor>
-        ${desc}
-      </div>`;
-    }
-    return html`${yamlField('Visibility YAML', conditions, set)} ${desc}`;
   }
 
   /**
