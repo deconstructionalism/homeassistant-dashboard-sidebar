@@ -1,6 +1,6 @@
 {
   "name": "homeassistant-dashboard-sidebar",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A collapsible dashboard sidebar card for Home Assistant Lovelace.",
   "type": "module",
   "license": "MIT",
