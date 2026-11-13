@@ -312,6 +312,29 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     });
   });
 
+  it('takes times as plain text fields in our style, committed on leaving the field', async () => {
+    const el = await mountTab(cfg({ visibility: [{ condition: 'time', after: '08:00' }] }));
+    rows(el)[0].click();
+    await el.updateComplete;
+    const after = field(el, 'After').querySelector('input') as HTMLInputElement;
+    expect(after.type, 'no native time picker').to.equal('text');
+    expect(after.value).to.equal('08:00');
+    // half-typed: nothing saved yet, the old time stays
+    after.value = '9:';
+    after.dispatchEvent(new Event('input'));
+    await el.updateComplete;
+    expect(el.visibilityConditions[0].after).to.equal('08:00');
+    // committed and padded
+    after.value = '9:5';
+    after.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.visibilityConditions[0].after).to.equal('09:05');
+    // not a time: kept as typed, flagged on the field
+    await typeInto(el, 'Before', '25:00');
+    expect(field(el, 'Before').classList.contains('invalid')).to.equal(true);
+    expect(field(el, 'Before').querySelector('.field-error')?.textContent).to.contain('HH:MM');
+  });
+
   it('checks a location by place or by zones', async () => {
     const el = await mountTab(cfg());
     await addType(el, 'Location');

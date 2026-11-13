@@ -14,6 +14,7 @@ import {
   childrenOf,
   isLogical,
   isServerCondition,
+  isValidTimeString,
   VisibilityEvaluator,
   type VisibilityCondition,
   type VisibilityHass,
@@ -237,23 +238,45 @@ const summary = (
   }
 };
 
-/** A labelled time input (HH:MM:SS), in the same field markup as the rest. */
+/** A typed time padded to HH:MM or HH:MM:SS, e.g. 9:5 to 09:05; anything else as typed. */
+export const normalizeTime = (raw: string): string => {
+  const t = raw.trim();
+  const m = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/.exec(t);
+  if (!m) return t;
+  return [m[1], m[2], m[3]]
+    .filter((p) => p !== undefined)
+    .map((p) => p.padStart(2, '0'))
+    .join(':');
+};
+
+/**
+ * A labelled time field: a plain text input in the editor's own style (not
+ * the browser's time picker), committed when you leave it, so a half-typed
+ * time never clears the saved one. A time that isn't valid is kept as typed
+ * and flagged on the condition's row.
+ */
 const timeField = (
   label: string,
   value: unknown,
   onChange: (value: string | undefined) => void,
   description?: string,
-): TemplateResult =>
-  html`<label class="field">
+): TemplateResult => {
+  const invalid = typeof value === 'string' && value !== '' && !isValidTimeString(value);
+  return html`<label class="field ${invalid ? 'invalid' : ''}">
     <span>${label}</span>
     <input
-      type="time"
-      step="1"
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="HH:MM"
       .value=${typeof value === 'string' ? value : ''}
-      @change=${(e: Event) => onChange((e.target as HTMLInputElement).value || undefined)}
+      @change=${(e: Event) => onChange(normalizeTime((e.target as HTMLInputElement).value) || undefined)}
     />
+    ${invalid ? html`<span class="field-error">Use HH:MM or HH:MM:SS, like 22:00.</span>` : nothing}
     ${description ? html`<small class="field-desc">${description}</small>` : nothing}
   </label>`;
+};
 
 /** A group of checkboxes under one label, for multi-choice fields. */
 const choicesField = (
