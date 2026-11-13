@@ -302,8 +302,6 @@ export class VisibilityTab implements ReactiveController {
   private _selected: string | null = null;
   /** Whether the whole list is being edited as YAML. */
   private _yamlAll = false;
-  /** Paths of conditions being edited as YAML on their own. */
-  private _yamlOne: string | null = null;
   /** The open popup: the add menu, or the tab or condition menu. */
   private _menu: { kind: 'add' | 'tab' | 'item'; rect: DOMRect; items?: MenuItem[] } | null = null;
   /** User names by id, once fetched. */
@@ -333,7 +331,6 @@ export class VisibilityTab implements ReactiveController {
   public reset(): void {
     this._selected = null;
     this._yamlAll = false;
-    this._yamlOne = null;
     this._menu = null;
     this._customScreen.clear();
   }
@@ -397,7 +394,6 @@ export class VisibilityTab implements ReactiveController {
       return list;
     });
     this._selected = [...parent, index].join('.');
-    this._yamlOne = null;
   }
 
   /** Deletes the condition at a path. */
@@ -407,7 +403,6 @@ export class VisibilityTab implements ReactiveController {
       return list;
     });
     this._selected = null;
-    this._yamlOne = null;
   }
 
   /** Moves a condition up or down among its siblings. */
@@ -656,11 +651,10 @@ export class VisibilityTab implements ReactiveController {
     return checkClientCondition(c, hass);
   }
 
-  /** Selects a row, leaving any per-condition YAML mode. */
+  /** Selects a row. */
   private _select(key: string): void {
     if (this._selected !== key) {
       this._selected = key;
-      this._yamlOne = null;
       this.host.requestUpdate();
     }
   }
@@ -731,7 +725,6 @@ export class VisibilityTab implements ReactiveController {
       items = html`
         ${item(this._yamlAll ? 'Edit With UI' : 'Edit As YAML', () => {
           this._yamlAll = !this._yamlAll;
-          this._yamlOne = null;
         })}
         ${item('Remove All Conditions', () => {
           this.host.setVisibilityConditions([]);
@@ -743,9 +736,6 @@ export class VisibilityTab implements ReactiveController {
       const c = path ? this._get(path) : undefined;
       if (!path || !c) return nothing;
       items = html`
-        ${item(this._yamlOne === this._selected ? 'Edit With UI' : 'Edit As YAML', () => {
-          this._yamlOne = this._yamlOne === this._selected ? null : this._selected;
-        })}
         ${item(c.enabled === false ? 'Turn On' : 'Turn Off', () =>
           this._patch(path, { enabled: c.enabled === false ? undefined : false }),
         )}
@@ -780,19 +770,11 @@ export class VisibilityTab implements ReactiveController {
     const index = path[path.length - 1];
     const count = this._siblingCount(path);
     const label = conditionLabel(c);
-    const yaml = this._yamlOne === this._selected;
     const known = c.condition === undefined || c.condition in TYPE_META;
     const errors = visibilityErrors([c]).map((e) => e.replace(/^visibility\[0\](\.)?/, ''));
-    const body =
-      yaml || !known
-        ? this.host.yamlEditor(
-            c,
-            (v) => this._replace(path, v as VisibilityCondition),
-            (v) => visibilityErrors([v]),
-          )
-        : this._fields(c, path);
+    const body = known ? this._fields(c, path) : nothing;
     return html`
-      <div class="form ${yaml || !known ? 'yaml-mode' : ''}">
+      <div class="form">
         <div class="form-head">
           <div class="form-title">Condition: ${label}</div>
           <div class="form-tools">
@@ -825,14 +807,15 @@ export class VisibilityTab implements ReactiveController {
           </div>
         </div>
         ${
-          !known && !yaml
+          !known
             ? html`<small class="field-desc">
-                An integration's condition. Home Assistant checks it; edit it as YAML here.
+                An integration's condition, checked by Home Assistant. Edit it with the tab's Edit
+                As YAML.
               </small>`
             : nothing
         }
         ${
-          !yaml && errors.length && known
+          errors.length && known
             ? html`<div class="vis-errors">
                 ${errors.map((e) => html`<span class="field-error">${titleCase(e.replace(/^[:\s]+/, ''))}</span>`)}
               </div>`

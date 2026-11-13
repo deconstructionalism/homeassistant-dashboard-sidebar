@@ -356,6 +356,18 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(save(el)?.visibility, 'none left: key removed').to.equal(undefined);
   });
 
+  it('offers only Turn Off / Turn On per condition, with YAML on the tab menu alone', async () => {
+    const el = await mountTab(cfg({ visibility: [{ condition: 'user', users: ['u1'] }] }));
+    rows(el)[0].click();
+    await el.updateComplete;
+    (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const items = [...root(el).querySelectorAll('.add-menu .add-menu-item')].map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(items).to.deep.equal(['Turn Off']);
+  });
+
   it('turns a condition off and on', async () => {
     const el = await mountTab(cfg({ visibility: [{ condition: 'user', users: ['u1'] }] }));
     rows(el)[0].click();
@@ -386,12 +398,15 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(save(el)?.visibility).to.deep.equal([{ condition: 'sun', after: 'sunset' }]);
   });
 
-  it('edits an integration condition as YAML, and keeps it', async () => {
+  it('keeps an integration condition, pointing to the tab YAML to edit it', async () => {
     const odd = { condition: 'some_integration.thing', option: 1 };
     const el = await mountTab(cfg({ visibility: [odd] }));
     rows(el)[0].click();
     await el.updateComplete;
-    expect(root(el).querySelector('.editor .yaml-mode textarea')).to.exist;
+    expect(root(el).querySelector('.editor textarea'), 'no per-condition YAML').to.equal(null);
+    expect(
+      root(el).querySelector('.editor .form > .field-desc')?.textContent?.replace(/\s+/g, ' '),
+    ).to.contain("Edit it with the tab's Edit As YAML");
     expect(formTitle(el)).to.equal('Condition: Some integration thing');
     expect(el.visibilityConditions).to.deep.equal([odd]);
   });
