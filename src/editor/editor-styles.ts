@@ -1567,6 +1567,11 @@ export const editorStyles = css`
     opacity: 0.5;
   }
 
+  .vis-status.older {
+    color: var(--warning-color, #ffa600);
+    opacity: 0.8;
+  }
+
   .vis-status.needs {
     color: var(--warning-color, #ffa600);
   }

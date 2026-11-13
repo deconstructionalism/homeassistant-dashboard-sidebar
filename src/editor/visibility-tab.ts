@@ -11,7 +11,9 @@ import Sortable from 'sortablejs';
 import { visibilityErrors } from '../lib/validate';
 import {
   childrenOf,
+  evaluateLocally,
   isLogical,
+  MIN_SERVER_CONDITIONS,
   isValidTimeString,
   VisibilityEvaluator,
   type VisibilityCondition,
@@ -829,7 +831,20 @@ export class VisibilityTab implements ReactiveController {
     if (c.enabled === false) {
       return html`<span class="vis-status off" title="Turned off">Off</span>`;
     }
-    const held = this.host.hass ? this._rowResult(c) : undefined;
+    const ev = this.host.hass ? this._rowEval(c) : undefined;
+    const held = ev?.observe([c], this.host.hass as unknown as VisibilityHass);
+    if (
+      ev?.olderHomeAssistant &&
+      evaluateLocally([c], this.host.hass as unknown as VisibilityHass, {
+        olderHomeAssistant: true,
+      }) === undefined
+    ) {
+      return html`<ha-icon
+        class="vis-status older"
+        icon="mdi:update"
+        title=${`Needs Home Assistant ${MIN_SERVER_CONDITIONS} or newer to check this, so it is ignored for now`}
+      ></ha-icon>`;
+    }
     if (held === undefined) {
       return html`<ha-icon
         class="vis-status server"
@@ -845,11 +860,11 @@ export class VisibilityTab implements ReactiveController {
   }
 
   /**
-   * Whether a condition holds for you now, evaluated exactly as the sidebar
-   * would (asking Home Assistant, live, for what only it can answer, while
-   * the editor is open).
+   * The live evaluator for one row, run exactly as the sidebar would (asking
+   * Home Assistant, live, for what only it can answer, while the editor is
+   * open).
    */
-  private _rowResult(c: VisibilityCondition): boolean | undefined {
+  private _rowEval(c: VisibilityCondition): VisibilityEvaluator {
     const key = JSON.stringify(c);
     this._usedEvals.add(key);
     let ev = this._rowEvals.get(key);
@@ -857,7 +872,7 @@ export class VisibilityTab implements ReactiveController {
       ev = new VisibilityEvaluator(() => this.host.requestUpdate());
       this._rowEvals.set(key, ev);
     }
-    return ev.observe([c], this.host.hass as unknown as VisibilityHass);
+    return ev;
   }
 
   /** Selects a row. */
