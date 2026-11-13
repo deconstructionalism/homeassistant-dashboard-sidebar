@@ -7,7 +7,7 @@ import {
   MOBILE_FIELDS,
   MOBILE_MODES,
 } from './schema.generated';
-import { hasTarget, isValidTimeString } from './visibility';
+import { isValidTarget, isValidTimeString } from './visibility';
 import type { DashboardSidebarConfig, ItemBlock, SidebarBlock } from './types';
 
 /** Accepted alignment values, as a set for lookups. */
@@ -189,8 +189,8 @@ const validateVisibility = (
       }
       case 'location':
         need(
-          c.target === undefined || hasTarget(c.target),
-          '.target: needs a zone, area, floor, label or device',
+          c.target === undefined || isValidTarget(c.target),
+          '.target: must map entity_id, device_id, area_id, floor_id or label_id to ids',
         );
         need(c.away === undefined || typeof c.away === 'boolean', '.away: must be true or false');
         need(

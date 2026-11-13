@@ -146,11 +146,13 @@ describe('time', () => {
   };
   afterEach(() => vi.restoreAllMocks());
 
-  it('checks after and before, before being exclusive', () => {
+  it('checks after and before, both including their own moment, as Home Assistant does', () => {
     at(22, 30);
     expect(ok({ condition: 'time', after: '22:00' })).toBe(true);
     expect(ok({ condition: 'time', after: '23:00' })).toBe(false);
-    expect(ok({ condition: 'time', before: '22:30' })).toBe(false);
+    expect(ok({ condition: 'time', after: '22:30' })).toBe(true);
+    expect(ok({ condition: 'time', before: '22:30' })).toBe(true);
+    expect(ok({ condition: 'time', before: '22:29:59' })).toBe(false);
     expect(ok({ condition: 'time', after: '08:00', before: '23:00:00' })).toBe(true);
   });
 
@@ -189,12 +191,14 @@ describe('time', () => {
     expect(isValidTimeString('08:60')).toBe(false);
   });
 
-  it('wakes at the next boundary, never later than midnight', () => {
+  it('wakes at the next boundary (just past an inclusive before), never later than midnight', () => {
     const now = at(22, 30, 0);
     const client = [{ condition: 'time', after: '22:45' }];
-    expect(msToNextBoundary(client, hass(), now)).toBe(15 * 60 * 1000 + 50);
+    expect(msToNextBoundary(client, hass(), now)).toBe(15 * 60 * 1000 + 20);
+    const before = [{ condition: 'time', before: '22:45' }];
+    expect(msToNextBoundary(before, hass(), now)).toBe(15 * 60 * 1000 + 1 + 20);
     const late = [{ condition: 'time', after: '08:00' }];
-    expect(msToNextBoundary(late, hass(), now)).toBe(90 * 60 * 1000 + 50);
+    expect(msToNextBoundary(late, hass(), now)).toBe(90 * 60 * 1000 + 20);
     expect(msToNextBoundary([{ condition: 'user' }], hass(), now)).toBe(undefined);
   });
 });
@@ -270,7 +274,7 @@ describe('resolveTarget', () => {
       'light.f': { labels: ['cozy'] },
     },
   } as Partial<VisibilityHass>);
-  const r = (t: Record<string, unknown>) => resolveTarget(h, t).sort();
+  const r = (t: Record<string, unknown>) => resolveTarget(h, t, () => true).sort();
 
   it('reaches area entities, but not a device entity assigned elsewhere', () => {
     expect(r({ area_id: 'kitchen' })).toEqual(['light.a', 'light.c']);
@@ -365,11 +369,30 @@ describe('splitting between browser and server', () => {
       { condition: 'time' },
       { condition: 'location' },
       { condition: 'view_columns' },
+      { condition: 'state', entity: 'light.kitchen', attribute: 'mode', state: 'away' },
+      { condition: 'state', entity: 'light.kitchen', state: 'input_select.mode' },
+      { condition: 'numeric_state', entity: 'sensor.temp', below: 'input_number.limit' },
+      { entity: 'light.kitchen', state_not: ['input_select.mode'] },
+    ]) {
+      expect(isServerCondition(c), JSON.stringify(c)).toBe(false);
+    }
+  });
+
+  it('sends Lovelace state checks to the server in core form, as Home Assistant does', () => {
+    for (const c of [
       { condition: 'state', entity: 'light.kitchen', state: 'on' },
       { entity: 'light.kitchen', state: 'on' },
+      { condition: 'numeric_state', entity: 'sensor.temp', above: 20 },
     ]) {
-      expect(isServerCondition(c), String(c.condition)).toBe(false);
+      expect(isServerCondition(c), JSON.stringify(c)).toBe(true);
     }
+    expect(
+      splitTree([{ condition: 'state', entity: 'light.kitchen', state_not: 'on' }]).server[0]
+        .condition,
+    ).toEqual({
+      condition: 'not',
+      conditions: [{ condition: 'state', entity_id: 'light.kitchen', state: 'on' }],
+    });
   });
 
   it('merges server siblings into one subscription, keeping client ones here', () => {
@@ -401,11 +424,17 @@ describe('splitting between browser and server', () => {
     expect(split.client.map((c) => c.condition)).toEqual(['user', 'time']);
   });
 
-  it('sends an all-server group whole, and a templated enabled to the server', () => {
-    const group = { condition: 'not', conditions: [{ condition: 'sun', before: 'sunrise' }] };
-    expect(splitTree([group]).server[0].condition).toEqual(group);
+  it('sends an all-server group whole (not as NOT(AND)), and leaves a templated enabled unknown', () => {
+    const sun = { condition: 'sun', before: 'sunrise' };
+    const group = { condition: 'not', conditions: [sun] };
+    expect(splitTree([group]).server[0].condition).toEqual({
+      condition: 'not',
+      conditions: [{ condition: 'and', conditions: [sun] }],
+    });
     const templated = { condition: 'user', users: ['u1'], enabled: '{{ true }}' };
-    expect(splitTree([templated]).server[0].condition).toEqual(templated);
+    const split = splitTree([templated]);
+    expect(split.server).toHaveLength(0);
+    expect(split.evaluate(hass(), {})).toBe(undefined);
   });
 
   it('is unknown until the server answers, then combines', () => {
@@ -484,13 +513,16 @@ describe('VisibilityEvaluator', () => {
 
   it('skips the re-check when nothing the conditions read has changed', () => {
     const e = new VisibilityEvaluator(() => undefined);
-    const conds = [{ condition: 'state', entity: 'light.kitchen', state: 'on' }];
-    const h = hass();
+    // an attribute keeps a state check in the browser
+    const conds = [
+      { condition: 'state', entity: 'light.kitchen', attribute: 'mode', state: 'away' },
+    ];
+    const h = hass({ states: { ...hass().states, 'light.kitchen': s('on', { mode: 'away' }) } });
     expect(e.observe(conds, h)).toBe(true);
     // a new hass whose kitchen light is the same object: result kept
     const unrelated = { ...h, states: { ...h.states, 'sensor.temp': s('30') } };
     expect(e.observe(conds, unrelated)).toBe(true);
-    const off = { ...h, states: { ...h.states, 'light.kitchen': s('off') } };
+    const off = { ...h, states: { ...h.states, 'light.kitchen': s('off', { mode: 'home' }) } };
     expect(e.observe(conds, off)).toBe(false);
   });
 

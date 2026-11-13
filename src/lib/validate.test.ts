@@ -311,8 +311,8 @@ describe('validateConfig', () => {
     expect(
       errs({ condition: 'location', locations: ['home'], target: { entity_id: 'zone.a' } }),
     ).toContain('visibility[0]: use either locations or target, not both');
-    expect(errs({ condition: 'location', target: {} })).toContain(
-      'visibility[0].target: needs a zone, area, floor, label or device',
+    expect(errs({ condition: 'location', target: 'zone.home' })).toContain(
+      'visibility[0].target: must map entity_id, device_id, area_id, floor_id or label_id to ids',
     );
     expect(errs({ condition: 'template' })).toContain(
       'visibility[0].value_template: needs a template',

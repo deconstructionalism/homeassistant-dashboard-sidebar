@@ -10,10 +10,8 @@ import Sortable from 'sortablejs';
 
 import { visibilityErrors } from '../lib/validate';
 import {
-  checkClientCondition,
   childrenOf,
   isLogical,
-  isServerCondition,
   isValidTimeString,
   VisibilityEvaluator,
   type VisibilityCondition,
@@ -162,7 +160,7 @@ export const screenSizes = (query: string): string[] | undefined => {
 /** A short, readable line for a condition in the list. */
 const summary = (
   c: VisibilityCondition,
-  names: (kind: 'user' | 'entity', id: string) => string,
+  names: (kind: 'user' | 'entity' | 'area', id: string) => string,
 ): string => {
   const ent = (id: unknown): string =>
     typeof id === 'string' && id ? names('entity', id) : '(no entity)';
@@ -191,9 +189,24 @@ const summary = (
     case 'location': {
       const bits = [...asList(c.locations).map((l) => (l === 'home' ? 'Home' : l))];
       if (c.away === true) bits.push('Away');
-      const zones = asList((c.target as Record<string, unknown> | undefined)?.entity_id);
-      if (zones.length) bits.push(...zones.map((z) => names('entity', z)));
-      return bits.length ? `You are in ${bits.join(' or ')}` : 'No places chosen';
+      const target = c.target as Record<string, unknown> | undefined;
+      if (target && typeof target === 'object') {
+        bits.push(...asList(target.entity_id).map((z) => names('entity', z)));
+        // zones reached another way are named by how
+        for (const id of asList(target.label_id)) bits.push(`zones labelled ${id}`);
+        for (const id of asList(target.area_id)) bits.push(`zones in ${names('area', id)}`);
+        for (const id of asList(target.floor_id)) bits.push(`zones on floor ${id}`);
+        for (const id of asList(target.device_id)) {
+          bits.push(`zones of ${names('entity', `device:${id}`)}`);
+        }
+      }
+      if (bits.length === 0) return 'No places chosen';
+      const exclude = (target?.exclude ?? {}) as Record<string, unknown>;
+      const less = Object.values(exclude)
+        .flatMap((v) => asList(v))
+        .map((id) => names('entity', id));
+      const match = c.match_mode === 'active_zone' ? ' (as your current zone)' : '';
+      return `You are in ${bits.join(' or ')}${match}${less.length ? `, except ${less.join(', ')}` : ''}`;
     }
     case 'state':
     case undefined: {
@@ -631,7 +644,12 @@ export class VisibilityTab implements ReactiveController {
   }
 
   /** A display name for a user id or an entity id. */
-  private _name = (kind: 'user' | 'entity', id: string): string => {
+  private _name = (kind: 'user' | 'entity' | 'area', id: string): string => {
+    if (kind === 'area') {
+      const area = (this.host.hass as unknown as { areas?: Record<string, { name?: string }> })
+        ?.areas?.[id];
+      return area?.name || id;
+    }
     if (kind === 'user') {
       return (
         this._users?.find((u) => u.id === id)?.name ??
@@ -811,16 +829,13 @@ export class VisibilityTab implements ReactiveController {
     if (c.enabled === false) {
       return html`<span class="vis-status off" title="Turned off">Off</span>`;
     }
-    let held = this._clientResult(c);
-    if (held === undefined && this.host.hass) {
-      held = this._serverResult(c);
-      if (held === undefined) {
-        return html`<ha-icon
-          class="vis-status server"
-          icon="mdi:home-assistant"
-          title="Waiting for Home Assistant"
-        ></ha-icon>`;
-      }
+    const held = this.host.hass ? this._rowResult(c) : undefined;
+    if (held === undefined) {
+      return html`<ha-icon
+        class="vis-status server"
+        icon="mdi:home-assistant"
+        title="Waiting for Home Assistant"
+      ></ha-icon>`;
     }
     return html`<ha-icon
       class="vis-status ${held ? 'yes' : 'no'}"
@@ -829,8 +844,12 @@ export class VisibilityTab implements ReactiveController {
     ></ha-icon>`;
   }
 
-  /** Whether a condition holds now, asking Home Assistant (live, while the editor is open). */
-  private _serverResult(c: VisibilityCondition): boolean | undefined {
+  /**
+   * Whether a condition holds for you now, evaluated exactly as the sidebar
+   * would (asking Home Assistant, live, for what only it can answer, while
+   * the editor is open).
+   */
+  private _rowResult(c: VisibilityCondition): boolean | undefined {
     const key = JSON.stringify(c);
     this._usedEvals.add(key);
     let ev = this._rowEvals.get(key);
@@ -839,24 +858,6 @@ export class VisibilityTab implements ReactiveController {
       this._rowEvals.set(key, ev);
     }
     return ev.observe([c], this.host.hass as unknown as VisibilityHass);
-  }
-
-  /** Whether a condition holds now, if the browser can tell (no server part). */
-  private _clientResult(c: VisibilityCondition): boolean | undefined {
-    const hass = this.host.hass as unknown as VisibilityHass | undefined;
-    if (!hass) return undefined;
-    if (isLogical(c)) {
-      const kids = childrenOf(c).filter((k) => k.enabled !== false);
-      const results = kids.map((k) => this._clientResult(k));
-      if (results.some((r) => r === undefined)) return undefined;
-      if (c.condition === 'or') return kids.length === 0 || results.some(Boolean);
-      const all = results.every(Boolean);
-      return c.condition === 'not' ? !all : all;
-    }
-    if (isServerCondition(c) || (c.enabled !== undefined && c.enabled !== true)) {
-      return undefined;
-    }
-    return checkClientCondition(c, hass);
   }
 
   /** Selects a row. */

@@ -500,9 +500,11 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     const status = () => rows(el).map((r) => r.querySelector('.vis-status')?.className ?? '');
     expect(status()[0]).to.contain('yes');
     expect(status()[1]).to.contain('no');
+    expect(status()[1], 'the first guess for the state row').to.contain('no');
     expect(status()[2], 'waiting for Home Assistant').to.contain('server');
-    expect(pushes, 'one subscription, for the template row').to.have.length(1);
-    pushes[0]({ result: true });
+    // as in Home Assistant, the state row is asked too (its first guess shows meanwhile)
+    expect(pushes, 'one subscription each for the state and template rows').to.have.length(2);
+    pushes[1]({ result: true });
     await el.updateComplete;
     expect(status()[2], "Home Assistant's answer").to.contain('yes');
     expect(root(el).querySelector('.vis-live'), 'no overall label').to.equal(null);

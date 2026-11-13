@@ -140,17 +140,18 @@ the same results, so the YAML is interchangeable:
 | `screen` | the `media_query` matches, e.g. `(min-width: 1024px)` | the browser |
 | `time` | it is `after` and/or `before` a time (`22:00` to `06:00` crosses midnight), on one of `weekdays` | the browser |
 | `location` | your person is in one of `locations`, is `away`, or is in a `target` zone (`match_mode`: `any_zone` or `active_zone`) | the browser |
-| `state` | `entity` (or its `attribute`) is one of `state`, or not one of `state_not`; a value naming an entity compares to its state | the browser |
-| `numeric_state` | `entity` (or its `attribute`) is above `above` and/or below `below`; either can name an entity | the browser |
+| `state` | `entity` (or its `attribute`) is one of `state`, or not one of `state_not`; a value naming an entity compares to its state | Home Assistant; the browser when it uses an attribute or names entities |
+| `numeric_state` | `entity` (or its `attribute`) is above `above` and/or below `below`; either can name an entity | Home Assistant; the browser when a bound names an entity |
 | `template` | `value_template` renders true | Home Assistant |
 | `sun` | it is `after` and/or `before` `sunrise` or `sunset`, with optional offsets | Home Assistant |
 | `zone` | `entity_id` (a person or tracker) is in `zone` | Home Assistant |
 | `device` | a device condition holds (picked from what the device offers) | Home Assistant |
 | `and` / `or` / `not` | all / any / none of its `conditions` hold | either |
 
-`state` and `numeric_state` written with `entity_id:` (Home Assistant's
-automation form, which also takes `for:`) are checked by Home Assistant, as is
-any condition an integration adds. `enabled: false` turns a condition off.
+As on a card, `state` and `numeric_state` go to Home Assistant, and while it
+answers the browser shows its own first guess. The automation form
+(`entity_id:`, which also takes `for:`) and any condition an integration adds
+are checked by Home Assistant too. `enabled: false` turns a condition off.
 `view_columns` always holds here, since the sidebar isn't in a view column.
 
 When the conditions don't hold, the sidebar (and its [mobile bar](mobile.md))
@@ -158,7 +159,8 @@ is left out entirely and the dashboard takes the full width. Everything is
 followed live, at the moment it changes: states and users as Home Assistant
 reports them, screen conditions as the media query flips, time conditions at
 their exact boundary, and Home Assistant's conditions as it pushes their result.
-Until Home Assistant has answered, the sidebar stays as it is, so it never
+Until Home Assistant has answered, the browser's first guess stands where it
+can tell, as on a card; where it can't, the sidebar stays as it is, so it never
 flashes in or out as a page loads.
 
 While the dashboard is being **edited**, the sidebar always shows, so one hidden
