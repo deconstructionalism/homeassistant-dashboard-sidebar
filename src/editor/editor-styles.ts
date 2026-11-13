@@ -1567,6 +1567,20 @@ export const editorStyles = css`
     opacity: 0.5;
   }
 
+  .vis-status.needs {
+    color: var(--warning-color, #ffa600);
+  }
+
+  .vis-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .vis-node.sortable-ghost > .vis-row {
+    opacity: 0.4;
+  }
+
   .vis-children {
     display: flex;
     flex-direction: column;
@@ -1576,28 +1590,9 @@ export const editorStyles = css`
     border-left: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
   }
 
-  .vis-add-row {
-    padding: 2px 4px 4px;
-  }
-
-  .vis-live {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-  }
-
-  .vis-live ha-icon {
-    --mdc-icon-size: 16px;
-  }
-
-  .vis-live.yes {
-    color: var(--success-color, #43a047);
-  }
-
-  .vis-live.no,
-  .vis-live.wait {
-    opacity: 0.7;
+  /* An empty group still takes a dropped condition. */
+  .vis-children .vis-list {
+    min-height: 12px;
   }
 
   .vis-choices {
@@ -1611,12 +1606,6 @@ export const editorStyles = css`
     display: inline-flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .vis-errors {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
   }
 
   @media (width < 640px) {

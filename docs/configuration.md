@@ -168,11 +168,12 @@ edit button, so you can tell it's hidden from you the rest of the time.
 === "Visual editor"
 
     The **Visibility** tab lists the conditions on the right, with groups nested
-    under them. Each row shows whether it holds for you right now, and the top
-    of the list shows the overall result. Select a condition to edit it on the
-    left: every type has its own form, and users are picked by name. Use
-    **Add After** and **Add Inside** (for groups) to build the list, the arrows
-    to reorder, and **⋯** to turn a condition off or edit it as YAML. The **⋯**
+    under them. Each row shows whether it holds for you right now (asking Home
+    Assistant for the conditions only it can check), or a warning when it
+    still needs something. Drag rows to reorder them, into and out of groups.
+    Select a condition to edit it on the left: every type has its own form,
+    and users are picked by name. Use **Add After**, **Add Inside** (for
+    groups), **Turn Off** and **Delete Condition** below the form. The **⋯**
     next to the tab note edits the whole list as YAML.
 
 === "YAML"

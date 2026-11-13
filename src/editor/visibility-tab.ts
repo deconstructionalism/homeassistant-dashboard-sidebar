@@ -6,6 +6,7 @@ import {
   type ReactiveControllerHost,
   type TemplateResult,
 } from 'lit';
+import Sortable from 'sortablejs';
 
 import { visibilityErrors } from '../lib/validate';
 import {
@@ -31,6 +32,8 @@ import { menuStyle, popupMenu, type MenuItem } from './editor-menus';
 export interface VisibilityTabHost extends ReactiveControllerHost {
   /** The current Home Assistant object. */
   hass?: HomeAssistant;
+  /** Where the tab renders, to wire drag and drop. */
+  readonly renderRoot: HTMLElement | DocumentFragment;
   /** The working copy's conditions (empty when none). */
   readonly visibilityConditions: VisibilityCondition[];
   /** Replaces the working copy's conditions; an empty list removes the key. */
@@ -291,11 +294,68 @@ const textList = (s: string): string[] =>
     .filter(Boolean);
 
 /**
+ * Moves the condition at `fromParent[oldIndex]` into the list at `toParent`,
+ * at `newIndex` (its index once there), returning the new tree and the
+ * condition's new path. Moving a group into itself is refused.
+ */
+export const moveCondition = (
+  list: VisibilityCondition[],
+  fromParent: number[],
+  oldIndex: number,
+  toParent: number[],
+  newIndex: number,
+): { list: VisibilityCondition[]; path: number[] } | null => {
+  const from = [...fromParent, oldIndex];
+  if (toParent.length >= from.length && from.every((v, i) => toParent[i] === v)) {
+    return null;
+  }
+  let moved: VisibilityCondition | undefined;
+  const edit = (
+    tree: VisibilityCondition[],
+    parent: number[],
+    change: (siblings: VisibilityCondition[]) => void,
+    depth = 0,
+  ): VisibilityCondition[] => {
+    if (depth === parent.length) {
+      const next = [...tree];
+      change(next);
+      return next;
+    }
+    return tree.map((c, i) =>
+      i === parent[depth]
+        ? { ...c, conditions: edit(childrenOf(c), parent, change, depth + 1) }
+        : c,
+    );
+  };
+  const removed = edit(list, fromParent, (siblings) => {
+    [moved] = siblings.splice(oldIndex, 1);
+  });
+  if (!moved) {
+    return null;
+  }
+  // Taking the condition out shifts later siblings (and their subtrees) up one.
+  const target = [...toParent];
+  const depth = fromParent.length;
+  if (
+    target.length > depth &&
+    fromParent.every((v, i) => target[i] === v) &&
+    target[depth] > oldIndex
+  ) {
+    target[depth] -= 1;
+  }
+  const node = moved;
+  const result = edit(removed, target, (siblings) => {
+    siblings.splice(newIndex, 0, node);
+  });
+  return { list: result, path: [...target, newIndex] };
+};
+
+/**
  * The editor's Visibility tab: the sidebar's conditions as a selectable list
  * (groups nest under a guide line, like categories), a form for the selected
- * one, a live "shown to you right now" result, and the whole list as YAML.
- * Every Home Assistant condition type has a form; anything else (an
- * integration's condition) is edited as YAML in place.
+ * one, each row's live result for you, drag and drop, and the whole list as
+ * YAML. Every Home Assistant condition type has a form; an integration's
+ * condition is edited in the tab's YAML.
  */
 export class VisibilityTab implements ReactiveController {
   /** The selected condition's path, as a dotted string, or null. */
@@ -303,28 +363,97 @@ export class VisibilityTab implements ReactiveController {
   /** Whether the whole list is being edited as YAML. */
   private _yamlAll = false;
   /** The open popup: the add menu, or the tab or condition menu. */
-  private _menu: { kind: 'add' | 'tab' | 'item'; rect: DOMRect; items?: MenuItem[] } | null = null;
+  private _menu: { kind: 'add' | 'tab'; rect: DOMRect; items?: MenuItem[] } | null = null;
   /** User names by id, once fetched. */
   private _users?: Array<{ id: string; name: string }>;
   /** Screen conditions (by path) switched to a custom media query. */
   private _customScreen = new Set<string>();
   /** Device conditions by device id, once fetched. */
   private _deviceConditions = new Map<string, Array<Record<string, unknown>>>();
-  /** Live result of the whole list for the current user. */
-  private readonly _live: VisibilityEvaluator;
+  /** Live results for rows Home Assistant checks, by the condition's JSON. */
+  private _rowEvals = new Map<string, VisibilityEvaluator>();
+  /** The rows' evaluators used in the latest render, to drop the rest. */
+  private _usedEvals = new Set<string>();
+  /** Condition lists already wired for drag and drop. */
+  private _sortables = new WeakSet<HTMLElement>();
+  /** The node just before the row being dragged, to put it back for Lit. */
+  private _dragMarker: Node | null = null;
 
-  /** Hooks the tab to its editor and sets up the live result. */
+  /** Hooks the tab to its editor. */
   public constructor(private readonly host: VisibilityTabHost) {
     host.addController(this);
-    this._live = new VisibilityEvaluator(() => host.requestUpdate());
   }
 
   /** Nothing to set up until the tab renders. */
   public hostConnected(): void {}
 
+  /** Wires drag and drop on new lists, and drops unused live results. */
+  public hostUpdated(): void {
+    for (const el of this.host.renderRoot.querySelectorAll<HTMLElement>('.vis-list')) {
+      if (!this._sortables.has(el)) {
+        this._sortables.add(el);
+        this._wireSort(el);
+      }
+    }
+    for (const [key, ev] of this._rowEvals) {
+      if (!this._usedEvals.has(key)) {
+        ev.dispose();
+        this._rowEvals.delete(key);
+      }
+    }
+    this._usedEvals = new Set();
+  }
+
   /** Drops the live subscriptions when the editor closes. */
   public hostDisconnected(): void {
-    this._live.dispose();
+    for (const ev of this._rowEvals.values()) ev.dispose();
+    this._rowEvals.clear();
+  }
+
+  /** Lets a list's rows be dragged, within it and into or out of groups. */
+  private _wireSort(el: HTMLElement): void {
+    Sortable.create(el, {
+      group: 'vis-conditions',
+      draggable: '.vis-node',
+      animation: 150,
+      fallbackOnBody: true,
+      swapThreshold: 0.65,
+      onStart: (evt) => {
+        this._dragMarker = evt.item.previousSibling;
+      },
+      onEnd: (evt) => this._onDrop(evt),
+    });
+  }
+
+  /** Applies a drop: puts the row back where Lit left it, then moves the condition. */
+  public _onDrop(evt: {
+    item: HTMLElement;
+    from: HTMLElement;
+    to: HTMLElement;
+    oldIndex?: number;
+    newIndex?: number;
+  }): void {
+    const marker = this._dragMarker;
+    this._dragMarker = null;
+    if (marker?.parentNode) {
+      marker.parentNode.insertBefore(evt.item, marker.nextSibling);
+    }
+    const parentOf = (list: HTMLElement): number[] =>
+      list.dataset.parent ? list.dataset.parent.split('.').map(Number) : [];
+    if (evt.oldIndex === undefined || evt.newIndex === undefined) return;
+    if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+    const moved = moveCondition(
+      this._list,
+      parentOf(evt.from),
+      evt.oldIndex,
+      parentOf(evt.to),
+      evt.newIndex,
+    );
+    if (moved) {
+      this.host.setVisibilityConditions(moved.list);
+      this._selected = moved.path.join('.');
+      this.host.requestUpdate();
+    }
   }
 
   /** Clears the selection and modes, e.g. when the editor gets a new config. */
@@ -542,95 +671,102 @@ export class VisibilityTab implements ReactiveController {
         <div class="preview vis-pane">
           <div class="preview-head">
             <span class="preview-title">Conditions</span>
-            ${this._renderLive()}
           </div>
-          <div class="pv-frame vis-tree" role="tree">
-            ${this._renderRows(list, [])}
-            <div class="vis-add-row">
-              ${this._addButton([], list.length, 'Add Condition', true)}
-            </div>
-          </div>
+          <div class="pv-frame vis-tree" role="tree">${this._renderList(list, [])}</div>
         </div>
       </div>
       ${this._renderMenu()}
     `;
   }
 
-  /** The live result for you, right now. */
-  private _renderLive(): TemplateResult {
-    const result = this.host.hass
-      ? this._live.observe(this._list, this.host.hass as unknown as VisibilityHass)
-      : undefined;
-    const [icon, text, cls] =
-      result === undefined
-        ? ['mdi:cloud-clock-outline', 'Checking', 'wait']
-        : result
-          ? ['mdi:eye-outline', 'Shown to you now', 'yes']
-          : ['mdi:eye-off-outline', 'Hidden from you now', 'no'];
-    return html`<span class="vis-live ${cls}" title="With the conditions as they are in the editor">
-      <ha-icon icon=${icon}></ha-icon>${text}
-    </span>`;
+  /**
+   * A list of conditions, one draggable node each (its row, and a group's
+   * children nested under a guide line).
+   */
+  private _renderList(list: VisibilityCondition[], parent: Path): TemplateResult {
+    return html`<div class="vis-list" data-parent=${parent.join('.')}>
+      ${list.map((c, i) => {
+        const path = [...parent, i];
+        const key = path.join('.');
+        const group = isLogical(c);
+        return html`<div class="vis-node">
+          <div
+            class="vis-row ${this._selected === key ? 'selected' : ''} ${c.enabled === false ? 'off' : ''}"
+            role="treeitem"
+            data-path=${key}
+            tabindex="0"
+            @click=${() => this._select(key)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this._select(key);
+              }
+            }}
+          >
+            <ha-icon class="vis-icon" icon=${iconFor(c)}></ha-icon>
+            <span class="vis-text">
+              <span class="vis-type">${conditionLabel(c)}</span>
+              <span class="vis-summary">${summary(c, this._name)}</span>
+            </span>
+            ${this._rowStatus(c)}
+          </div>
+          ${
+            group
+              ? html`<div class="vis-children">${this._renderList(childrenOf(c), path)}</div>`
+              : nothing
+          }
+        </div>`;
+      })}
+    </div>`;
   }
 
-  /** One row per condition, groups nesting their children under a guide line. */
-  private _renderRows(list: VisibilityCondition[], parent: Path): TemplateResult {
-    return html`${list.map((c, i) => {
-      const path = [...parent, i];
-      const key = path.join('.');
-      const group = isLogical(c);
-      return html`
-        <div
-          class="vis-row ${this._selected === key ? 'selected' : ''} ${c.enabled === false ? 'off' : ''}"
-          role="treeitem"
-          data-path=${key}
-          tabindex="0"
-          @click=${() => this._select(key)}
-          @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              this._select(key);
-            }
-          }}
-        >
-          <ha-icon class="vis-icon" icon=${iconFor(c)}></ha-icon>
-          <span class="vis-text">
-            <span class="vis-type">${conditionLabel(c)}</span>
-            <span class="vis-summary">${summary(c, this._name)}</span>
-          </span>
-          ${this._rowStatus(c)}
-        </div>
-        ${
-          group
-            ? html`<div class="vis-children">
-                ${this._renderRows(childrenOf(c), path)}
-                <div class="vis-add-row">
-                  ${this._addButton(path, childrenOf(c).length, 'Add Condition', true)}
-                </div>
-              </div>`
-            : nothing
-        }
-      `;
-    })}`;
-  }
-
-  /** A row's live status: held or not (browser checks), off, or checked by Home Assistant. */
+  /**
+   * A row's status: what it still needs, turned off, or whether it holds for
+   * you right now (checked here, or by Home Assistant for the conditions only
+   * it can check).
+   */
   private _rowStatus(c: VisibilityCondition): TemplateResult {
+    const problems = visibilityErrors([c]).map((e) =>
+      e.replace(/^visibility\[0\]\.?/, '').replace(/^[:\s]+/, ''),
+    );
+    if (problems.length > 0) {
+      return html`<ha-icon
+        class="vis-status needs"
+        icon="mdi:alert-circle-outline"
+        title=${`Needs attention: ${problems.join('; ')}`}
+      ></ha-icon>`;
+    }
     if (c.enabled === false) {
       return html`<span class="vis-status off" title="Turned off">Off</span>`;
     }
-    const held = this._clientResult(c);
-    if (held === undefined) {
-      return html`<ha-icon
-        class="vis-status server"
-        icon="mdi:home-assistant"
-        title="Checked by Home Assistant"
-      ></ha-icon>`;
+    let held = this._clientResult(c);
+    if (held === undefined && this.host.hass) {
+      held = this._serverResult(c);
+      if (held === undefined) {
+        return html`<ha-icon
+          class="vis-status server"
+          icon="mdi:home-assistant"
+          title="Waiting for Home Assistant"
+        ></ha-icon>`;
+      }
     }
     return html`<ha-icon
       class="vis-status ${held ? 'yes' : 'no'}"
       icon=${held ? 'mdi:check-circle' : 'mdi:close-circle-outline'}
       title=${held ? 'Holds right now' : 'Does not hold right now'}
     ></ha-icon>`;
+  }
+
+  /** Whether a condition holds now, asking Home Assistant (live, while the editor is open). */
+  private _serverResult(c: VisibilityCondition): boolean | undefined {
+    const key = JSON.stringify(c);
+    this._usedEvals.add(key);
+    let ev = this._rowEvals.get(key);
+    if (!ev) {
+      ev = new VisibilityEvaluator(() => this.host.requestUpdate());
+      this._rowEvals.set(key, ev);
+    }
+    return ev.observe([c], this.host.hass as unknown as VisibilityHass);
   }
 
   /** Whether a condition holds now, if the browser can tell (no server part). */
@@ -690,8 +826,8 @@ export class VisibilityTab implements ReactiveController {
     </button>`;
   }
 
-  /** Opens the tab or condition options menu under its trigger. */
-  private _openMenu(e: Event, kind: 'tab' | 'item'): void {
+  /** Opens the tab's options menu under its trigger. */
+  private _openMenu(e: Event, kind: 'tab'): void {
     e.stopPropagation();
     this._menu = { kind, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() };
     this.host.requestUpdate();
@@ -720,27 +856,15 @@ export class VisibilityTab implements ReactiveController {
       >
         ${label}
       </button>`;
-    let items: TemplateResult;
-    if (m.kind === 'tab') {
-      items = html`
-        ${item(this._yamlAll ? 'Edit With UI' : 'Edit As YAML', () => {
-          this._yamlAll = !this._yamlAll;
-        })}
-        ${item('Remove All Conditions', () => {
-          this.host.setVisibilityConditions([]);
-          this.reset();
-        })}
-      `;
-    } else {
-      const path = this._path();
-      const c = path ? this._get(path) : undefined;
-      if (!path || !c) return nothing;
-      items = html`
-        ${item(c.enabled === false ? 'Turn On' : 'Turn Off', () =>
-          this._patch(path, { enabled: c.enabled === false ? undefined : false }),
-        )}
-      `;
-    }
+    const items = html`
+      ${item(this._yamlAll ? 'Edit With UI' : 'Edit As YAML', () => {
+        this._yamlAll = !this._yamlAll;
+      })}
+      ${item('Remove All Conditions', () => {
+        this.host.setVisibilityConditions([]);
+        this.reset();
+      })}
+    `;
     return html`
       <div class="menu-scrim" @click=${this._closeMenu}></div>
       <div class="add-menu" style=${menuStyle(m.rect, 'right')}>${items}</div>
@@ -771,7 +895,6 @@ export class VisibilityTab implements ReactiveController {
     const count = this._siblingCount(path);
     const label = conditionLabel(c);
     const known = c.condition === undefined || c.condition in TYPE_META;
-    const errors = visibilityErrors([c]).map((e) => e.replace(/^visibility\[0\](\.)?/, ''));
     const body = known ? this._fields(c, path) : nothing;
     return html`
       <div class="form">
@@ -796,14 +919,6 @@ export class VisibilityTab implements ReactiveController {
             >
               <ha-icon icon="mdi:arrow-down"></ha-icon>
             </button>
-            <button
-              class="tool"
-              title="More"
-              aria-label="More"
-              @click=${(e: Event) => this._openMenu(e, 'item')}
-            >
-              <ha-icon icon="mdi:dots-vertical"></ha-icon>
-            </button>
           </div>
         </div>
         ${
@@ -814,18 +929,19 @@ export class VisibilityTab implements ReactiveController {
               </small>`
             : nothing
         }
-        ${
-          errors.length && known
-            ? html`<div class="vis-errors">
-                ${errors.map((e) => html`<span class="field-error">${titleCase(e.replace(/^[:\s]+/, ''))}</span>`)}
-              </div>`
-            : nothing
-        }
         ${body}
         <div class="form-actions">
           ${isLogical(c) ? this._addButton(path, childrenOf(c).length, 'Add Inside', true) : nothing}
           ${this._addButton(path.slice(0, -1), index + 1, 'Add After', true)}
-          <button class="add-btn danger" @click=${() => this._remove(path)}>Delete ${label}</button>
+          <button
+            class="add-btn"
+            @click=${() => this._patch(path, { enabled: c.enabled === false ? undefined : false })}
+          >
+            ${c.enabled === false ? 'Turn On' : 'Turn Off'}
+          </button>
+          <button class="add-btn danger" @click=${() => this._remove(path)}>
+            Delete Condition
+          </button>
         </div>
       </div>
     `;

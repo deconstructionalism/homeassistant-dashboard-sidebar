@@ -1,7 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
 
 import type { DashboardSidebarConfig } from '../lib/types';
+import Sortable from 'sortablejs';
+
 import type { DashboardSidebarEditor } from './sidebar-editor';
+import { moveCondition } from './visibility-tab';
 import './sidebar-editor';
 
 // #4 in the editor: the Animate toggle on the Settings tab, and the
@@ -180,9 +183,6 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(add.classList.contains('solid'), 'solid, like Add Element and Add Button').to.equal(
       true,
     );
-    for (const b of root(el).querySelectorAll('.vis-add-row button')) {
-      expect(b.classList.contains('solid')).to.equal(true);
-    }
   });
 
   it('offers every Home Assistant condition type, grouped', async () => {
@@ -348,41 +348,35 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     (root(el).querySelector('.form-tools [title="Move up"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(save(el)?.visibility?.map((c) => c.condition)).to.deep.equal(['or', 'user']);
-    await clickText(el, 'Delete Or');
+    await clickText(el, 'Delete Condition');
     expect(el.visibilityConditions.map((c) => c.condition)).to.deep.equal(['user']);
     rows(el)[0].click();
     await el.updateComplete;
-    await clickText(el, 'Delete User');
+    await clickText(el, 'Delete Condition');
     expect(save(el)?.visibility, 'none left: key removed').to.equal(undefined);
   });
 
-  it('offers only Turn Off / Turn On per condition, with YAML on the tab menu alone', async () => {
+  it('has Turn Off / Turn On, Add After and Delete Condition as buttons, and no menu', async () => {
     const el = await mountTab(cfg({ visibility: [{ condition: 'user', users: ['u1'] }] }));
     rows(el)[0].click();
     await el.updateComplete;
-    (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    const items = [...root(el).querySelectorAll('.add-menu .add-menu-item')].map((b) =>
+    expect(root(el).querySelector('.form-tools [title="More"]'), 'no ⋯ menu').to.equal(null);
+    const actions = [...root(el).querySelectorAll('.form-actions button')].map((b) =>
       b.textContent?.trim(),
     );
-    expect(items).to.deep.equal(['Turn Off']);
-  });
-
-  it('turns a condition off and on', async () => {
-    const el = await mountTab(cfg({ visibility: [{ condition: 'user', users: ['u1'] }] }));
-    rows(el)[0].click();
-    await el.updateComplete;
-    (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
-    await el.updateComplete;
+    expect(actions).to.deep.equal(['Add After', 'Turn Off', 'Delete Condition']);
     await clickText(el, 'Turn Off');
     expect(save(el)?.visibility?.[0].enabled).to.equal(false);
     expect(rows(el)[0].classList.contains('off')).to.equal(true);
-    (root(el).querySelector('.form-tools [title="More"]') as HTMLButtonElement).click();
-    await el.updateComplete;
     await clickText(el, 'Turn On');
     expect(rows(el)[0].classList.contains('off')).to.equal(false);
     // back as it was: nothing to save, and no enabled key left behind
     expect(el.visibilityConditions[0]).to.not.have.property('enabled');
+  });
+
+  it('has no add button under the list', async () => {
+    const el = await mountTab(cfg({ visibility: [{ condition: 'or', conditions: [] }] }));
+    expect(root(el).querySelector('.vis-tree button')).to.equal(null);
   });
 
   it('edits the whole list as YAML from the tab menu', async () => {
@@ -411,7 +405,8 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
     expect(el.visibilityConditions).to.deep.equal([odd]);
   });
 
-  it('shows the live result for you, per row and overall', async () => {
+  it('shows per row whether it holds for you now, asking Home Assistant where needed', async () => {
+    const pushes: Array<(m: unknown) => void> = [];
     const el = await mountTab(
       cfg({
         visibility: [
@@ -421,24 +416,117 @@ describe('<dashboard-sidebar-editor> Visibility tab (#4)', () => {
         ],
       }),
     );
-    const status = rows(el).map((r) => r.querySelector('.vis-status')?.className);
-    expect(status[0]).to.contain('yes');
-    expect(status[1]).to.contain('no');
-    expect(status[2], 'checked by Home Assistant').to.contain('server');
-    expect(root(el).querySelector('.vis-live')?.textContent?.trim()).to.equal(
-      'Hidden from you now',
-    );
+    el.hass = {
+      ...HASS,
+      connection: {
+        subscribeMessage: (cb: (m: unknown) => void) => {
+          pushes.push(cb);
+          return Promise.resolve(() => undefined);
+        },
+      },
+    } as never;
+    await el.updateComplete;
+    const status = () => rows(el).map((r) => r.querySelector('.vis-status')?.className ?? '');
+    expect(status()[0]).to.contain('yes');
+    expect(status()[1]).to.contain('no');
+    expect(status()[2], 'waiting for Home Assistant').to.contain('server');
+    expect(pushes, 'one subscription, for the template row').to.have.length(1);
+    pushes[0]({ result: true });
+    await el.updateComplete;
+    expect(status()[2], "Home Assistant's answer").to.contain('yes');
+    expect(root(el).querySelector('.vis-live'), 'no overall label').to.equal(null);
   });
 
-  it('shows what a condition still needs', async () => {
+  it('marks a condition that still needs something on its row, not as errors in the form', async () => {
     const el = await mountTab(cfg());
     await addType(el, 'State');
-    const errors = [...root(el).querySelectorAll('.vis-errors .field-error')].map((e) =>
-      e.textContent?.trim(),
+    const flag = rows(el)[0].querySelector('.vis-status.needs') as HTMLElement;
+    expect(flag).to.exist;
+    expect(flag.getAttribute('title')).to.contain('entity: needs an entity id');
+    expect(root(el).querySelector('.editor .field-error'), 'no errors atop the form').to.equal(
+      null,
     );
-    expect(errors).to.include('Entity: needs an entity id');
   });
 
+  it('reorders by drag and drop, into and out of groups', async () => {
+    const el = await mountTab(
+      cfg({
+        visibility: [
+          { condition: 'user', users: ['u1'] },
+          { condition: 'or', conditions: [{ condition: 'user', users: ['u2'] }] },
+          { condition: 'screen', media_query: '(min-width: 1px)' },
+        ],
+      }),
+    );
+    await el.updateComplete;
+    const lists = () => [...root(el).querySelectorAll('.vis-list')] as HTMLElement[];
+    const nodes = (list: HTMLElement) =>
+      [...list.children].filter((n) => n.classList.contains('vis-node')) as HTMLElement[];
+    /** Drops like SortableJS does: start, move the node in the DOM, end. */
+    const drag = async (from: HTMLElement, oldIndex: number, to: HTMLElement, newIndex: number) => {
+      const sortable = Sortable.get(from)!;
+      const item = nodes(from)[oldIndex];
+      sortable.option('onStart')!({ item } as never);
+      const before = nodes(to).filter((n) => n !== item)[newIndex] ?? null;
+      to.insertBefore(item, before);
+      sortable.option('onEnd')!({ item, from, to, oldIndex, newIndex } as never);
+      await el.updateComplete;
+    };
+    // the screen condition into the group, after its child
+    await drag(lists()[0], 2, lists()[1], 1);
+    expect(el.visibilityConditions).to.deep.equal([
+      { condition: 'user', users: ['u1'] },
+      {
+        condition: 'or',
+        conditions: [
+          { condition: 'user', users: ['u2'] },
+          { condition: 'screen', media_query: '(min-width: 1px)' },
+        ],
+      },
+    ]);
+    expect(rows(el).map((r) => r.querySelector('.vis-type')?.textContent)).to.deep.equal([
+      'User',
+      'Or',
+      'User',
+      'Screen',
+    ]);
+    // the group's first child out to the top
+    await drag(lists()[1], 0, lists()[0], 0);
+    expect(el.visibilityConditions.map((c) => c.condition)).to.deep.equal(['user', 'user', 'or']);
+    expect(formTitle(el), 'the dropped condition is selected').to.equal('Condition: User');
+  });
+});
+
+describe('moveCondition', () => {
+  const u = (id: string) => ({ condition: 'user', users: [id] });
+  const tree = () => [u('a'), { condition: 'and', conditions: [u('b'), u('c')] }, u('d')];
+
+  it('moves within a list', () => {
+    expect(moveCondition(tree(), [], 0, [], 2)?.list.map((c) => c.users ?? 'and')).to.deep.equal([
+      'and',
+      ['d'],
+      ['a'],
+    ]);
+  });
+
+  it('moves into a group past the removed one, fixing the target path', () => {
+    const r = moveCondition(tree(), [], 0, [1], 0)!;
+    expect(r.path).to.deep.equal([0, 0]);
+    expect(r.list[0].conditions).to.deep.equal([u('a'), u('b'), u('c')]);
+  });
+
+  it('moves out of a group', () => {
+    const r = moveCondition(tree(), [1], 1, [], 3)!;
+    expect(r.list.map((c) => c.users ?? 'and')).to.deep.equal([['a'], 'and', ['d'], ['c']]);
+    expect(r.path).to.deep.equal([3]);
+  });
+
+  it('refuses to move a group into itself', () => {
+    expect(moveCondition(tree(), [], 1, [1], 0)).to.equal(null);
+  });
+});
+
+describe('<dashboard-sidebar-editor> Visibility tab hints (#4)', () => {
   it('keeps hints under fields in the standard hint style', async () => {
     const el = await mountTab(cfg());
     await addType(el, 'Time');
