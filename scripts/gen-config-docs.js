@@ -20,7 +20,7 @@ const OUT = resolve(root, 'docs/reference.md');
 // even before it is added here.
 const TITLES = {
   DashboardSidebarConfig: 'Top-level configuration',
-  BlockCommon: 'Common fields (every block and footer button)',
+  BlockCommon: 'Common fields (every block, footer button and the footer)',
   TitleBlock: 'Title block',
   ClockBlock: 'Clock block',
   DateBlock: 'Date block',

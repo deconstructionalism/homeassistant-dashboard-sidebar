@@ -1,6 +1,6 @@
 {
   "name": "homeassistant-dashboard-sidebar",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A collapsible dashboard sidebar card for Home Assistant Lovelace.",
   "type": "module",
   "license": "MIT",
@@ -28,6 +28,8 @@
     "docs:config:check": "node scripts/gen-config-docs.js --check",
     "docs:shots": "node scripts/screenshots/shoot.mjs",
     "docs:shots:check": "node scripts/screenshots/shoot.mjs --check",
+    "ha:conditions": "node scripts/fetch-ha-conditions.mjs",
+    "bench": "web-test-runner --config bench/wtr-bench.config.mjs",
     "check": "npm run lint && npm run format && npm run schema:check && npm run docs:config:check && npm run test:unit && npm run build"
   },
   "dependencies": {
@@ -35,6 +37,7 @@
     "lit": "^3.2.1"
   },
   "devDependencies": {
+    "@date-fns/tz": "1.5.0",
     "@eslint/js": "^9.17.0",
     "@mdi/js": "^7.4.47",
     "@open-wc/testing": "^5.0.0",
@@ -48,6 +51,7 @@
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
+    "date-fns": "4.4.0",
     "eslint": "^9.17.0",
     "eslint-plugin-jsdoc": "^50.8.0",
     "eslint-plugin-lit": "^1.15.0",

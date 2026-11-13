@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { starterConfig } from './bootstrap';
+import { sidebarVisible, starterConfig, wrapperCss } from './bootstrap';
 import { validateConfig } from './validate';
 
 const hass = {
@@ -59,5 +59,46 @@ describe('starterConfig', () => {
     expect(cfg.body).toBeUndefined();
     expect(cfg.footer).toBeUndefined();
     expect(validateConfig(cfg)).toHaveLength(0);
+  });
+});
+
+describe('wrapperCss (the dashboard layout around the sidebar)', () => {
+  const body = [{ type: 'item' as const, title: 'A', tap_action: { action: 'none' as const } }];
+
+  it('slides the dashboard by default', () => {
+    expect(wrapperCss({ body })).toContain('transition: width 0.25s ease');
+  });
+
+  it('does not slide with animate: false, push or overlay', () => {
+    for (const overlay of [false, true]) {
+      const css = wrapperCss({ body, animate: false, overlay });
+      expect(css).not.toContain('width 0.25s');
+      expect(css).toContain('transition: none');
+    }
+  });
+
+  it('never slides while settling in, or for reduced motion', () => {
+    const css = wrapperCss({ body });
+    expect(css).toMatch(/\[data-settling\][^{]*\{\s*transition: none !important;/);
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*transition: none !important;/,
+    );
+  });
+});
+
+describe('sidebarVisible', () => {
+  it('follows the result of the conditions', () => {
+    expect(sidebarVisible(true, false, false)).toBe(true);
+    expect(sidebarVisible(false, false, true)).toBe(false);
+  });
+
+  it('stays as it is while a server result is still out', () => {
+    expect(sidebarVisible(undefined, false, true)).toBe(true);
+    expect(sidebarVisible(undefined, false, false)).toBe(false);
+  });
+
+  it('always shows while the dashboard is being edited', () => {
+    expect(sidebarVisible(false, true, false)).toBe(true);
+    expect(sidebarVisible(undefined, true, false)).toBe(true);
   });
 });

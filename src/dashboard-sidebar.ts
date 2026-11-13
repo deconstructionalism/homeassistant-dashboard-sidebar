@@ -12,7 +12,16 @@ import { styleMap } from 'lit/directives/style-map.js';
 import Sortable from 'sortablejs';
 
 import { runAction } from './lib/action';
-import { applyCardMod, scopeCss } from './lib/card-mod';
+import {
+  FOOTER_JUSTIFY,
+  FOOTER_STYLE_LOC,
+  applyStyles,
+  hookClassMap,
+  scopeCss,
+  styleConfig,
+  stylingEngine,
+  whenStylingEngine,
+} from './lib/styling';
 import {
   EDIT_EVENT,
   PREVIEW_REORDER_EVENT,
@@ -87,6 +96,13 @@ export class DashboardSidebar extends LitElement {
 
   /** Whether the dashboard is in edit mode, which reveals the edit button. */
   @property({ attribute: false }) public editMode = false;
+
+  /**
+   * Set while editing a sidebar its visibility conditions hide from you: it
+   * shows dimmed, with an eye-off badge on the edit button.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'hidden-by-visibility' })
+  public hiddenByVisibility = false;
 
   /**
    * Whether this is an inert, chrome-less preview of a single block, embedded in
@@ -190,11 +206,17 @@ export class DashboardSidebar extends LitElement {
   /** Whether a markdown-compaction retry is already scheduled. */
   private _compactMarkdownScheduled = false;
 
-  /** Whether the whole-sidebar card-mod styles have already been applied. */
-  private _cardModApplied = false;
+  /** Whether the whole-sidebar styles have already been applied. */
+  private _stylesApplied = false;
 
-  /** Per-element card-mod config signatures, to avoid redundant re-applies. */
-  private readonly _elementCardModSigs = new WeakMap<HTMLElement, string>();
+  /**
+   * Per-element style config signatures, recorded only once a styling engine
+   * has applied them, to avoid redundant re-applies.
+   */
+  private _elementStyleSigs = new WeakMap<HTMLElement, string>();
+
+  /** Whether a re-apply is already waiting on a styling engine to load. */
+  private _awaitingStylingEngine = false;
 
   /** Pending hold-gesture timer, and whether a hold has already fired. */
   private _holdTimer?: number;
@@ -339,11 +361,12 @@ export class DashboardSidebar extends LitElement {
    * Invalid configs are kept only as an error list for the panel.
    */
   public setConfig(config: DashboardSidebarConfig): void {
+    this.toggleAttribute('data-no-animate', config.animate === false);
     // A preview renders a single region (e.g. a lone footer) best-effort, so it
     // skips the whole-sidebar validation that would otherwise gate rendering.
     this._errors = this.preview ? [] : validateConfig(config);
     this._config = config;
-    this._cardModApplied = false;
+    this._stylesApplied = false;
     if (this._errors.length > 0) {
       console.warn(`[dashboard-sidebar] config errors:\n- ${this._errors.join('\n- ')}`);
       return;
@@ -446,6 +469,26 @@ export class DashboardSidebar extends LitElement {
     if (this._config && this._errors.length === 0) {
       this._templates.collect(this._config);
     }
+    this._awaitStylingEngine();
+  }
+
+  /**
+   * When no styling engine is installed yet, re-applies every style once UIX
+   * or card-mod finishes loading. Both are frontend modules that can register
+   * after the sidebar's first render; without this, styles set before the
+   * engine arrived would never be applied.
+   */
+  private _awaitStylingEngine(): void {
+    if (stylingEngine() !== null || this._awaitingStylingEngine) {
+      return;
+    }
+    this._awaitingStylingEngine = true;
+    void whenStylingEngine().then(() => {
+      this._awaitingStylingEngine = false;
+      this._stylesApplied = false;
+      this._elementStyleSigs = new WeakMap();
+      this.requestUpdate();
+    });
   }
 
   /**
@@ -471,7 +514,7 @@ export class DashboardSidebar extends LitElement {
   /**
    * Reacts to reactive-property changes: fires the collapse toggle event first
    * so the wrapper resizes, forwards hass to templates and cards, then applies
-   * card-mod.
+   * the configured styles.
    */
   protected updated(changed: PropertyValues): void {
     if (changed.has('_collapsed')) {
@@ -489,7 +532,7 @@ export class DashboardSidebar extends LitElement {
         el.hass = this.hass;
       });
     }
-    this._applyCardMod();
+    this._applyStyles();
     this._wirePreviewSort();
     this._observeFooter();
     this._updatePinnedAnchor();
@@ -683,70 +726,108 @@ export class DashboardSidebar extends LitElement {
   }
 
   /**
-   * Applies the configured card-mod styles once per config, when the card-mod
-   * integration is installed. Retries on later updates until it succeeds.
+   * Applies the whole-sidebar style config (`uix`, else `card_mod`) once per
+   * config, through UIX or card-mod. Retries on later updates until a styling
+   * engine is installed and succeeds.
    */
-  private _applyCardMod(): void {
-    const cfg = this._config?.card_mod;
-    if (cfg && !this._cardModApplied && this._errors.length === 0) {
-      this._cardModApplied = applyCardMod(this, cfg);
+  private _applyStyles(): void {
+    const cfg = styleConfig(this._config);
+    if (cfg && !this._stylesApplied && this._errors.length === 0) {
+      this._stylesApplied = applyStyles(this, cfg) !== null;
     }
-    this._applyElementCardMods();
+    this._applyElementStyles();
   }
 
   /**
-   * Applies each element's own `card_mod` to its rendered root, keyed by the
-   * element's location so card-mod keeps a separate instance per element. Only
-   * re-applies when an element's config changes (tracked per node).
+   * Applies each element's own style config to its rendered root, keyed by the
+   * element's location so the engine keeps a separate instance per element.
+   * Only re-applies when an element's config changes (tracked per node), and a
+   * config only counts as applied once an engine actually applied it, so an
+   * element styled before UIX or card-mod loaded is styled once it does.
    */
-  private _applyElementCardMods(): void {
+  private _applyElementStyles(): void {
     if (this._errors.length > 0) {
       return;
     }
     (this.renderRoot as ParentNode).querySelectorAll<HTMLElement>('[data-loc]').forEach((node) => {
       const loc = node.getAttribute('data-loc') ?? '';
-      const cfg = this._cardModAt(loc);
+      const cfg = this._styleAt(loc);
       const sig = cfg ? JSON.stringify(cfg) : '';
-      if (this._elementCardModSigs.get(node) === sig) {
+      if (this._elementStyleSigs.get(node) === sig) {
         return;
       }
-      this._elementCardModSigs.set(node, sig);
-      if (cfg) {
-        applyCardMod(node, this._scopeElementCardMod(cfg, loc), `dashboard-sidebar:${loc}`);
+      if (!cfg) {
+        this._elementStyleSigs.set(node, sig);
+        return;
+      }
+      const engine = applyStyles(
+        node,
+        this._scopeElementStyle(cfg, `[data-loc="${loc.replace(/["\\]/g, '\\$&')}"]`),
+        `dashboard-sidebar:${loc}`,
+      );
+      if (engine !== null) {
+        this._elementStyleSigs.set(node, sig);
       }
     });
+    this._applyFooterStyle();
   }
 
   /**
-   * Scopes a per-element `card_mod` so its selectors only affect this element
-   * (and its subtree), by rewriting the `style` CSS to key every rule to the
-   * element's unique `data-loc`. A bare selector such as `.dashboard-sidebar-title`
+   * Applies the footer's own style config (`uix`, else `card_mod`) to the
+   * footer row, scoped to it like any element's. Same once-per-config,
+   * retry-until-applied rules as the per-element styles.
+   */
+  private _applyFooterStyle(): void {
+    const node = (this.renderRoot as ParentNode).querySelector<HTMLElement>(
+      `[data-style-loc="${FOOTER_STYLE_LOC}"]`,
+    );
+    if (!node) {
+      return;
+    }
+    const cfg = styleConfig(this._config?.footer);
+    const sig = cfg ? JSON.stringify(cfg) : '';
+    if (this._elementStyleSigs.get(node) === sig) {
+      return;
+    }
+    if (!cfg) {
+      this._elementStyleSigs.set(node, sig);
+      return;
+    }
+    const scoped = this._scopeElementStyle(cfg, `[data-style-loc="${FOOTER_STYLE_LOC}"]`);
+    if (applyStyles(node, scoped, `dashboard-sidebar:${FOOTER_STYLE_LOC}`) !== null) {
+      this._elementStyleSigs.set(node, sig);
+    }
+  }
+
+  /**
+   * Scopes a per-element style config so its selectors only affect this element
+   * (and its subtree), by rewriting the `style` CSS to key every rule to `sel`,
+   * the element's unique `data-loc` (or the footer's `data-style-loc`). A bare selector such as `.dashboard-sidebar-title`
    * then matches only this element, so styling one title no longer bleeds onto
    * every other title. Empty / non-string styles (the object form) and CSS that
    * fails to parse are passed through unchanged.
    */
-  private _scopeElementCardMod(cfg: Record<string, unknown>, loc: string): Record<string, unknown> {
+  private _scopeElementStyle(cfg: Record<string, unknown>, sel: string): Record<string, unknown> {
     const style = cfg.style;
     if (typeof style !== 'string' || style.trim() === '') {
       return cfg;
     }
-    const sel = `[data-loc="${loc.replace(/["\\]/g, '\\$&')}"]`;
     const scoped = scopeCss(style, sel);
     return scoped === null ? cfg : { ...cfg, style: scoped };
   }
 
   /**
-   * Resolves the `card_mod` config for an element location (`body:1`,
-   * `body:1.0`, `footer:btn:0`), or undefined when none is set.
+   * Resolves the style config (`uix`, else `card_mod`) for an element location
+   * (`body:1`, `body:1.0`, `footer:btn:0`), or undefined when none is set.
    */
-  private _cardModAt(loc: string): Record<string, unknown> | undefined {
+  private _styleAt(loc: string): Record<string, unknown> | undefined {
     const cfg = this._config;
     if (!cfg) {
       return undefined;
     }
     const btn = /^footer:btn:(\d+)$/.exec(loc);
     if (btn) {
-      return cfg.footer?.buttons?.[Number(btn[1])]?.card_mod;
+      return styleConfig(cfg.footer?.buttons?.[Number(btn[1])]);
     }
     const [region, rest] = loc.split(':');
     if ((region !== 'header' && region !== 'body') || rest === undefined) {
@@ -758,9 +839,9 @@ export class DashboardSidebar extends LitElement {
       return undefined;
     }
     if (itemIndex !== undefined) {
-      return block.type === 'category' ? block.items?.[Number(itemIndex)]?.card_mod : undefined;
+      return block.type === 'category' ? styleConfig(block.items?.[Number(itemIndex)]) : undefined;
     }
-    return block.card_mod;
+    return styleConfig(block);
   }
 
   /**
@@ -1243,10 +1324,17 @@ export class DashboardSidebar extends LitElement {
                   this.editMode
                     ? html`<button
                         class="edit-btn dashboard-sidebar-edit"
-                        title="Edit sidebar"
+                        title=${this.hiddenByVisibility ? 'Edit sidebar. Its visibility conditions hide it from you outside edit mode.' : 'Edit sidebar'}
                         @click=${this._openEditor}
                       >
                         <ha-icon icon="mdi:pencil"></ha-icon>
+                        ${
+                          this.hiddenByVisibility
+                            ? html`<span class="hidden-badge"
+                                ><ha-icon icon="mdi:eye-off"></ha-icon
+                              ></span>`
+                            : nothing
+                        }
                       </button>`
                     : nothing
                 }`
@@ -1765,7 +1853,12 @@ export class DashboardSidebar extends LitElement {
       'dashboard-sidebar-footer': true,
       'collapsed-footer': collapsed,
       'no-divider': footer.divider === false,
+      ...hookClassMap(footer.class),
     };
+    // The button row's alignment; a collapsed footer is always centered (CSS).
+    const rowStyle =
+      !collapsed && footer.align ? { 'justify-content': FOOTER_JUSTIFY[footer.align] } : {};
+    const footerId = footer.id || nothing;
 
     if (footer.card !== undefined || footer.markdown !== undefined) {
       const el = collapsed ? undefined : this._cards.get('footer');
@@ -1790,7 +1883,11 @@ export class DashboardSidebar extends LitElement {
         : {};
       const actionable = markdown && this._actionable(mdActions);
       const fill = !markdown && typeof footer.card !== 'string' ? ' card-fill' : '';
-      return html`<div class=${classMap(footerClasses)}>
+      return html`<div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+      >
         <div
           class="content dashboard-sidebar-content${fill}${actionable ? ' clickable' : ''}${this._selClass(loc)}"
           data-loc=${loc}
@@ -1818,7 +1915,7 @@ export class DashboardSidebar extends LitElement {
       const showPopover = (this._footerOpen && anchor) || (pinned && this._pinnedAnchor);
       const popAnchor = this._footerOpen && anchor ? anchor : this._pinnedAnchor;
       return html`
-        <div class=${classMap(footerClasses)}>
+        <div class=${classMap(footerClasses)} id=${footerId} data-style-loc=${FOOTER_STYLE_LOC}>
           ${this._renderDots('row item collapsed-row dashboard-sidebar-item dashboard-sidebar-footer-more')}
           ${showPopover && popAnchor ? this._renderFooterPopover(buttons, popAnchor, 0) : nothing}
         </div>
@@ -1835,7 +1932,13 @@ export class DashboardSidebar extends LitElement {
     const width = (this.preview && this._footerBarWidth) || (this._config?.width ?? 240) - 24;
     const maxFit = Math.max(1, Math.floor((width + 4) / 44)); // 40px button + 4px gap
     if (buttons.length <= maxFit) {
-      return html`<div class=${classMap(footerClasses)} data-container=${container}>
+      return html`<div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+        style=${styleMap(rowStyle)}
+        data-container=${container}
+      >
         ${repeat(
           buttons,
           (btn) => this._keyFor(btn),
@@ -1846,7 +1949,13 @@ export class DashboardSidebar extends LitElement {
     const inline = buttons.slice(0, maxFit - 1);
     const overflow = buttons.slice(maxFit - 1);
     return html`
-      <div class=${classMap(footerClasses)} data-container=${container}>
+      <div
+        class=${classMap(footerClasses)}
+        id=${footerId}
+        data-style-loc=${FOOTER_STYLE_LOC}
+        style=${styleMap(rowStyle)}
+        data-container=${container}
+      >
         ${repeat(
           inline,
           (btn) => this._keyFor(btn),

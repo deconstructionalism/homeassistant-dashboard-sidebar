@@ -124,6 +124,225 @@ describe('validateConfig', () => {
     ).toContain('body[0].card_mod: must be a mapping');
   });
 
+  it('accepts uix on the sidebar, elements, category items, footer buttons and the bar', () => {
+    expect(
+      validateConfig({
+        uix: { style: ':host { color: red; }' },
+        body: [
+          {
+            type: 'item',
+            title: 'i',
+            tap_action: { action: 'toggle' },
+            uix: { style: '.x { color: blue; }' },
+          },
+          {
+            type: 'category',
+            title: 'c',
+            items: [{ title: 'k', tap_action: { action: 'toggle' }, uix: { style: 'x' } }],
+          },
+        ],
+        footer: {
+          buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' }, uix: { style: 'x' } }],
+        },
+        mobile: { mode: 'mirror', uix: { style: 'x' } },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('accepts uix and card_mod together (uix wins at render time)', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        uix: { style: 'a' },
+        card_mod: { style: 'b' },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects a non-mapping uix wherever it appears', () => {
+    expect(
+      validateConfig({ ...valid(), uix: 'nope' } as unknown as DashboardSidebarConfig),
+    ).toContain('uix: must be a mapping');
+    expect(
+      validateConfig({
+        body: [{ type: 'item', title: 'i', tap_action: { action: 'toggle' }, uix: ['x'] }],
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('body[0].uix: must be a mapping');
+    expect(
+      validateConfig({
+        ...valid(),
+        footer: { buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' }, uix: 3 }] },
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('footer.buttons[0].uix: must be a mapping');
+    expect(
+      validateConfig({
+        ...valid(),
+        mobile: { mode: 'mirror', uix: 'nope' },
+      } as unknown as DashboardSidebarConfig),
+    ).toContain('mobile.uix: must be a mapping');
+  });
+
+  it('accepts align and the styling hooks on the footer and the mobile footer', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        footer: {
+          align: 'center',
+          class: 'foot',
+          id: 'f1',
+          uix: { style: 'x' },
+          card_mod: { style: 'y' },
+          buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' } }],
+        },
+        mobile: {
+          mode: 'custom',
+          items: [{ type: 'item', title: 'A', tap_action: { action: 'toggle' } }],
+          footer: {
+            align: 'right',
+            uix: { style: 'x' },
+            buttons: [{ icon: 'mdi:cog', tap_action: { action: 'toggle' } }],
+          },
+        },
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects a bad footer align or hook', () => {
+    const errs = validateConfig({
+      ...valid(),
+      footer: { align: 'middle', class: 3, uix: 'x', buttons: [] },
+    } as unknown as DashboardSidebarConfig);
+    expect(errs.some((e) => e.startsWith('footer.align'))).toBe(true);
+    expect(errs).toContain('footer.class: must be a string');
+    expect(errs).toContain('footer.uix: must be a mapping');
+  });
+
+  it('accepts a visibility list in Home Assistant condition shapes, and animate', () => {
+    expect(
+      validateConfig({
+        ...valid(),
+        animate: false,
+        visibility: [
+          { condition: 'user', users: ['abc123'] },
+          { condition: 'screen', media_query: '(min-width: 1024px)' },
+          { condition: 'state', entity: 'input_boolean.kiosk', state: 'off' },
+          { condition: 'state', entity: 'light.x', state_not: ['on', 'unavailable'] },
+          { condition: 'numeric_state', entity: 'sensor.t', above: 5 },
+          {
+            condition: 'or',
+            conditions: [
+              { condition: 'user', users: ['a'] },
+              { condition: 'not', conditions: [{ condition: 'screen', media_query: '(x)' }] },
+            ],
+          },
+        ],
+      } as unknown as DashboardSidebarConfig),
+    ).toHaveLength(0);
+  });
+
+  it('rejects malformed visibility conditions with a pointed message', () => {
+    const errs = (visibility: unknown) =>
+      validateConfig({ ...valid(), visibility } as unknown as DashboardSidebarConfig);
+    expect(errs({ condition: 'user' })).toContain('visibility: must be a list of conditions');
+    expect(errs(['x'])).toContain('visibility[0]: must be a mapping');
+    expect(errs([{ condition: 'location' }])).toContain(
+      'visibility[0]: needs locations, target or away',
+    );
+    expect(errs([{ condition: 'user', users: 'abc' }])).toContain(
+      'visibility[0].users: must be a list of user ids',
+    );
+    expect(errs([{ condition: 'screen' }])).toContain(
+      'visibility[0].media_query: needs a CSS media query',
+    );
+    expect(errs([{ condition: 'state', entity: 'light.x' }])).toContain(
+      'visibility[0]: needs state or state_not',
+    );
+    expect(errs([{ condition: 'numeric_state', entity: 'sensor.t', above: true }])).toContain(
+      'visibility[0].above: must be a number or an entity id',
+    );
+    expect(errs([{ condition: 'and', conditions: [{ condition: 'screen' }] }])).toContain(
+      'visibility[0].conditions[0].media_query: needs a CSS media query',
+    );
+    expect(errs([{ condition: 'not' }])).toContain(
+      'visibility[0].conditions: needs a list of conditions',
+    );
+  });
+
+  it('accepts everything a card Visibility tab can hold', () => {
+    const errs = (visibility: unknown) =>
+      validateConfig({ ...valid(), visibility } as unknown as DashboardSidebarConfig);
+    expect(
+      errs([
+        { condition: 'user', users: ['u1'] },
+        { condition: 'screen', media_query: '(min-width: 1024px)' },
+        { condition: 'time', after: '08:00', before: '22:00:00', weekdays: ['mon', 'fri'] },
+        { condition: 'location', locations: ['home'] },
+        { condition: 'location', target: { entity_id: 'zone.work' }, match_mode: 'active_zone' },
+        { condition: 'location', away: true },
+        { condition: 'state', entity: 'light.a', attribute: 'mode', state: 'input_select.m' },
+        { condition: 'state', entity_id: ['light.a', 'light.b'], state: 'on', for: '00:05:00' },
+        { condition: 'numeric_state', entity: 'sensor.t', above: 'input_number.lo', below: 30 },
+        { condition: 'template', value_template: '{{ true }}' },
+        { condition: 'sun', after: 'sunset', after_offset: '-01:00:00' },
+        { condition: 'zone', entity_id: 'person.cron', zone: 'zone.home' },
+        { condition: 'device', device_id: 'd1', domain: 'light', type: 'is_on', entity_id: 'x' },
+        { condition: 'view_columns', min: 2 },
+        { condition: 'some_integration.thing', anything: 1 },
+        { condition: 'or', conditions: { condition: 'user', users: ['u2'] } },
+        { condition: 'not', conditions: [{ condition: 'sun', before: 'sunrise' }], enabled: false },
+        { entity: 'light.a', state: 'on' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('checks the fields each condition type needs', () => {
+    const errs = (c: unknown) =>
+      validateConfig({ ...valid(), visibility: [c] } as unknown as DashboardSidebarConfig);
+    expect(errs({ condition: 'time' })).toContain('visibility[0]: needs after, before or weekdays');
+    expect(errs({ condition: 'time', after: '25:00' })).toContain(
+      'visibility[0].after: must be a time like 08:00 or 08:00:00',
+    );
+    expect(errs({ condition: 'time', after: '08:00', before: '08:00' })).toContain(
+      'visibility[0]: after and before must differ',
+    );
+    expect(errs({ condition: 'time', weekdays: ['monday'] })[0]).toMatch(
+      /^visibility\[0\]\.weekdays/,
+    );
+    expect(
+      errs({ condition: 'location', locations: ['home'], target: { entity_id: 'zone.a' } }),
+    ).toContain('visibility[0]: use either locations or target, not both');
+    expect(errs({ condition: 'location', target: 'zone.home' })).toContain(
+      'visibility[0].target: must map entity_id, device_id, area_id, floor_id or label_id to ids',
+    );
+    expect(errs({ condition: 'template' })).toContain(
+      'visibility[0].value_template: needs a template',
+    );
+    expect(errs({ condition: 'sun', after: 'noon' })).toContain(
+      'visibility[0].after: must be sunrise or sunset',
+    );
+    expect(errs({ condition: 'zone', entity_id: 'person.a' })).toContain(
+      'visibility[0].zone: needs a zone',
+    );
+    expect(errs({ condition: 'device', device_id: 'd1' })).toContain(
+      'visibility[0].domain: needs the device integration',
+    );
+    expect(errs({ condition: 'state', entity_id: '', state: 'on' })).toContain(
+      'visibility[0].entity_id: needs an entity id',
+    );
+    expect(errs({ entity: 'light.a' })).toContain('visibility[0]: needs state or state_not');
+    expect(errs({ condition: 'user', users: [], enabled: 3 })).toContain(
+      'visibility[0].enabled: must be true, false or a template',
+    );
+  });
+
+  it('rejects a non-boolean animate', () => {
+    expect(
+      validateConfig({ ...valid(), animate: 'no' } as unknown as DashboardSidebarConfig).some((e) =>
+        e.startsWith('animate'),
+      ),
+    ).toBe(true);
+  });
+
   it('validates title, clock, and date blocks', () => {
     expect(
       validateConfig({ header: [{ type: 'title' }] } as unknown as DashboardSidebarConfig),

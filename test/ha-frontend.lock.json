@@ -1,0 +1,24 @@
+{
+  "repo": "home-assistant/frontend",
+  "tag": "20261028.5",
+  "commit": "e32bc0696ebefde323f5b791269ad0c57f3f99d9",
+  "files": {
+    "src/panels/lovelace/common/validate-condition.ts": "55adf3b6bcfce587ee2e4f07e8899c8f90e48dcce7d42cec4708683215588baf",
+    "src/common/condition/translate.ts": "de0250a02b0b9425576424294b00b746ea2565c20db14c6519f6e08bf19dbca9",
+    "src/common/condition/split.ts": "c2c3fa825caba2da266a0f8a467dd2ebbabe78a3c40ead366f5db47bd6c5071d",
+    "src/common/condition/evaluate-locally.ts": "887b70e8c98e8b56935dfeba8a8f548922f1fc79e9aae363389db8650b2b77c3",
+    "src/common/datetime/check_time.ts": "019e14a951ace258ad712bb8581310495b5ac2e9659a19c76b2480f36f456240",
+    "src/common/datetime/weekday.ts": "047fe978924e8ad40ad247b96f118b6e8937867447b7ebf5e5ab3040100e0cae",
+    "src/common/array/ensure-array.ts": "4f2c8035ab74cf0bb76ed9b060a816f72014ee30a5a5a5edc2a904834c2d1075",
+    "src/common/entity/valid_entity_id.ts": "9f3ab764076440b208d0b82ff810e0d96ea5dda0d5ec536e8b04d637bc8a796e",
+    "src/common/entity/compute_domain.ts": "3965f329c2388e0ade3980e5ea63b488c500b825e34a83c80d16c9551edeff94",
+    "src/common/entity/compute_state_domain.ts": "c1a57cae5fd475c85e7fa84c34ccfb4d885667fe0f8eb5b879c39be909a99f90",
+    "src/data/selector.ts": "439dfd1e57784e4d2930856a916046ab2a05e8e7bc0081afeaa7a51c6cfee45b",
+    "src/data/device/device_registry.ts": "5542121bac11cb57d162b5096cdaff4f8818f7694f299dbe569cff2153c2766a",
+    "src/data/person.ts": "8f1827b1b4bc219a995e041aa6f0152e12333d679e9368081b66b4cf01149f1e",
+    "src/data/automation.ts": "782340a53dddb57c6233a938584c52468bf2336cbb0dc47bd82b3bcd55ab470b",
+    "src/data/entity/entity.ts": "8b3531fdcf3c2234fd1709f0a23bcc98c6af67a9db5550ed05bc1165845446a5",
+    "src/data/translation.ts": "df1b54754227498aa473376f7038e6ffa0bd13deb37a47cec5d8e2317177a53d",
+    "LICENSE.md": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  }
+}

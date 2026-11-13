@@ -10,7 +10,7 @@ dashboard_sidebar:
     radial-gradient(90% 55% at 110% 105%, rgba(34,211,238,0.40) 0%, rgba(34,211,238,0) 55%),
     linear-gradient(165deg, #0a0f1f 0%, #141a35 48%, #1d1236 100%)
 
-  card_mod:
+  uix:
     style: |
       .dashboard-sidebar-root {
         border-right: 1px solid rgba(148,163,184,0.18);

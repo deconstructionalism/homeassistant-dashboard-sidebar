@@ -11,7 +11,7 @@ import { css } from 'lit';
  * styles that rail styles this one the same way; each falls back to the
  * general card/text tokens and finally to the built-in value, so a theme that
  * defines neither renders exactly as before. Overriding a `--dashboard-sidebar-*` variable
- * from card-mod restyles every element that uses it at once.
+ * from UIX (or card-mod) restyles every element that uses it at once.
  */
 export const baseStyles = css`
   :host {
@@ -270,6 +270,34 @@ export const baseStyles = css`
     --mdc-icon-size: 16px;
   }
 
+  /* Editing a sidebar its visibility hides from you: dimmed, with an eye-off
+     badge on the edit button (which stays fully usable). */
+  :host([hidden-by-visibility]) .region-header,
+  :host([hidden-by-visibility]) .region-body,
+  :host([hidden-by-visibility]) .dashboard-sidebar-footer {
+    opacity: 0.45;
+  }
+
+  .hidden-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--warning-color, #ffa600);
+    color: var(--text-primary-color, #fff);
+  }
+
+  .hidden-badge ha-icon {
+    --mdc-icon-size: 10px;
+
+    color: inherit;
+  }
+
   ha-icon {
     color: var(--dashboard-sidebar-icon-color);
   }
@@ -293,5 +321,23 @@ export const baseStyles = css`
      out of place. */
   .tooltip.above {
     transform: none;
+  }
+
+  /* animate: false turns every sidebar animation off, and so does the
+     system's reduce-motion setting. */
+  :host([data-no-animate]) *,
+  :host([data-no-animate]) *::before,
+  :host([data-no-animate]) *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 `;

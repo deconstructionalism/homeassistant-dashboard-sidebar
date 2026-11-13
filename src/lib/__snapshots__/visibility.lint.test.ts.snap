@@ -1,0 +1,3507 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`visibility linting and evaluation > alias and note kept for the server 1`] = `
+{
+  "conditions": [
+    {
+      "alias": "Lamp",
+      "condition": "state",
+      "entity": "light.kitchen",
+      "note": "n",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "alias": "Lamp",
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "note": "n",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > all-server group sent whole 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "condition": "not",
+          "conditions": [
+            {
+              "after": "sunset",
+              "condition": "sun",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "condition": "not",
+          "conditions": [
+            {
+              "condition": "and",
+              "conditions": [
+                {
+                  "after": "sunset",
+                  "condition": "sun",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > and: F,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > and: F,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > and: T,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > and: T,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > and: empty list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > and: false with server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > and: no list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].conditions: needs a list of conditions",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > and: only child turned off 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": false,
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > device 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "device",
+      "device_id": "d1",
+      "domain": "light",
+      "type": "is_on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "device",
+      "device_id": "d1",
+      "domain": "light",
+      "type": "is_on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > device: incomplete 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "device",
+      "device_id": "d1",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].domain: needs the device integration",
+    "visibility[0].type: needs a condition type",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "device",
+      "device_id": "d1",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > integration condition 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "some_integration.thing",
+      "option": 1,
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "some_integration.thing",
+      "option": 1,
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > location: another zone 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "entity_id": "zone.work",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: away (not away) 1`] = `
+{
+  "conditions": [
+    {
+      "away": true,
+      "condition": "location",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: elsewhere 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "locations": [
+        "Work",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: empty target 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {},
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: home 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "locations": [
+        "home",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: home or away 1`] = `
+{
+  "conditions": [
+    {
+      "away": true,
+      "condition": "location",
+      "locations": [
+        "home",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: home zone, active only 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "match_mode": "active_zone",
+      "target": {
+        "entity_id": [
+          "zone.home",
+        ],
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: nothing 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0]: needs locations, target or away",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: places and target 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "locations": [
+        "Work",
+      ],
+      "target": {
+        "entity_id": "zone.home",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: use either locations or target, not both",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: target not a mapping 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": "zone.home",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0].target: must map entity_id, device_id, area_id, floor_id or label_id to ids",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone by area 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "area_id": "den",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone by floor 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "floor_id": "up",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone by labelled device (no children) 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "label_id": "zones",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone by parent device 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "device_id": "hub",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone, active only 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "match_mode": "active_zone",
+      "target": {
+        "entity_id": "zone.block",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zone, any 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "entity_id": "zone.block",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zones by label 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "label_id": "mine",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > location: zones by label, less one 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "location",
+      "target": {
+        "exclude": {
+          "entity_id": [
+            "zone.home",
+            "zone.block",
+          ],
+        },
+        "label_id": "mine",
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > mixed group nested 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [
+            {
+              "condition": "template",
+              "value_template": "{{ x }}",
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u1",
+              ],
+            },
+          ],
+        },
+        {
+          "condition": "not",
+          "conditions": [
+            {
+              "after": "sunset",
+              "condition": "sun",
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+    {
+      "after": "sunset",
+      "condition": "sun",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > nested: and(or(T, F), or(F, F)) 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "condition": "user",
+              "users": [
+                "u1",
+              ],
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+          ],
+        },
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > nested: not(or(F, F)) 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > nested: not(or(F, T)) 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u1",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > nested: or(F, and(T, not(F))) 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "and",
+          "conditions": [
+            {
+              "condition": "user",
+              "users": [
+                "u1",
+              ],
+            },
+            {
+              "condition": "not",
+              "conditions": [
+                {
+                  "condition": "user",
+                  "users": [
+                    "u2",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > nested: three deep 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "or",
+          "conditions": [
+            {
+              "condition": "not",
+              "conditions": [
+                {
+                  "condition": "user",
+                  "users": [
+                    "u2",
+                  ],
+                },
+              ],
+            },
+            {
+              "condition": "user",
+              "users": [
+                "u2",
+              ],
+            },
+          ],
+        },
+        {
+          "condition": "not",
+          "conditions": [
+            {
+              "condition": "and",
+              "conditions": [
+                {
+                  "condition": "user",
+                  "users": [
+                    "u1",
+                  ],
+                },
+                {
+                  "condition": "user",
+                  "users": [
+                    "u2",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: F,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: F,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: T,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: T,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: around server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [
+            {
+              "condition": "template",
+              "value_template": "{{ x }}",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > not: around server and false 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > not: empty list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > not: no list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].conditions: needs a list of conditions",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > not: one condition, not a list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": {
+        "condition": "user",
+        "users": [
+          "u2",
+        ],
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > not: only child turned off 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": false,
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric with an infinite bound 1`] = `
+{
+  "conditions": [
+    {
+      "below": -Infinity,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric without bounds goes as a template 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: needs above or below",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ is_number(states("sensor.temp")) }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: above 1`] = `
+{
+  "conditions": [
+    {
+      "above": 20,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": 20,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: above, equal (strict) 1`] = `
+{
+  "conditions": [
+    {
+      "above": 21.5,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "above": 21.5,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: attribute 1`] = `
+{
+  "conditions": [
+    {
+      "above": 19,
+      "attribute": "target",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": 19,
+      "attribute": "target",
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: below 1`] = `
+{
+  "conditions": [
+    {
+      "below": 22,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "below": 22,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: between 1`] = `
+{
+  "conditions": [
+    {
+      "above": 20,
+      "below": 22,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": 20,
+      "below": 22,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: bound names an entity 1`] = `
+{
+  "conditions": [
+    {
+      "below": "input_number.limit",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: empty state reads as 0 1`] = `
+{
+  "conditions": [
+    {
+      "above": -1,
+      "condition": "numeric_state",
+      "entity": "sensor.empty",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": -1,
+      "condition": "numeric_state",
+      "entity_id": "sensor.empty",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: entity_id form 1`] = `
+{
+  "conditions": [
+    {
+      "above": 20,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": 20,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: junk bound ignored 1`] = `
+{
+  "conditions": [
+    {
+      "above": "abc",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ is_number(states("sensor.temp")) }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: lower bound names an entity 1`] = `
+{
+  "conditions": [
+    {
+      "above": "input_number.limit",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: missing entity 1`] = `
+{
+  "conditions": [
+    {
+      "below": 100,
+      "condition": "numeric_state",
+      "entity": "sensor.gone",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "below": 100,
+      "condition": "numeric_state",
+      "entity_id": "sensor.gone",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: no bounds 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: needs above or below",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ is_number(states("sensor.temp")) }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: not a number 1`] = `
+{
+  "conditions": [
+    {
+      "above": 0,
+      "condition": "numeric_state",
+      "entity": "sensor.text",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "above": 0,
+      "condition": "numeric_state",
+      "entity_id": "sensor.text",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: null attribute reads as 0 1`] = `
+{
+  "conditions": [
+    {
+      "above": -1,
+      "attribute": "nothing",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": -1,
+      "attribute": "nothing",
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: numeric text bound 1`] = `
+{
+  "conditions": [
+    {
+      "above": "20",
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "above": 20,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > numeric: outside 1`] = `
+{
+  "conditions": [
+    {
+      "above": 22,
+      "below": 30,
+      "condition": "numeric_state",
+      "entity": "sensor.temp",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "above": 22,
+      "below": 30,
+      "condition": "numeric_state",
+      "entity_id": "sensor.temp",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > or: F,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: F,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: T,F 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: T,T 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: empty list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "or",
+      "conditions": [],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > or: false with server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > or: no list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].conditions: needs a list of conditions",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > or: one condition, not a list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": {
+        "condition": "user",
+        "users": [
+          "u1",
+        ],
+      },
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: only child turned off 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": false,
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > or: true with server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > or: turned-off true and a false 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": false,
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > screen: does not match 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "screen",
+      "media_query": "(max-width: 1px)",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > screen: empty query 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "screen",
+      "media_query": "",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0].media_query: needs a CSS media query",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > screen: matches 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "screen",
+      "media_query": "(min-width: 1px)",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > screen: no query 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "screen",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0].media_query: needs a CSS media query",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > server alone 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > server and a false 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+    {
+      "condition": "user",
+      "users": [
+        "u2",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > server and a true 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+    {
+      "condition": "user",
+      "users": [
+        "u1",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > server siblings at top 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+    {
+      "after": "sunset",
+      "condition": "sun",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "after": "sunset",
+          "condition": "sun",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > server siblings under or 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "after": "sunset",
+          "condition": "sun",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+        {
+          "after": "sunset",
+          "condition": "sun",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > server turned off 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u1",
+      ],
+    },
+    {
+      "condition": "template",
+      "enabled": false,
+      "value_template": "{{ x }}",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state goes to the server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "on",
+    },
+    {
+      "condition": "template",
+      "value_template": "{{ x }}",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "light.kitchen",
+          "state": "on",
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ x }}",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: a number value 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "sensor.five",
+      "state": 5,
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "sensor.five",
+      "state": 5,
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: any of 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": [
+        "off",
+        "on",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": [
+        "off",
+        "on",
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: attribute as a number 1`] = `
+{
+  "conditions": [
+    {
+      "attribute": "brightness",
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": 128,
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state: attribute as text 1`] = `
+{
+  "conditions": [
+    {
+      "attribute": "brightness",
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "128",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state: both, state wins 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "on",
+      "state_not": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: entity_id form 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: entity_id form, for 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "for": "00:05:00",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "for": "00:05:00",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: is 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: is not 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "off",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "off",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: legacy shape 1`] = `
+{
+  "conditions": [
+    {
+      "entity": "light.kitchen",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.kitchen",
+      "state": "on",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: legacy shape, state_not 1`] = `
+{
+  "conditions": [
+    {
+      "entity": "light.hall",
+      "state_not": "off",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "light.hall",
+          "state": "off",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: missing attribute is unknown 1`] = `
+{
+  "conditions": [
+    {
+      "attribute": "nope",
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "unknown",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state: missing entity is unknown 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.gone",
+      "state": "unknown",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "state",
+      "entity_id": "light.gone",
+      "state": "unknown",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: missing entity, state_not 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.gone",
+      "state_not": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "light.gone",
+          "state": "on",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: no entity 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "state": "on",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].entity: needs an entity id",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: no value 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: needs state or state_not",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "and",
+          "conditions": [],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: state_not 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state_not": "off",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "light.kitchen",
+          "state": "off",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: state_not list 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state_not": [
+        "on",
+        "idle",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "light.kitchen",
+          "state": [
+            "on",
+            "idle",
+          ],
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > state: value names a missing entity 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "input_select.gone",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state: value names an entity 1`] = `
+{
+  "conditions": [
+    {
+      "attribute": "mode",
+      "condition": "state",
+      "entity": "light.kitchen",
+      "state": "input_select.mode",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > state_not goes to the server 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "state",
+          "entity": "light.hall",
+          "state_not": "on",
+        },
+        {
+          "after": "sunset",
+          "condition": "sun",
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "not",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "light.hall",
+              "state": "on",
+            },
+          ],
+        },
+        {
+          "after": "sunset",
+          "condition": "sun",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > sun: after sunset 1`] = `
+{
+  "conditions": [
+    {
+      "after": "sunset",
+      "after_offset": "-01:00:00",
+      "condition": "sun",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "after": "sunset",
+      "after_offset": "-01:00:00",
+      "condition": "sun",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > sun: bad value 1`] = `
+{
+  "conditions": [
+    {
+      "after": "noon",
+      "condition": "sun",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].after: must be sunrise or sunset",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "after": "noon",
+      "condition": "sun",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > sun: nothing 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "sun",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: needs after or before",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "sun",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > template 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+      "value_template": "{{ true }}",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+      "value_template": "{{ true }}",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > template: empty 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "template",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].value_template: needs a template",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "template",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > templated enabled 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "enabled": "{{ true }}",
+      "users": [
+        "u1",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": "unknown",
+  "ifHomeAssistantSaysTrue": "unknown",
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > templated enabled inside and 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "and",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": "{{ x }}",
+          "users": [
+            "u1",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": "unknown",
+  "ifHomeAssistantSaysTrue": "unknown",
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > templated enabled inside or with true 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "enabled": "{{ x }}",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: after, exactly now 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:30",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: after, not yet 1`] = `
+{
+  "conditions": [
+    {
+      "after": "23:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: after, passed 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: after, with seconds 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:29:59",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: before, ahead 1`] = `
+{
+  "conditions": [
+    {
+      "before": "23:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: before, exactly now (inclusive) 1`] = `
+{
+  "conditions": [
+    {
+      "before": "22:30",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: before, just passed 1`] = `
+{
+  "conditions": [
+    {
+      "before": "22:29:59",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: no fields 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: needs after, before or weekdays",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: not a time 1`] = `
+{
+  "conditions": [
+    {
+      "after": "25:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0].after: must be a time like 08:00 or 08:00:00",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: other days 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "time",
+      "weekdays": [
+        "mon",
+        "fri",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: overnight starting tomorrow 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:00",
+      "before": "06:00",
+      "condition": "time",
+      "weekdays": [
+        "fri",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: overnight, inside 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:00",
+      "before": "06:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: overnight, outside 1`] = `
+{
+  "conditions": [
+    {
+      "after": "23:00",
+      "before": "06:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: same time both ends 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:30",
+      "before": "22:30",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0]: after and before must differ",
+  ],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: today 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "time",
+      "weekdays": [
+        "thu",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: today in the window 1`] = `
+{
+  "conditions": [
+    {
+      "after": "22:00",
+      "condition": "time",
+      "weekdays": [
+        "thu",
+        "fri",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: window, inside 1`] = `
+{
+  "conditions": [
+    {
+      "after": "08:00",
+      "before": "23:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > time: window, outside 1`] = `
+{
+  "conditions": [
+    {
+      "after": "08:00",
+      "before": "22:00",
+      "condition": "time",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > top level list is and 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u1",
+      ],
+    },
+    {
+      "condition": "or",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+        {
+          "condition": "user",
+          "users": [
+            "u1",
+          ],
+        },
+      ],
+    },
+    {
+      "condition": "not",
+      "conditions": [
+        {
+          "condition": "user",
+          "users": [
+            "u2",
+          ],
+        },
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > top: turned-off false 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u1",
+      ],
+    },
+    {
+      "condition": "user",
+      "enabled": false,
+      "users": [
+        "u2",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > turned off 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "enabled": false,
+      "users": [
+        "u2",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > user: me 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u1",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > user: me among others 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u2",
+        "u1",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > user: no users key 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [
+    "visibility[0].users: must be a list of user ids",
+  ],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > user: nobody chosen 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > user: someone else 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "user",
+      "users": [
+        "u2",
+      ],
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": false,
+  "lint": [],
+  "local": false,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > view_columns 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "view_columns",
+      "min": 2,
+    },
+  ],
+  "ifHomeAssistantSaysFalse": true,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": true,
+  "sentToHomeAssistant": [],
+}
+`;
+
+exports[`visibility linting and evaluation > zone 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "zone",
+      "entity_id": "person.cron",
+      "zone": "zone.home",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "zone",
+      "entity_id": "person.cron",
+      "zone": "zone.home",
+    },
+  ],
+}
+`;
+
+exports[`visibility linting and evaluation > zone: no zone 1`] = `
+{
+  "conditions": [
+    {
+      "condition": "zone",
+      "entity_id": "person.cron",
+    },
+  ],
+  "ifHomeAssistantSaysFalse": false,
+  "ifHomeAssistantSaysTrue": true,
+  "lint": [
+    "visibility[0].zone: needs a zone",
+  ],
+  "local": "unknown",
+  "sentToHomeAssistant": [
+    {
+      "condition": "zone",
+      "entity_id": "person.cron",
+    },
+  ],
+}
+`;

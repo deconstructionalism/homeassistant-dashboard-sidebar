@@ -922,12 +922,12 @@ export const editorStyles = css`
     color: var(--primary-color, #03a9f4);
   }
 
-  /* The card-mod install prompt shown when the integration is absent. */
-  .card-mod-missing .field-desc {
+  /* The install prompt shown when neither UIX nor card-mod is installed. */
+  .styling-missing .field-desc {
     opacity: 0.8;
   }
 
-  /* Collapsed reference of targetable CSS classes under the Card Mod field. */
+  /* Collapsed reference of targetable CSS classes under the Styles field. */
   .class-ref-list {
     display: flex;
     flex-direction: column;
@@ -1485,5 +1485,152 @@ export const editorStyles = css`
   .add-menu-item.submenu-item {
     padding-left: 26px;
     opacity: 0.85;
+  }
+
+  /* Visibility tab: the condition list stands where a preview would, a fixed
+     column of rows; groups indent their children under a guide line, the
+     way categories do in the preview. */
+  .vis-pane {
+    flex: 0 0 min(340px, 45%);
+  }
+
+  .vis-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .vis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .vis-row:hover {
+    background: var(--secondary-background-color, rgb(0 0 0 / 6%));
+  }
+
+  .vis-row:focus-visible,
+  .vis-row.selected {
+    box-shadow: inset 0 0 0 2px var(--primary-color, #03a9f4);
+  }
+
+  .vis-row.off .vis-text,
+  .vis-row.off .vis-icon {
+    opacity: 0.45;
+  }
+
+  .vis-icon {
+    --mdc-icon-size: 20px;
+
+    flex: 0 0 auto;
+    opacity: 0.75;
+  }
+
+  .vis-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .vis-type {
+    font-size: 0.75rem;
+    opacity: 0.6;
+  }
+
+  .vis-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vis-status {
+    --mdc-icon-size: 18px;
+
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+  }
+
+  .vis-status.yes {
+    color: var(--success-color, #43a047);
+  }
+
+  .vis-status.no,
+  .vis-status.off,
+  .vis-status.server {
+    opacity: 0.5;
+  }
+
+  .vis-status.needs {
+    color: var(--warning-color, #ffa600);
+  }
+
+  .vis-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .vis-node.sortable-ghost > .vis-row {
+    opacity: 0.4;
+  }
+
+  .vis-children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-left: 19px;
+    padding-left: 8px;
+    border-left: 1px solid var(--divider-color, rgb(0 0 0 / 15%));
+  }
+
+  /* An empty group still takes a dropped condition. */
+  .vis-children .vis-list {
+    min-height: 12px;
+  }
+
+  /* Time picker: hour : minute : second dropdowns, sized to their values. */
+  .vis-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .field .vis-time select {
+    width: auto;
+    min-width: 72px;
+  }
+
+  .vis-time-sep {
+    opacity: 0.6;
+  }
+
+  .field.invalid .vis-time select {
+    border-color: var(--error-color, #db4437);
+  }
+
+  .vis-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 2px 0;
+  }
+
+  .vis-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  @media (width < 640px) {
+    .vis-pane {
+      flex: 0 0 auto;
+    }
   }
 `;

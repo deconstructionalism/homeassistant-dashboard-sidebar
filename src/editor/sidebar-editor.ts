@@ -9,11 +9,14 @@ import type {
   CategoryBlock,
   DashboardSidebarConfig,
   FooterButtonConfig,
+  FooterConfig,
   ItemBlock,
   MobileBarEntry,
   Region,
   SidebarBlock,
 } from '../lib/types';
+import type { VisibilityCondition } from '../lib/visibility';
+import { VisibilityTab } from './visibility-tab';
 import type { DashboardSidebar } from '../dashboard-sidebar';
 import '../dashboard-sidebar';
 import type { DashboardSidebarBar } from '../dashboard-sidebar-bar';
@@ -42,12 +45,12 @@ import {
   actionSections,
   blockFields,
   blockTypeLabel,
-  cardModField,
   checkboxField,
-  cardModInstalled,
   codeField,
   colorField,
   colorTemplateField,
+  stylesField,
+  ALIGN_OPTIONS,
   elementClassRef,
   entityDatalist,
   footerButtonFields,
@@ -60,6 +63,7 @@ import {
   type ValidationCtx,
   validateWidth,
 } from './block-form';
+import { stylingInstalled } from '../lib/styling';
 
 /**
  * The expanded preview frame is capped to this many pixels, and to this
@@ -107,7 +111,7 @@ const TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
   { sel: '.dashboard-sidebar-tooltip', desc: 'Collapsed hover tooltip' },
 ];
 
-/** The stable bar classes card-mod / themes can target, for the Mobile tab. */
+/** The stable bar classes UIX, card-mod and themes can target, for the Mobile tab. */
 const DOCS_REFERENCE_URL =
   'https://deconstructionalism.github.io/homeassistant-dashboard-sidebar/reference/';
 
@@ -126,11 +130,27 @@ const MOBILE_YAML_REF: Array<{ key: string; desc: string }> = [
   { key: '  card:', desc: 'a manual Lovelace card, or' },
   { key: '  markdown:', desc: 'markdown text, with markdown_color and tap_action' },
   { key: '  divider:', desc: 'false to drop the strip top rule' },
+  { key: '  align:', desc: 'left, center or right for the strip buttons' },
+  { key: '  uix:', desc: 'styles for the footer strip, scoped to it' },
   { key: 'position:', desc: 'top or bottom (default bottom)' },
   { key: 'labels:', desc: 'true to show titles under the bar icons' },
   { key: 'background:', desc: "any CSS background (defaults to the sidebar's)" },
-  { key: 'card_mod:', desc: 'card-mod config for the bar' },
+  { key: 'uix:', desc: 'UIX style config for the bar (card-mod renders it too)' },
+  { key: 'card_mod:', desc: "the same under card-mod's key; prefer uix:" },
 ];
+
+/** The footer's row-level settings, which survive a change of footer mode. */
+const FOOTER_ROW_KEYS = ['divider', 'align', 'class', 'id', 'uix', 'card_mod'] as const;
+
+/**
+ * Picks the footer's row-level settings (divider, alignment, styling hooks)
+ * that are set, so switching between a button row, a card and markdown, or
+ * previewing one, keeps them.
+ */
+const footerRowSettings = (footer: FooterConfig | undefined): Partial<FooterConfig> =>
+  Object.fromEntries(
+    FOOTER_ROW_KEYS.filter((k) => footer?.[k] !== undefined).map((k) => [k, footer?.[k]]),
+  );
 
 const BAR_TARGETABLE_CLASSES: Array<{ sel: string; desc: string }> = [
   { sel: 'dashboard-sidebar-bar', desc: 'The mobile bar element' },
@@ -175,8 +195,12 @@ const ALL_TYPES: BlockType[] = [
 ];
 
 /** The modal tabs, in order. The `body` region is labelled "Body". */
-const TABS: Array<{ id: 'settings' | 'header' | 'body' | 'footer' | 'mobile'; label: string }> = [
+/** The modal's tabs. */
+type EditorTab = 'settings' | 'visibility' | 'header' | 'body' | 'footer' | 'mobile';
+
+const TABS: Array<{ id: EditorTab; label: string }> = [
   { id: 'settings', label: 'Settings' },
+  { id: 'visibility', label: 'Visibility' },
   { id: 'header', label: 'Header' },
   { id: 'body', label: 'Body' },
   { id: 'footer', label: 'Footer' },
@@ -231,7 +255,7 @@ export class DashboardSidebarEditor extends LitElement {
   @property({ attribute: false }) public onDelete?: () => void;
 
   /** The active tab. */
-  @state() private _tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile' = 'settings';
+  @state() private _tab: EditorTab = 'settings';
 
   /** Stable id of the element selected for editing in the preview, or null. */
   @state() private _selected: string | null = null;
@@ -256,6 +280,28 @@ export class DashboardSidebarEditor extends LitElement {
 
   /** Popup-menu open/close state: add, element overflow, and tab options. */
   private _menus = new MenusController(this);
+
+  /** The Visibility tab, which keeps its own selection and menus. */
+  private _visibility = new VisibilityTab(this);
+
+  /** The working copy's visibility conditions, for the Visibility tab. */
+  public get visibilityConditions(): VisibilityCondition[] {
+    return this._working.visibility ?? [];
+  }
+
+  /** Sets the working copy's conditions; none removes the key. */
+  public setVisibilityConditions(list: VisibilityCondition[]): void {
+    this._patchConfig({ visibility: list.length > 0 ? list : undefined });
+  }
+
+  /** The editor's YAML editor, for the Visibility tab. */
+  public yamlEditor(
+    value: unknown,
+    onChange: (value: unknown) => void,
+    validate: (parsed: unknown) => string[],
+  ): TemplateResult {
+    return this._yamlEditor(value, onChange, validate);
+  }
 
   /** Id of the element being edited as YAML, or null when editing with the UI. */
   @state() private _yamlEditId: string | null = null;
@@ -351,6 +397,7 @@ export class DashboardSidebarEditor extends LitElement {
       this._initialJson = JSON.stringify(this._working);
       this._fieldErrors = {};
       this._selected = null;
+      this._visibility.reset();
       this._confirmingClose = false;
       this._collapsedTabs = new Set();
       this._previewCollapsedCats = new Set();
@@ -1170,7 +1217,7 @@ export class DashboardSidebarEditor extends LitElement {
    * mutually exclusive: buttons, a manual card, or markdown.
    */
   private _setFooterMode(mode: 'buttons' | 'card' | 'markdown'): void {
-    const divider = this._working.footer?.divider;
+    const row = footerRowSettings(this._working.footer);
     // Switching to a button row seeds one starter button so the footer is not
     // left in its empty state.
     const starter = defaultFooterButton();
@@ -1180,7 +1227,7 @@ export class DashboardSidebarEditor extends LitElement {
         : mode === 'markdown'
           ? { markdown: 'Markdown **content**' }
           : { buttons: [starter] };
-    this._working.footer = { ...base, divider };
+    this._working.footer = { ...base, ...row };
     this._footerYaml = false;
     this._selected = mode === 'buttons' ? this._idFor(starter) : this._selected;
     this._touch();
@@ -1246,7 +1293,7 @@ export class DashboardSidebarEditor extends LitElement {
   private _setFooterCard(card: unknown): void {
     this._working.footer = {
       card: card as LovelaceCardConfig,
-      divider: this._working.footer?.divider,
+      ...footerRowSettings(this._working.footer),
     };
     this._touch();
   }
@@ -1306,11 +1353,12 @@ export class DashboardSidebarEditor extends LitElement {
    * Switches tabs, remembering the current tab's selection and restoring the
    * target tab's, and closing any open menus.
    */
-  private _switchTab(tab: 'settings' | 'header' | 'body' | 'footer' | 'mobile'): void {
+  private _switchTab(tab: EditorTab): void {
     if (this._tab === 'header' || this._tab === 'body' || this._tab === 'footer') {
       this._tabSelection[this._tab] = this._selected;
     }
     this._tab = tab;
+    this._yamlError = null;
     this._selected =
       tab === 'header' || tab === 'body' || tab === 'footer'
         ? (this._tabSelection[tab] ?? null)
@@ -1476,6 +1524,8 @@ export class DashboardSidebarEditor extends LitElement {
     switch (this._tab) {
       case 'settings':
         return this._renderSettings();
+      case 'visibility':
+        return this._visibility.render();
       case 'header':
         return this._renderSplit('header');
       case 'body':
@@ -1503,6 +1553,7 @@ export class DashboardSidebarEditor extends LitElement {
       footer: c.footer,
       width: c.width,
       background: c.background,
+      uix: c.uix,
       card_mod: c.card_mod,
     };
     return html`
@@ -1553,6 +1604,13 @@ export class DashboardSidebarEditor extends LitElement {
                     (v) => this._patchConfig({ overlay: v || undefined }),
                     'Float the sidebar over the dashboard instead of pushing the content aside.',
                   )}
+                  ${checkboxField(
+                    'Animate',
+                    c.animate ?? true,
+                    // Store undefined (not true) when on, so the key is dropped.
+                    (v) => this._patchConfig({ animate: v ? undefined : false }),
+                    'Slide when collapsing and expanding. Turn off for kiosks and slow tablets.',
+                  )}
                   <details class="advanced">
                     <summary>Advanced</summary>
                     ${intField(
@@ -1592,8 +1650,8 @@ export class DashboardSidebarEditor extends LitElement {
                       (v) => this._patchConfig({ background: v || undefined }),
                       'Any valid CSS background, including gradients (e.g. linear-gradient(...)).',
                     )}
-                    ${cardModField(c.card_mod, (v) => this._patchConfig({ card_mod: v }))}
-                    ${cardModInstalled() ? this._cardModClassRef() : nothing}
+                    ${stylesField(c, (p) => this._patchConfig(p))}
+                    ${stylingInstalled() ? this._stylesClassRef() : nothing}
                   </details>
                 `
           }
@@ -1666,12 +1724,14 @@ export class DashboardSidebarEditor extends LitElement {
     // there are no references, so the elements are cloned outright.
     const mirrored = resolveBar({ ...this._working, mobile: { ...mobile, mode: 'mirror' } });
     const items = mirrored.slots.map((entry) => structuredClone(entry.element) as MobileBarEntry);
-    // A custom bar derives nothing, so the desktop footer and card_mod have
-    // to come across whole or the switch silently loses them. The footer
-    // copies in every shape it takes: a button strip, a card, or markdown.
+    // A custom bar derives nothing, so the desktop footer and styles (uix and
+    // card_mod alike) have to come across whole or the switch silently loses
+    // them. The footer copies in every shape it takes: a button strip, a card,
+    // or markdown.
     const footer = this._working.footer ? structuredClone(this._working.footer) : undefined;
+    const uix = this._working.uix ? structuredClone(this._working.uix) : undefined;
     const cardMod = this._working.card_mod ? structuredClone(this._working.card_mod) : undefined;
-    this._patchMobile({ mode: 'custom', items, footer, card_mod: cardMod });
+    this._patchMobile({ mode: 'custom', items, footer, uix, card_mod: cardMod });
     this._confirmingCustomSwitch = false;
   }
 
@@ -1772,8 +1832,8 @@ export class DashboardSidebarEditor extends LitElement {
           (v) => this._patchMobile({ background: v || undefined }),
           'Any valid CSS background. Defaults to the sidebar background.',
         )}
-        ${cardModField(m.card_mod, (v) => this._patchMobile({ card_mod: v }))}
-        ${cardModInstalled() ? this._cardModClassRef(BAR_TARGETABLE_CLASSES) : nothing}
+        ${stylesField(m, (p) => this._patchMobile(p))}
+        ${stylingInstalled() ? this._stylesClassRef(BAR_TARGETABLE_CLASSES) : nothing}
       </details>
     `;
   }
@@ -1970,7 +2030,7 @@ export class DashboardSidebarEditor extends LitElement {
    * (and `:host`) that Card Mod / external CSS can target, each with a short
    * description of the element it selects.
    */
-  private _cardModClassRef(classes = TARGETABLE_CLASSES): TemplateResult {
+  private _stylesClassRef(classes = TARGETABLE_CLASSES): TemplateResult {
     return html`<details class="advanced class-ref">
       <summary>Targetable CSS classes</summary>
       <div class="class-ref-list">
@@ -2269,11 +2329,12 @@ export class DashboardSidebarEditor extends LitElement {
    */
   private _renderRegionPreview(region: Region): TemplateResult {
     const blocks = this._working[region] ?? [];
-    // Carry the sidebar-level card_mod through, so an element styled there (a
+    // Carry the sidebar-level styles through, so an element styled there (a
     // title's letter-spacing, say) previews the same in the tab where it is
     // edited as it does in the whole-sidebar preview on Settings.
     return html`${this._previewEl(region, {
       [region]: blocks,
+      uix: this._working.uix,
       card_mod: this._working.card_mod,
     })}`;
   }
@@ -2287,14 +2348,14 @@ export class DashboardSidebarEditor extends LitElement {
     const mode = this._footerMode();
     const dividerShown = footer?.divider ?? true;
     const empty = mode === 'buttons' && (footer?.buttons?.length ?? 0) === 0;
-    const notes = this._renderTabNotes(
+    const notes = html`${this._renderTabNotes(
       'The footer is pinned to the bottom of the sidebar and does not scroll.',
       mode === 'buttons'
         ? 'Collapsed: footer buttons collapse into a single menu button.'
         : 'Collapsed: the footer content is hidden.',
       // No options menu until the footer has content: divider/mode do not apply.
       empty ? nothing : this._renderTabMenuButton(),
-    );
+    )}${this._customBarFooterNote()}`;
     if (empty) {
       return html`
         ${notes}
@@ -2340,12 +2401,13 @@ export class DashboardSidebarEditor extends LitElement {
               (v) => this._setFooterCard(v),
               () => [],
             )}
-            ${this._cardStatus()}
+            ${this._cardStatus()} ${this._renderFooterSettings(false)}
           </div>
           ${this._renderPreview(
             html`${renderGhost('up')}
             ${this._previewEl('footer-card', {
               footer: {
+                ...footerRowSettings(footer),
                 card: footer?.card ?? { type: 'markdown', content: '' },
                 divider: dividerShown,
               },
@@ -2384,11 +2446,13 @@ export class DashboardSidebarEditor extends LitElement {
               undefined,
               this.hass,
             )}
+            ${this._renderFooterSettings(false)}
           </div>
           ${this._renderPreview(
             html`${renderGhost('up')}
             ${this._previewEl('footer-markdown', {
               footer: {
+                ...footerRowSettings(footer),
                 markdown: footer?.markdown ?? '',
                 markdown_color: footer?.markdown_color,
                 divider: dividerShown,
@@ -2403,19 +2467,59 @@ export class DashboardSidebarEditor extends LitElement {
     return html`
       ${notes}
       <div class="split ${this._tabCollapsed ? 'pv-collapsed' : ''}">
-        <div class="editor">${keyed(this._selected, this._renderSelectedForm())}</div>
+        <div class="editor">
+          ${keyed(this._selected, this._renderSelectedForm())} ${this._renderFooterSettings(true)}
+        </div>
         ${this._renderPreview(
           // Faded placeholders above stand in for content so the footer sits
           // pinned to the bottom, as it does live, not in a large empty box.
           html`${renderGhost('up')}
           ${this._previewEl('footer', {
             width: this._working.width,
-            footer: { buttons, divider: footer?.divider ?? true },
+            footer: { ...footerRowSettings(footer), buttons, divider: footer?.divider ?? true },
           })}`,
           true,
         )}
       </div>
     `;
+  }
+
+  /**
+   * A note on the Footer tab when the mobile bar is custom: a custom bar has
+   * its own footer and copies nothing from this one, so edits here (align,
+   * styles, buttons) do not reach it.
+   */
+  private _customBarFooterNote(): TemplateResult | typeof nothing {
+    return mobileMode(this._working) === 'bar' && barMode(this._working) === 'custom'
+      ? this._editorNote(
+          'This is the desktop footer. Your mobile bar is custom, so its footer is set in the Mobile Bar tab.',
+        )
+      : nothing;
+  }
+
+  /**
+   * Renders the Footer Settings section under the Footer tab: the button row's
+   * alignment (a button footer only) and the footer row's own styles, scoped to
+   * the row like any element's.
+   */
+  private _renderFooterSettings(buttons: boolean): TemplateResult {
+    const footer = this._working.footer ?? {};
+    return html`<details class="advanced footer-settings">
+      <summary>Footer Settings</summary>
+      ${
+        buttons
+          ? selectField('Align', footer.align ?? 'left', ALIGN_OPTIONS, (v) =>
+              this._patchFooter({ align: v === 'left' ? undefined : v }),
+            )
+          : nothing
+      }
+      ${stylesField(
+        footer,
+        (p) => this._patchFooter(p),
+        'Scoped to the footer row. Target it directly with .dashboard-sidebar-footer or :scope.',
+      )}
+      ${stylingInstalled() ? elementClassRef('footer') : nothing}
+    </details>`;
   }
 
   /**
@@ -2901,7 +3005,7 @@ export class DashboardSidebarEditor extends LitElement {
             (v) => this._patchBlock(sel.region, sel.index, { card: v }),
             () => [],
           )}
-          ${this._cardStatus()} ${cardModInstalled() ? elementClassRef('card') : nothing}
+          ${this._cardStatus()} ${stylingInstalled() ? elementClassRef('card') : nothing}
           <div class="form-actions">
             ${this._renderAddMenu(this._typeItems(sel.region), 'Add Element After', true)}
             ${deleteBtn}

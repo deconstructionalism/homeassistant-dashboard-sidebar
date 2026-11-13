@@ -26,7 +26,15 @@ jobs:
         run: npm run schema:check
       - name: Config reference up to date
         run: npm run docs:config:check
-      - name: Unit tests
+      # Home Assistant's condition code for the parity tests, fetched at test
+      # time and checked against test/ha-frontend.lock.json (commit + SHA-256
+      # per file). Cached per pin; the hashes are checked either way.
+      - name: Cache Home Assistant condition code
+        uses: actions/cache@v4
+        with:
+          path: test/ha-frontend/.upstream
+          key: ha-frontend-${{ hashFiles('test/ha-frontend.lock.json') }}
+      - name: Unit tests (with parity against Home Assistant; fails rather than skips in CI)
         run: npm run test:unit
       - name: Build
         run: npm run build

@@ -71,10 +71,17 @@ const regionCount = (el: DashboardSidebarEditor, region: string): number => {
 };
 
 describe('<dashboard-sidebar-editor>', () => {
-  it('renders the five tabs', async () => {
+  it('renders the six tabs', async () => {
     const el = await mount(cfg());
     const labels = [...root(el).querySelectorAll('.tab')].map((b) => b.textContent?.trim());
-    expect(labels).to.deep.equal(['Settings', 'Header', 'Body', 'Footer', 'Mobile Bar']);
+    expect(labels).to.deep.equal([
+      'Settings',
+      'Visibility',
+      'Header',
+      'Body',
+      'Footer',
+      'Mobile Bar',
+    ]);
   });
 
   it('shows the settings form in mirror mode and a YAML editor in custom mode', async () => {
@@ -463,12 +470,12 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(saved?.position).to.equal('right');
   });
 
-  it('hides the targetable CSS classes in Settings when card-mod is absent', async () => {
+  it('hides the targetable CSS classes in Settings when no styling engine is installed', async () => {
     const el = await mount(cfg());
     await tab(el, 'Settings');
     expect(root(el).querySelector('.class-ref')).to.not.exist;
-    // The sidebar-level Card Mod field still prompts to install card-mod.
-    expect(root(el).querySelector('.card-mod-missing')).to.exist;
+    // The sidebar-level Styles field still prompts to install UIX or card-mod.
+    expect(root(el).querySelector('.styling-missing')).to.exist;
   });
 
   it('adds a block below the selected element from its form', async () => {
@@ -506,17 +513,17 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(root(el).querySelector('.advanced')).to.exist;
   });
 
-  it('hides the targetable classes on an element when card-mod is absent', async () => {
+  it('hides the targetable classes on an element when no styling engine is installed', async () => {
     const el = await mount(cfg());
     await tab(el, 'Body');
     await clickLoc(el, 'body:0'); // the item
     const form = root(el).querySelector('.form') as HTMLElement;
     expect(form.querySelector('.class-ref'), 'targetable classes hidden').to.not.exist;
     // The install prompt stands in for the whole styling apparatus.
-    expect(form.querySelector('.card-mod-missing')).to.exist;
+    expect(form.querySelector('.styling-missing')).to.exist;
   });
 
-  it('does not render a CSS class field (removed in favor of scoped Card Mod)', async () => {
+  it('does not render a CSS class field (removed in favor of scoped Styles)', async () => {
     const el = await mount(cfg());
     await tab(el, 'Body');
     await clickLoc(el, 'body:0');
@@ -527,15 +534,16 @@ describe('<dashboard-sidebar-editor>', () => {
     expect(cssClass, 'CSS class field removed').to.equal(undefined);
   });
 
-  it('prompts to install card-mod when it is absent (no card_mod field)', async () => {
-    // card-mod is not registered in the test environment.
+  it('prompts to install UIX when no styling engine is installed', async () => {
+    // No styling engine is registered on this test page.
     const el = await mount(cfg());
     await tab(el, 'Body');
     await clickLoc(el, 'body:0');
-    const prompt = root(el).querySelector('.card-mod-missing');
+    const prompt = root(el).querySelector('.styling-missing');
     expect(prompt).to.exist;
-    const link = prompt?.querySelector('a') as HTMLAnchorElement;
-    expect(link?.href).to.contain('lovelace-card-mod');
+    expect(prompt?.textContent).to.contain('Install UIX from HACS');
+    const links = [...(prompt?.querySelectorAll('a') ?? [])].map((a) => a.href);
+    expect(links).to.deep.equal(['https://github.com/Lint-Free-Technology/uix']);
   });
 
   it('reorders a region through a preview reorder event', async () => {
@@ -1014,7 +1022,15 @@ describe('<dashboard-sidebar-editor>', () => {
 describe('<dashboard-sidebar-editor> with card-mod installed', () => {
   before(() => {
     if (!customElements.get('card-mod')) {
-      customElements.define('card-mod', class extends HTMLElement {});
+      // A real engine exposes applyToElement; an element without it is not
+      // treated as installed.
+      customElements.define(
+        'card-mod',
+        class extends HTMLElement {
+          /** card-mod's apply surface (unused by these tests). */
+          static applyToElement(): void {}
+        },
+      );
     }
   });
 

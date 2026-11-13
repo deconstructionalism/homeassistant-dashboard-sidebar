@@ -1,4 +1,5 @@
 import type { ActionConfig, LovelaceCardConfig } from 'custom-card-helpers';
+import type { VisibilityCondition } from './visibility';
 
 /**
  * A string that may contain a Jinja template. When it does it is resolved at
@@ -31,14 +32,20 @@ export type ClockHourFormat = '12h' | '24h';
 export interface BlockCommon {
   /**
    * Extra CSS class(es) added to the rendered root, alongside the built-in
-   * dashboard-sidebar-* classes, so card-mod can target this one element.
+   * dashboard-sidebar-* classes, so UIX or card-mod can target this one element.
    */
   class?: string;
-  /** CSS id set on the rendered root, so card-mod can target this one element. */
+  /** CSS id set on the rendered root, so UIX or card-mod can target this one element. */
   id?: string;
   /**
-   * Per-element card-mod config (a `{ style, class, ... }` object), applied to
-   * this element's rendered root via the card-mod integration when installed.
+   * Per-element style config (a `{ style, class, ... }` object), applied to this
+   * element's rendered root by UIX, or card-mod when UIX is not installed. Wins
+   * over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
    */
   card_mod?: Record<string, unknown>;
 }
@@ -250,11 +257,18 @@ export interface FooterButtonConfig extends BlockCommon {
  * The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered
  * set of icon buttons (with overflow into a dots menu), a single manual card,
  * or a markdown block. A card or markdown footer shows no dots menu and is
- * hidden while collapsed.
+ * hidden while collapsed. Takes the same `class`, `id`, `uix` and `card_mod`
+ * hooks as every element, applied to the footer row.
  */
-export interface FooterConfig {
+export interface FooterConfig extends BlockCommon {
   /** Whether the footer shows its top divider bar. Default true. */
   divider?: boolean;
+  /**
+   * Where the button row sits: left (default), center or right. Applies to a
+   * button footer, in the sidebar and the mobile bar's sheet; a collapsed
+   * sidebar always centers its footer.
+   */
+  align?: Align;
   /** Ordered icon buttons. Mutually exclusive with `card`/`markdown`. */
   buttons?: FooterButtonConfig[];
   /** A manual Lovelace card, replacing the buttons. */
@@ -318,7 +332,15 @@ export interface MobileConfig {
    * `background`, and through it to the theme card background.
    */
   background?: string;
-  /** Passed to the card-mod integration to style the bar. */
+  /**
+   * Style config for the bar, applied by UIX, or card-mod when UIX is not
+   * installed. Wins over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
+   */
   card_mod?: Record<string, unknown>;
 }
 
@@ -361,8 +383,28 @@ export interface DashboardSidebarConfig {
   /** The mobile bar configuration. */
   mobile?: MobileConfig;
   /**
-   * Passed to the card-mod integration (when installed) to style the sidebar.
-   * Target the dashboard-sidebar-* classes on the rendered elements.
+   * Show the sidebar (and its mobile bar) only when every condition holds.
+   * Any condition a card's Visibility tab takes works here, with the same
+   * results: `user`, `screen`, `time`, `location`, `state`, `numeric_state`,
+   * `template`, `sun`, `zone`, `device`, and `and` / `or` / `not`. While the
+   * dashboard is being edited it always shows, so it can still be edited.
+   */
+  visibility?: VisibilityCondition[];
+  /**
+   * Animate the sidebar collapsing and expanding (and the dashboard narrowing
+   * beside it). Default true; false turns every sidebar animation off. The
+   * system's reduce-motion setting turns them off too.
+   */
+  animate?: boolean;
+  /**
+   * Style config for the whole sidebar, applied by UIX, or card-mod when UIX is
+   * not installed. Target the dashboard-sidebar-* classes on the rendered
+   * elements. Wins over `card_mod` when both are set.
+   */
+  uix?: Record<string, unknown>;
+  /**
+   * The same as `uix`, under card-mod's key. Still works; `card_mod` will be
+   * deprecated, so prefer `uix`.
    */
   card_mod?: Record<string, unknown>;
 }

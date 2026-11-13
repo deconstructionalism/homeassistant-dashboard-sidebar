@@ -118,14 +118,17 @@ renders inside the sheet between the folded slots and the footer.
 ## The sheet footer
 
 `mobile.footer` takes the **same shape as the desktop [footer](footer.md)**: a
-button strip, a card, or markdown, with the same `divider` and markdown
-options.
+button strip, a card, or markdown, with the same `divider`, `align`, markdown
+options, and styling hooks (`uix`, `class`, `id`). It is the custom bar's own:
+the desktop footer's settings, its alignment included, don't carry over, which
+the editor's Footer tab points out when the bar is custom.
 
 ```yaml
 mobile:
   mode: custom
   footer:
     divider: true
+    align: center          # left (default), center, or right
     buttons:
       - icon: mdi:cog
         tap_action:
@@ -146,11 +149,11 @@ mobile:
   position: bottom     # top | bottom; which edge the bar docks to
   labels: false        # show element titles under the bar icons
   background: ''       # any CSS background; defaults to the sidebar's
-  card_mod: {}         # card-mod config for the bar itself
+  uix: {}              # styles for the bar itself (UIX, or card-mod)
 ```
 
 These apply in both modes. Every part of the bar carries a
-`dashboard-sidebar-bar-*` class for [card-mod](styling.md#card-mod) targeting,
+`dashboard-sidebar-bar-*` class for [UIX or card-mod](styling.md#uix-and-card-mod) targeting,
 and elements keep their own `class` and `id` hooks.
 
 The full field list is in the [config reference](reference.md#mobileconfig).

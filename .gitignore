@@ -7,3 +7,6 @@ dist/
 
 # MkDocs build output
 site/
+
+# Home Assistant frontend code for the parity tests, fetched on demand (pinned in test/ha-frontend.lock.json)
+test/ha-frontend/

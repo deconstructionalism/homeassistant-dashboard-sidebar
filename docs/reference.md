@@ -23,17 +23,21 @@ The full configuration read from the Lovelace `dashboard_sidebar` key.
 | `body` | `SidebarBlock[]` | no | Blocks in the scrolling region below the header. |
 | `footer` | `FooterConfig` | no | The bottom bar configuration. |
 | `mobile` | `MobileConfig` | no | The mobile bar configuration. |
-| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration (when installed) to style the sidebar. Target the dashboard-sidebar-* classes on the rendered elements. |
+| `visibility` | `VisibilityCondition[]` | no | Show the sidebar (and its mobile bar) only when every condition holds. Any condition a card's Visibility tab takes works here, with the same results: `user`, `screen`, `time`, `location`, `state`, `numeric_state`, `template`, `sun`, `zone`, `device`, and `and` / `or` / `not`. While the dashboard is being edited it always shows, so it can still be edited. |
+| `animate` | `boolean` | no | Animate the sidebar collapsing and expanding (and the dashboard narrowing beside it). Default true; false turns every sidebar animation off. The system's reduce-motion setting turns them off too. |
+| `uix` | `Record<string, unknown>` | no | Style config for the whole sidebar, applied by UIX, or card-mod when UIX is not installed. Target the dashboard-sidebar-* classes on the rendered elements. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
-## Common fields (every block and footer button)
+## Common fields (every block, footer button and the footer)
 
 CSS targeting hooks shared by every block and footer button.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so card-mod can target this one element. |
-| `id` | `string` | no | CSS id set on the rendered root, so card-mod can target this one element. |
-| `card_mod` | `Record<string, unknown>` | no | Per-element card-mod config (a `{ style, class, ... }` object), applied to this element's rendered root via the card-mod integration when installed. |
+| `class` | `string` | no | Extra CSS class(es) added to the rendered root, alongside the built-in dashboard-sidebar-* classes, so UIX or card-mod can target this one element. |
+| `id` | `string` | no | CSS id set on the rendered root, so UIX or card-mod can target this one element. |
+| `uix` | `Record<string, unknown>` | no | Per-element style config (a `{ style, class, ... }` object), applied to this element's rendered root by UIX, or card-mod when UIX is not installed. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
 ## Title block
 
@@ -41,7 +45,7 @@ Set `type: title` to use this block.
 
 A heading block showing templatable text. Hidden while collapsed.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -60,7 +64,7 @@ Set `type: clock` to use this block.
 
 A digital clock block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -80,7 +84,7 @@ Set `type: date` to use this block.
 
 A date block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -100,7 +104,7 @@ Set `type: divider` to use this block.
 
 A horizontal rule block.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -113,7 +117,7 @@ Set `type: item` to use this block.
 
 A single tappable row. Standalone in a region, or nested in a category.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -135,7 +139,7 @@ Set `type: category` to use this block.
 
 A collapsible group of items, nested one level deep.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -155,7 +159,7 @@ Set `type: markdown` to use this block.
 
 A markdown block: Home Assistant markdown with Jinja templating.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -170,7 +174,7 @@ Set `type: card` to use this block.
 
 A manual card block: any Lovelace card, authored as YAML.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -181,11 +185,14 @@ Also accepts the [Common fields (every block and footer button)](#common-fields-
 
 ## Footer
 
-The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set of icon buttons (with overflow into a dots menu), a single manual card, or a markdown block. A card or markdown footer shows no dots menu and is hidden while collapsed.
+The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set of icon buttons (with overflow into a dots menu), a single manual card, or a markdown block. A card or markdown footer shows no dots menu and is hidden while collapsed. Takes the same `class`, `id`, `uix` and `card_mod` hooks as every element, applied to the footer row.
+
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `divider` | `boolean` | no | Whether the footer shows its top divider bar. Default true. |
+| `align` | `Align` | no | Where the button row sits: left (default), center or right. Applies to a button footer, in the sidebar and the mobile bar's sheet; a collapsed sidebar always centers its footer. |
 | `buttons` | `FooterButtonConfig[]` | no | Ordered icon buttons. Mutually exclusive with `card`/`markdown`. |
 | `card` | `LovelaceCardConfig` | no | A manual Lovelace card, replacing the buttons. |
 | `markdown` | `MaybeTemplate` | no | Markdown content with Jinja templating, replacing the buttons. Templatable. |
@@ -198,7 +205,7 @@ The bottom bar. Exactly one of `buttons`, `card`, or `markdown`: an ordered set 
 
 An icon button in the footer's button bar.
 
-Also accepts the [Common fields (every block and footer button)](#common-fields-every-block-and-footer-button) below.
+Also accepts the [Common fields (every block, footer button and the footer)](#common-fields-every-block-footer-button-and-the-footer) below.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -224,7 +231,8 @@ The mobile bar. Its presence hides the sidebar on narrow viewports and renders a
 | `position` | `'top' \| 'bottom'` | no | Screen edge the bar docks to. Default bottom. |
 | `labels` | `boolean` | no | Show element titles under the bar icons. Default false. |
 | `background` | `string` | no | Bar background: any CSS `background` value. Defaults to the sidebar's `background`, and through it to the theme card background. |
-| `card_mod` | `Record<string, unknown>` | no | Passed to the card-mod integration to style the bar. |
+| `uix` | `Record<string, unknown>` | no | Style config for the bar, applied by UIX, or card-mod when UIX is not installed. Wins over `card_mod` when both are set. |
+| `card_mod` | `Record<string, unknown>` | no | The same as `uix`, under card-mod's key. Still works; `card_mod` will be deprecated, so prefer `uix`. |
 
 ## Field types
 

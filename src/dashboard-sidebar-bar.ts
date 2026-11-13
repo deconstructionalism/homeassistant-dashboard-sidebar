@@ -1,10 +1,21 @@
 import { html, LitElement, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
 
 import { runAction, type RunnableAction } from './lib/action';
 
 import { EDIT_EVENT } from './lib/const';
-import { applyCardMod } from './lib/card-mod';
+import {
+  FOOTER_JUSTIFY,
+  FOOTER_STYLE_LOC,
+  applyStyles,
+  hookClassMap,
+  scopeCss,
+  styleConfig,
+  stylingEngine,
+  whenStylingEngine,
+} from './lib/styling';
 import { formatCollapsedClock, formatCollapsedDate, zonedDate } from './lib/format';
 import { barMode, mobileMode, resolveBar, type BarEntry, type ResolvedBar } from './lib/mobile';
 import { TemplateManager } from './lib/templates';
@@ -44,7 +55,7 @@ const MIN_SLOT_WIDTH = 64;
  * accordion categories and the desktop footer pinned across its bottom
  * (icon buttons, or a card/markdown footer built via the card helpers);
  * category slots on the bar open a small upward flyout. Chrome carries
- * dashboard-sidebar-bar-* classes so card-mod and themes can target every
+ * dashboard-sidebar-bar-* classes so UIX, card-mod and themes can target every
  * part.
  */
 @customElement('dashboard-sidebar-bar')
@@ -63,6 +74,10 @@ export class DashboardSidebarBar extends LitElement {
   /** Whether the dashboard is in edit mode, showing the edit pencil. */
   @property({ attribute: false })
   public editMode = false;
+
+  /** Set while editing a bar its visibility conditions hide from you (dimmed, badged pencil). */
+  @property({ type: Boolean, reflect: true, attribute: 'hidden-by-visibility' })
+  public hiddenByVisibility = false;
 
   /** Forces the sheet open, so the editor preview can show its contents. */
   @property({ attribute: false })
@@ -179,6 +194,7 @@ export class DashboardSidebarBar extends LitElement {
    */
   public setConfig(config: DashboardSidebarConfig): void {
     this._config = config;
+    this.toggleAttribute('data-no-animate', config.animate === false);
     this._resolved = resolveBar(config);
     this.setAttribute('data-position', config.mobile?.position ?? 'bottom');
     // Collect templates from the resolved elements by presenting them to the
@@ -217,21 +233,22 @@ export class DashboardSidebarBar extends LitElement {
   }
 
   /**
-   * The card-mod config that styles the bar itself. `mobile.card_mod`
-   * always wins when set, so a bar can carry its own extra styling in
-   * either mode; unset and mirroring, it falls back to the desktop
-   * sidebar's own card_mod, since a mirrored bar's elements reuse the
+   * The style config that styles the bar itself (`uix`, else `card_mod`, at
+   * each level). The bar's own style always wins when set, so a bar can carry
+   * its own extra styling in either mode; unset and mirroring, it falls back to
+   * the desktop sidebar's style, since a mirrored bar's elements reuse the
    * desktop's classes (a footer button's `sb-mache`, say) and otherwise
    * silently rendered unstyled.
    */
-  private _effectiveCardMod(): Record<string, unknown> | undefined {
+  private _effectiveStyle(): Record<string, unknown> | undefined {
     if (!this._config) {
       return undefined;
     }
-    if (this._config.mobile?.card_mod) {
-      return this._config.mobile.card_mod;
+    const own = styleConfig(this._config.mobile);
+    if (own) {
+      return own;
     }
-    return barMode(this._config) === 'mirror' ? this._config.card_mod : undefined;
+    return barMode(this._config) === 'mirror' ? styleConfig(this._config) : undefined;
   }
 
   /** Whether the effective footer is a card or markdown footer. */
@@ -323,6 +340,11 @@ export class DashboardSidebarBar extends LitElement {
     this._resize.observe(this);
     this._measure();
     this._restartTimer();
+    // Styles set before UIX or card-mod finished loading are applied once one
+    // arrives (updated() re-applies on every render).
+    if (stylingEngine() === null) {
+      void whenStylingEngine().then(() => this.requestUpdate());
+    }
   }
 
   /** Unsubscribes on disconnect. */
@@ -345,11 +367,47 @@ export class DashboardSidebarBar extends LitElement {
     }
   }
 
-  /** Applies the bar-level card-mod after render. */
+  /** Applies the bar-level styles after render. */
   protected updated(): void {
-    const cardMod = this._effectiveCardMod();
-    if (cardMod) {
-      applyCardMod(this, cardMod, 'dashboard-sidebar-bar');
+    const style = this._effectiveStyle();
+    if (style) {
+      applyStyles(this, style, 'dashboard-sidebar-bar');
+    }
+    this._applyFooterStyle();
+  }
+
+  /**
+   * Applies the footer's own style config (`uix`, else `card_mod`) to the
+   * sheet's footer row, scoped to it the same way the sidebar scopes it. A
+   * mirrored bar shows the desktop footer, so it takes the desktop footer's
+   * styles; a custom bar takes `mobile.footer`'s.
+   */
+  private _applyFooterStyle(): void {
+    const node = this.renderRoot.querySelector<HTMLElement>(
+      `[data-style-loc="${FOOTER_STYLE_LOC}"]`,
+    );
+    const cfg = styleConfig(this._effectiveFooter());
+    if (!node || !cfg) {
+      return;
+    }
+    // Recorded on the node itself: the sheet unmounts while closed, and a
+    // fresh node (no record yet) is styled again when it reopens.
+    const sig = JSON.stringify(cfg);
+    if (node.dataset.styledSig === sig) {
+      return;
+    }
+    const css = cfg.style;
+    const scoped =
+      typeof css === 'string' && css.trim() !== ''
+        ? scopeCss(css, `[data-style-loc="${FOOTER_STYLE_LOC}"]`)
+        : null;
+    const applied = applyStyles(
+      node,
+      scoped === null ? cfg : { ...cfg, style: scoped },
+      `dashboard-sidebar-bar:${FOOTER_STYLE_LOC}`,
+    );
+    if (applied !== null) {
+      node.dataset.styledSig = sig;
     }
   }
 
@@ -866,9 +924,18 @@ export class DashboardSidebarBar extends LitElement {
           buttons.length > 0 || content !== nothing
             ? html`
                 <div
-                  class="dashboard-sidebar-bar-sheet-footer ${
-                    this._effectiveFooter()?.divider === false ? 'no-divider' : ''
-                  }"
+                  class=${classMap({
+                    'dashboard-sidebar-bar-sheet-footer': true,
+                    'no-divider': this._effectiveFooter()?.divider === false,
+                    ...hookClassMap(this._effectiveFooter()?.class),
+                  })}
+                  id=${this._effectiveFooter()?.id || nothing}
+                  data-style-loc=${FOOTER_STYLE_LOC}
+                  style=${styleMap(
+                    shownContent === nothing && this._effectiveFooter()?.align
+                      ? { 'justify-content': FOOTER_JUSTIFY[this._effectiveFooter()!.align!] }
+                      : {},
+                  )}
                 >
                   ${
                     shownContent !== nothing
@@ -923,7 +990,7 @@ export class DashboardSidebarBar extends LitElement {
           this.editMode && !this.preview
             ? html`<button
                 class="dashboard-sidebar-bar-edit"
-                title="Edit sidebar"
+                title=${this.hiddenByVisibility ? 'Edit sidebar. Its visibility conditions hide it from you outside edit mode.' : 'Edit sidebar'}
                 @click=${() => {
                   this.dispatchEvent(
                     new CustomEvent(EDIT_EVENT, { bubbles: true, composed: true }),
@@ -931,6 +998,11 @@ export class DashboardSidebarBar extends LitElement {
                 }}
               >
                 <ha-icon icon="mdi:pencil"></ha-icon>
+                ${
+                  this.hiddenByVisibility
+                    ? html`<span class="hidden-badge"><ha-icon icon="mdi:eye-off"></ha-icon></span>`
+                    : nothing
+                }
               </button>`
             : nothing
         }

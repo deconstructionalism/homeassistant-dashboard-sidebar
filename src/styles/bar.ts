@@ -2,7 +2,7 @@ import { css } from 'lit';
 
 /**
  * Styles for the mobile bar. Chrome carries dashboard-sidebar-bar-* classes
- * so card-mod and themes can target every part, mirroring the sidebar's
+ * so UIX, card-mod and themes can target every part, mirroring the sidebar's
  * conventions. The bar is fixed to the bottom edge and pads for the iOS
  * home-indicator safe area.
  */
@@ -148,6 +148,32 @@ export const barStyles = css`
 
   .dashboard-sidebar-bar-edit ha-icon {
     --mdc-icon-size: 16px;
+  }
+
+  /* Editing a bar its visibility hides from you: dimmed, with an eye-off
+     badge on the edit button (which stays fully usable). */
+  :host([hidden-by-visibility]) .dashboard-sidebar-bar-slots {
+    opacity: 0.45;
+  }
+
+  .hidden-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--warning-color, #ffa600);
+    color: var(--text-primary-color, #fff);
+  }
+
+  .hidden-badge ha-icon {
+    --mdc-icon-size: 10px;
+
+    color: inherit;
   }
 
   :host([data-position='top']) .dashboard-sidebar-bar-edit {
@@ -564,5 +590,14 @@ export const barStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* animate: false turns the bar's animations off too (the sheet then opens
+     and closes at once). Reduce motion swaps the slide for a fade above. */
+  :host([data-no-animate]) *,
+  :host([data-no-animate]) *::before,
+  :host([data-no-animate]) *::after {
+    transition: none !important;
+    animation: none !important;
   }
 `;

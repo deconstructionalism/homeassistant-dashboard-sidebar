@@ -26,7 +26,7 @@ though everything it produces is plain YAML under a `dashboard_sidebar` key.
   Your browser does not support embedded video. <a href="assets/sidebar-demo.mp4">Download the demo</a>.
 </video>
 
-The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient background, a gradient-fill title, and glows). Here is the exact config behind it:
+The sidebar in the clip is styled with [UIX](styling.md#uix-and-card-mod) (gradient background, a gradient-fill title, and glows). Here is the exact config behind it:
 
 ??? note "The full `dashboard_sidebar` YAML behind this demo"
 
@@ -36,7 +36,7 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
       width: 240
       start_collapsed: false
       background: 'radial-gradient(120% 80% at 15% -10%, rgba(167,139,250,0.55) 0%, rgba(167,139,250,0) 58%), radial-gradient(90% 55% at 110% 105%, rgba(34,211,238,0.40) 0%, rgba(34,211,238,0) 55%), linear-gradient(165deg, #0a0f1f 0%, #141a35 48%, #1d1236 100%)'
-      card_mod:
+      uix:
         style: |
           .dashboard-sidebar-root {
             border-right: 1px solid rgba(148,163,184,0.18);
@@ -54,7 +54,7 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
         text: MY HOME
         align: center
         text_color: '#e9d5ff'
-        card_mod:
+        uix:
           style: |
             .dashboard-sidebar-title {
               background: linear-gradient(90deg,#a78bfa,#22d3ee,#f0abfc,#a78bfa);
@@ -68,7 +68,7 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
         format: '%-I:%M %p'
         align: center
         text_color: '#7dd3fc'
-        card_mod:
+        uix:
           style: |
             .dashboard-sidebar-clock {
               text-shadow: 0 0 18px rgba(125,211,252,0.55);
@@ -164,7 +164,8 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
             green: 62
             yellow: 76
             red: 84
-          card_mod:
+          # The card's own styles, read by UIX itself (card-mod reads card_mod: here)
+          uix:
             style: |
               * {
                 background: none!important;
@@ -227,8 +228,8 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
   Home Assistant theme, reading the same variables as HA's own nav sidebar.
 - 🖌️ **Styleable down to the pixel**: per-element colors, any CSS background
   including gradients, and
-  [card-mod](https://github.com/thomasloven/lovelace-card-mod) at both the whole
-  sidebar and per-element level.
+  [UIX](https://github.com/Lint-Free-Technology/uix) (or card-mod) at both the
+  whole sidebar and per-element level.
 - 🖱️ **Built by clicking, not typing**: a five-tab editor (Settings, Header, Body,
   Footer, Mobile Bar, each named for the config key it edits) with a live preview
   that mirrors the real sidebar, drag-to-reorder, and a YAML escape hatch on every
@@ -242,9 +243,10 @@ The sidebar in the clip is styled with [card-mod](styling.md#card-mod) (gradient
 - **[HACS](https://hacs.xyz/)** to download the card. HACS is a separate, one-time
   add-on; if you do not have it yet, install it first (or add the card as a manual
   resource). See [Install & Add](install.md).
-- **[card-mod](https://github.com/thomasloven/lovelace-card-mod)** is
-  **optional**, only needed for the advanced CSS styling in
-  [Styling](styling.md). Everything else works without it.
+- **[UIX](https://github.com/Lint-Free-Technology/uix)** is **optional**, only
+  needed for the advanced CSS styling in [Styling](styling.md). Everything else
+  works without it. [card-mod](https://github.com/thomasloven/lovelace-card-mod)
+  works too, as a fallback, until its support is deprecated.
 
 ## At a glance
 
