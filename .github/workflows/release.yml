@@ -6,6 +6,8 @@ on:
 
 jobs:
   build-and-attach:
+    # attaches to the GitHub release HACS installs from, so GitHub only
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: write
